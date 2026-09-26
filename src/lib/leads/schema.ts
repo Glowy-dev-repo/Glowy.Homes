@@ -26,6 +26,10 @@ export const LeadInput = z
     message: z.string().trim().max(2000).optional(),
     listingId: z.string().uuid().optional(),
     propertyId: z.string().uuid().optional(),
+    /** Contact from a pro's profile page: route to that pro. */
+    proId: z.string().uuid().optional(),
+    /** Where the consumer is buying, for leads without a home (preapproval). */
+    citySlug: z.string().regex(/^[a-z0-9-]+$/).max(80).optional(),
     consent: z.literal(true, { message: "Please agree to be contacted so a professional can reply." }),
     tour: z
       .object({ mode: z.enum(["in_person", "video"]), windows: z.array(windowSchema).min(1).max(3) })
@@ -37,6 +41,8 @@ export const LeadInput = z
     turnstileToken: z.string().optional(),
   })
   .refine((v) => v.leadType !== "tour" || !!v.tour, { message: "Pick at least one time window.", path: ["tour"] })
-  .refine((v) => !["tour", "contact", "rental_inquiry"].includes(v.leadType) || !!v.listingId, { message: "A listing is required.", path: ["listingId"] });
+  .refine((v) => !["tour", "rental_inquiry"].includes(v.leadType) || !!v.listingId, { message: "A listing is required.", path: ["listingId"] })
+  .refine((v) => v.leadType !== "contact" || !!v.listingId || !!v.proId, { message: "Choose a home or a professional to contact.", path: ["listingId"] })
+  .refine((v) => v.leadType !== "preapproval" || !!v.citySlug || !!v.listingId || !!v.propertyId, { message: "Choose where you are buying.", path: ["citySlug"] });
 
 export type LeadInput = z.infer<typeof LeadInput>;

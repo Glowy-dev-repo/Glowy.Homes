@@ -18,7 +18,7 @@ export default function ProLandingPage() {
         are routed by service area, with published rules and daily caps so every pro gets a fair share.
       </p>
       <Button asChild size="lg" className="mt-8">
-        <Link href="/signin?callbackUrl=/pro/profile">Join as a pro</Link>
+        <Link href="/pro/join">Join as a pro</Link>
       </Button>
     </div>
   );

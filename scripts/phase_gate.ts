@@ -69,6 +69,39 @@ async function waitForServer(url: string, timeoutMs: number) {
   return false;
 }
 
+const INNGEST_URL = "http://localhost:8288";
+
+/** Starts the Inngest dev server pointed at the app and waits until it has synced the functions. */
+async function startInngestDevServer(appUrl: string): Promise<ChildProcess | null> {
+  if (await fetch(INNGEST_URL).then(() => true, () => false)) {
+    console.log("[jobs] an Inngest dev server is already running on 8288; using it");
+    return null;
+  }
+  const child = spawn(`npx --yes inngest-cli@latest dev -u ${appUrl} --no-discovery`, { shell: true, detached: !isWin, stdio: ["ignore", "pipe", "pipe"] });
+  child.stdout?.on("data", () => {});
+  child.stderr?.on("data", () => {});
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${INNGEST_URL}/v0/gql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "{ functions { id } }" }),
+      });
+      const body = (await res.json()) as { data?: { functions?: unknown[] } };
+      if ((body.data?.functions?.length ?? 0) > 0) {
+        console.log(`[jobs] Inngest dev server ready with ${body.data!.functions!.length} functions`);
+        return child;
+      }
+    } catch {
+      // not up yet
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  console.log("[jobs] Inngest dev server did not sync in time");
+  return child;
+}
+
 // ---------- phase specific checks ----------
 
 /** Phase 0: every migration applies cleanly to a brand new empty database. */
@@ -172,6 +205,22 @@ async function disclaimerPresence(ctx: Ctx) {
   return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("disclaimers")).at(-1) };
 }
 
+/** Phase 4 criterion 2: the routing scenario tests. */
+async function routingScenarios() {
+  const { ok, output } = await run("npx vitest run tests/unit/routing.test.ts");
+  return { ok, note: output.match(/Tests\s+(\d+ passed[^\n]*)/)?.[1]?.trim() };
+}
+
+/** Phase 4 criterion 4: an agent with no service area never receives a lead. */
+async function noAreaNoLeads() {
+  const n = await dbCount(`
+    select count(*) from leads l join pros p on p.id = l.assigned_pro_id
+    where p.pro_type = 'agent' and not exists (select 1 from pro_service_areas a where a.pro_id = p.id)
+      and coalesce(l.payload->>'requested_pro_id', '') <> p.id::text`);
+  const pros = await dbCount(`select count(*) from pros p where p.pro_type = 'agent' and not exists (select 1 from pro_service_areas a where a.pro_id = p.id)`);
+  return { ok: n === 0 && pros > 0, note: `${pros} agents without areas, ${n} leads routed to them` };
+}
+
 type Ctx = { baseUrl: string };
 type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
 
@@ -190,6 +239,10 @@ const PHASE_CHECKS: Record<number, Check[]> = {
   3: [
     { name: "valuation coverage and accuracy", fn: valuationCoverage },
     { name: "disclaimer presence on estimate pages", fn: disclaimerPresence },
+  ],
+  4: [
+    { name: "routing scenario tests", fn: routingScenarios },
+    { name: "agents without a service area get no leads", fn: noAreaNoLeads },
   ],
 };
 
@@ -221,14 +274,25 @@ async function main() {
     const server = spawn(`npx next start -p ${PORT}`, {
       shell: true,
       detached: !isWin,
-      // Tests and the perf script send far more than 60 requests a minute from one IP.
-      env: { ...process.env, EMAIL_TRANSPORT: "log", NODE_ENV: "production", RATE_LIMIT_PER_MINUTE: "100000" },
+      env: {
+        ...process.env,
+        EMAIL_TRANSPORT: "log",
+        NODE_ENV: "production",
+        // Tests and the perf script send far more than 60 requests a minute from one IP.
+        RATE_LIMIT_PER_MINUTE: "100000",
+        // Shortened lead timers so reassignment is testable (docs/05 Phase 4 criterion 3).
+        LEAD_REASSIGN_SECONDS: process.env.LEAD_REASSIGN_SECONDS ?? "45",
+        LEAD_RETRY_SECONDS: process.env.LEAD_RETRY_SECONDS ?? "30",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     });
     server.stdout?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
     server.stderr?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
+    let jobs: ChildProcess | null = null;
     try {
       const up = await waitForServer(BASE_URL, 60_000);
+      // The Inngest dev server runs background jobs (lead routing) against the test build.
+      if (up) jobs = await startInngestDevServer(`${BASE_URL}/api/inngest`);
       await step("e2e", async () => {
         if (!up) return { ok: false, note: "server did not start" };
         return (await run("npx playwright test", { E2E_BASE_URL: BASE_URL, CI: "1" })).ok;
@@ -236,6 +300,7 @@ async function main() {
       // Phase checks run while the production server is up, so they measure the real app.
       await runPhaseChecks({ baseUrl: BASE_URL });
     } finally {
+      if (jobs) killTree(jobs);
       killTree(server);
     }
   } else {

@@ -9,6 +9,8 @@ const under = (prefix: string) => (path: string) => path === prefix || path.star
 // /pro itself is the public pro landing page (docs/01 route map); everything below it is the pro workspace.
 const RULES: Rule[] = [
   { match: under("/admin"), roles: ["admin"] },
+  // Any signed in user can apply to become a pro.
+  { match: under("/pro/join"), roles: "any" },
   { match: (p) => p.startsWith("/pro/"), roles: ["agent", "lender", "admin"] },
   { match: under("/landlord"), roles: "any" },
   { match: under("/account"), roles: "any" },

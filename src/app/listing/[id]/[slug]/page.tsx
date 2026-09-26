@@ -2,6 +2,7 @@ import { CalendarDays, MessageSquare, Phone } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
+import { LeadDialog } from "@/components/lead/LeadDialog";
 import { CommuteEstimator } from "@/components/listing/CommuteEstimator";
 import { FactsGrid } from "@/components/listing/FactsGrid";
 import { ListingCard } from "@/components/listing/ListingCard";
@@ -128,14 +129,34 @@ export default async function ListingPage({ params }: Props) {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <a href="#agent" className="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover">
-                <CalendarDays className="size-5" aria-hidden />
-                Request a tour
-              </a>
-              <a href="#agent" className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5">
-                <MessageSquare className="size-5" aria-hidden />
-                Contact agent
-              </a>
+              {!closed && (
+                <>
+                  <LeadDialog
+                    leadType="tour"
+                    listingId={l.id}
+                    address={address}
+                    triggerClassName="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover"
+                    trigger={
+                      <>
+                        <CalendarDays className="size-5" aria-hidden />
+                        Request a tour
+                      </>
+                    }
+                  />
+                  <LeadDialog
+                    leadType={sale ? "contact" : "rental_inquiry"}
+                    listingId={l.id}
+                    address={address}
+                    triggerClassName="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5"
+                    trigger={
+                      <>
+                        <MessageSquare className="size-5" aria-hidden />
+                        {sale ? "Contact agent" : "Ask about this rental"}
+                      </>
+                    }
+                  />
+                </>
+              )}
               <SaveButton listingId={l.id} variant="button" />
               <ShareButton title={address} />
             </div>
@@ -295,12 +316,28 @@ export default async function ListingPage({ params }: Props) {
       {/* 14. Sticky bottom bar on mobile */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-neutral-200 bg-white px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
         <p className="tabular mr-auto text-h3 font-bold">{formatPrice(headlinePrice, { listingType: l.listingType, compact: true })}</p>
-        <a href="#agent" className="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent">
-          Contact
-        </a>
-        <a href="#agent" className="inline-flex min-h-11 items-center rounded-md bg-accent px-3 font-semibold text-white">
-          Request tour
-        </a>
+        {closed ? (
+          <a href="#agent" className="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent">
+            Agent details
+          </a>
+        ) : (
+          <>
+            <LeadDialog
+              leadType={sale ? "contact" : "rental_inquiry"}
+              listingId={l.id}
+              address={address}
+              triggerClassName="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent"
+              trigger="Contact"
+            />
+            <LeadDialog
+              leadType="tour"
+              listingId={l.id}
+              address={address}
+              triggerClassName="inline-flex min-h-11 items-center rounded-md bg-accent px-3 font-semibold text-white"
+              trigger="Request tour"
+            />
+          </>
+        )}
       </div>
     </div>
   );

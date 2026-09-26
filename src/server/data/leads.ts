@@ -14,6 +14,7 @@ export async function createLead(input: LeadInput, consumerUserId: string | null
     consent: { given_at: new Date().toISOString(), text: CONSENT_TEXT, version: CONSENT_TEXT_VERSION },
   };
   if (input.tour) payload.tour = input.tour;
+  if (input.proId) payload.requested_pro_id = input.proId;
   if (input.preapproval) payload.preapproval = input.preapproval;
 
   const [lead] = await sql<{ id: string }[]>`
@@ -21,7 +22,9 @@ export async function createLead(input: LeadInput, consumerUserId: string | null
       region_id, message, payload, source_page, status)
     select ${input.leadType}, ${consumerUserId}, ${input.name}, ${input.email}, ${input.phone ?? null},
       ${input.listingId ?? null}, coalesce(${input.propertyId ?? null}::uuid, l.property_id),
-      coalesce(l.neighborhood_region_id, l.city_region_id, p.neighborhood_region_id, p.city_region_id),
+      coalesce(l.neighborhood_region_id, l.city_region_id, p.neighborhood_region_id, p.city_region_id,
+        (select r.id from regions r where r.type = 'city' and r.slug = ${input.citySlug ?? null}),
+        (select a.region_id from pro_service_areas a where a.pro_id = ${input.proId ?? null}::uuid limit 1)),
       ${input.message ?? null}, ${sql.json(payload as never)}, ${input.sourcePage ?? null}, 'new'
     from (select 1) one
     left join listings l on l.id = ${input.listingId ?? null}::uuid

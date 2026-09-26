@@ -20,6 +20,11 @@ describe("accessFor", () => {
     expect(accessFor("/landlord/listings/new", ["consumer"])).toBe("allow");
   });
 
+  it("lets any signed in user open the pro signup", () => {
+    expect(accessFor("/pro/join", null)).toBe("signin");
+    expect(accessFor("/pro/join", ["consumer"])).toBe("allow");
+  });
+
   it("requires a pro role for the pro workspace", () => {
     expect(accessFor("/pro/leads", ["consumer"])).toBe("forbidden");
     expect(accessFor("/pro/leads", ["consumer", "agent"])).toBe("allow");
