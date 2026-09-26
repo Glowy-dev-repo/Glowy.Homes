@@ -48,6 +48,7 @@ const listing: ListingDetail = {
   media: [],
   priceHistory: [],
   agent: null,
+  contactPrefs: null,
 };
 
 describe("mortgage math (Canadian semi annual compounding)", () => {

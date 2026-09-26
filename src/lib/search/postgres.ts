@@ -76,23 +76,28 @@ async function whereClause(
   if (p.daysOnMarketMax !== undefined) conds.push(sql`l.list_date >= current_date - ${p.daysOnMarketMax}::int`);
   if (p.pets !== undefined) conds.push(sql`coalesce((l.rental_terms->>'pets')::boolean, false) = ${p.pets}`);
   if (p.furnished !== undefined) conds.push(sql`coalesce((l.rental_terms->>'furnished')::boolean, false) = ${p.furnished}`);
+  if (p.laundry !== undefined) conds.push(sql`(coalesce(l.rental_terms->>'laundry', '') = 'In suite') = ${p.laundry}`);
+  if (p.parking !== undefined) conds.push(sql`coalesce((l.rental_terms->>'parking')::boolean, false) = ${p.parking}`);
   if (p.availableBy) conds.push(sql`l.available_date <= ${p.availableBy}::date`);
 
   return { where: conds.reduce((acc, c) => sql`${acc} and ${c}`), extent };
 }
 
+/** Featured placement is capped (docs/01 SE3, docs/05 Phase 5): at most this many boosted slots, at the top of page 1. */
+export const MAX_FEATURED_PER_PAGE = 4;
+
 function orderBy(sql: Sql, sort: SearchParams["sort"]): Fragment {
   switch (sort) {
     case "price_asc":
-      return sql`l.is_featured desc, l.price asc, l.id`;
+      return sql`l.price asc, l.id`;
     case "price_desc":
-      return sql`l.is_featured desc, l.price desc, l.id`;
+      return sql`l.price desc, l.id`;
     case "sqft_desc":
-      return sql`l.is_featured desc, l.sqft desc nulls last, l.id`;
+      return sql`l.sqft desc nulls last, l.id`;
     case "ppsf_asc":
-      return sql`l.is_featured desc, (l.price::float8 / nullif(l.sqft, 0)) asc nulls last, l.id`;
+      return sql`(l.price::float8 / nullif(l.sqft, 0)) asc nulls last, l.id`;
     default:
-      return sql`l.is_featured desc, l.list_date desc, l.id`;
+      return sql`l.list_date desc, l.id`;
   }
 }
 
@@ -124,12 +129,16 @@ export async function searchListings(p: SearchParams, sql: Sql = sqlClient): Pro
   const offset = (p.page - 1) * PAGE_SIZE;
   const [items, [{ total }]] = await Promise.all([
     sql<ListingSummary[]>`
+      with pinned as (
+        select l.id from listings l where ${where} and l.is_featured
+        order by ${orderBy(sql, p.sort)} limit ${MAX_FEATURED_PER_PAGE}
+      )
       select ${summaryColumns(sql)}
       from listings l
       join properties p on p.id = l.property_id
       ${coverJoin(sql)}
       where ${where}
-      order by ${orderBy(sql, p.sort)}
+      order by (l.id in (select id from pinned)) desc, ${orderBy(sql, p.sort)}
       limit ${PAGE_SIZE} offset ${offset}`,
     sql<{ total: number }[]>`select count(*)::int as total from listings l where ${where}`,
   ]);

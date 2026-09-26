@@ -36,6 +36,8 @@ export const moderationItems = pgTable("moderation_items", {
   status: text("status").notNull().default("open"),
   reviewerUserId: uuid("reviewer_user_id").references(() => users.id),
   decisionNote: text("decision_note"),
+  /** Automatic checks that failed (docs/03 section 7); any failure makes the item high priority. */
+  failedChecks: jsonb("failed_checks").$type<string[]>().notNull().default([]),
   createdAt: createdAt(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });

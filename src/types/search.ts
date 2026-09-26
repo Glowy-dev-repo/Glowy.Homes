@@ -27,6 +27,9 @@ export const SearchParams = z.object({
   // rental only
   pets: z.boolean().optional(),
   furnished: z.boolean().optional(),
+  /** In suite laundry (rentals). */
+  laundry: z.boolean().optional(),
+  parking: z.boolean().optional(),
   availableBy: z.string().date().optional(),
   sort: z.enum(SORTS).default("newest"),
   page: z.number().int().min(1).default(1),

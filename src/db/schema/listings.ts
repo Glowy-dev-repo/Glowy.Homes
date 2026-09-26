@@ -120,6 +120,8 @@ export const listings = pgTable(
     taxAnnual: integer("tax_annual"),
     virtualTourUrl: text("virtual_tour_url"),
     listingAgentId: uuid("listing_agent_id").references(() => pros.id),
+    /** User listings: how the owner wants to be contacted (docs/05 Phase 5 task 1). */
+    contactPrefs: jsonb("contact_prefs").$type<{ showPhone?: boolean; phone?: string | null; preferred?: "email" | "phone" }>(),
     brokerageName: text("brokerage_name"),
     ownerUserId: uuid("owner_user_id").references(() => users.id),
     isFeatured: boolean("is_featured").notNull().default(false),

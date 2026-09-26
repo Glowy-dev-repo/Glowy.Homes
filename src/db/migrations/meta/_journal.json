@@ -43,6 +43,13 @@
       "when": 1790398369190,
       "tag": "0005_closed_listings_gix",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790401956716,
+      "tag": "0006_user_listings",
+      "breakpoints": true
     }
   ]
 }

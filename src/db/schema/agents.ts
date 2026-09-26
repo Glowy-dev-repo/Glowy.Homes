@@ -16,7 +16,8 @@ import { regions } from "./geo";
 import { leads } from "./leads";
 import { users } from "./users";
 
-export const PRO_TYPES = ["agent", "lender", "landlord", "property_manager"] as const;
+// "owner" is a for sale by owner seller: a profile only so inquiries on their listing reach them.
+export const PRO_TYPES = ["agent", "lender", "landlord", "property_manager", "owner"] as const;
 export type ProType = (typeof PRO_TYPES)[number];
 
 export const pros = pgTable("pros", {

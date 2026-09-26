@@ -27,7 +27,7 @@ function homeTypeLabel(p: SearchParams): string | null {
 }
 
 function moreCount(p: SearchParams): number {
-  const keys = ["sqftMin", "sqftMax", "yearBuiltMin", "daysOnMarketMax", "keywords", "pets", "furnished", "availableBy"] as const;
+  const keys = ["sqftMin", "sqftMax", "yearBuiltMin", "daysOnMarketMax", "keywords", "pets", "furnished", "laundry", "parking", "availableBy"] as const;
   return keys.filter((k) => p[k] !== undefined).length + (p.status.join(",") !== "active" ? 1 : 0);
 }
 
@@ -192,6 +192,8 @@ export function clearedFilters(p: SearchParams): Partial<SearchParams> {
     keywords: undefined,
     pets: undefined,
     furnished: undefined,
+    laundry: undefined,
+    parking: undefined,
     availableBy: undefined,
     type: p.type,
   };

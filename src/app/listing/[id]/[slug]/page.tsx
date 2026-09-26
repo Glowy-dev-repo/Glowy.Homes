@@ -13,11 +13,12 @@ import { RecordView } from "@/components/listing/RecordView";
 import { SaveButton } from "@/components/listing/saved-homes";
 import { ShareButton } from "@/components/listing/ShareButton";
 import { StatusBadge } from "@/components/listing/StatusBadge";
+import { ApplyButton } from "@/components/rentals/ApplyButton";
 import { EstimateCard } from "@/components/valuation/EstimateCard";
 import { brand } from "@/config/brand";
 import { sqlClient } from "@/db";
 import { formatArea, formatBaths, formatBeds, formatNumber, formatPrice } from "@/lib/format";
-import { getListingDetail, type ListingDetail } from "@/lib/listings/detail";
+import { getListingDetail, isOwnerListing, type ListingDetail } from "@/lib/listings/detail";
 import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription, toSummary } from "@/lib/listings/ldp";
 import { similarListings } from "@/lib/listings/similar";
 import { mediaUrl } from "@/lib/media/urls";
@@ -77,6 +78,7 @@ export default async function ListingPage({ params }: Props) {
 
   const sale = l.listingType === "sale";
   const closed = l.status === "sold" || l.status === "leased";
+  const owner = isOwnerListing(l);
   const headlinePrice = closed && l.soldPrice ? l.soldPrice : l.price;
   const address = fullAddress(l);
   const dom = daysOnMarket(l);
@@ -151,11 +153,17 @@ export default async function ListingPage({ params }: Props) {
                     trigger={
                       <>
                         <MessageSquare className="size-5" aria-hidden />
-                        {sale ? "Contact agent" : "Ask about this rental"}
+                        {sale ? (owner ? "Contact the owner" : "Contact agent") : "Ask about this rental"}
                       </>
                     }
                   />
                 </>
+              )}
+              {!closed && !sale && (
+                <ApplyButton
+                  listingId={l.id}
+                  className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-neutral-300 px-4 font-semibold text-neutral-900 hover:bg-neutral-50"
+                />
               )}
               <SaveButton listingId={l.id} variant="button" />
               <ShareButton title={address} />
@@ -283,33 +291,51 @@ export default async function ListingPage({ params }: Props) {
             )}
           </Section>
 
-          {/* 13. Listing agent and brokerage attribution */}
-          <Section id="agent" title="Listing agent">
-            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-neutral-200 p-5" data-testid="agent-card">
-              <div aria-hidden className="grid size-14 place-items-center rounded-full bg-neutral-100 text-h3 text-neutral-700">
-                {(l.agent?.displayName ?? l.brokerageName ?? brand.short).split(" ").map((w) => w[0]).slice(0, 2).join("")}
-              </div>
-              <div className="min-w-0 flex-1">
-                {l.agent ? (
-                  <Link href={`/agent/${l.agent.slug}`} className="text-h3 hover:underline">
-                    {l.agent.displayName}
-                  </Link>
-                ) : (
-                  <p className="text-h3">{l.brokerageName ?? "Listing brokerage"}</p>
+          {/* 13. Listing agent and brokerage attribution, or the owner for listings posted on the site */}
+          {owner ? (
+            <Section id="agent" title={sale ? "Listed by owner" : "Listed by landlord"}>
+              <div className="rounded-lg border border-neutral-200 p-5" data-testid="owner-card">
+                <p className="text-h3">{sale ? "For sale by owner" : "Rented directly by the landlord"}</p>
+                <p className="mt-1 text-body text-neutral-700">
+                  {l.contactPrefs?.preferred === "phone" ? "Prefers a phone call." : "Prefers to be contacted by email through this page."}
+                </p>
+                {l.contactPrefs?.showPhone && l.contactPrefs.phone && (
+                  <a href={`tel:${l.contactPrefs.phone}`} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-neutral-300 px-4 font-medium">
+                    <Phone className="size-4" aria-hidden />
+                    Call {l.contactPrefs.phone}
+                  </a>
                 )}
-                <p className="text-small text-neutral-600">Listing courtesy of {l.brokerageName ?? "the listing brokerage"}</p>
               </div>
-              {l.agent?.phone && (
-                <a href={`tel:${l.agent.phone.replace(/\D/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-neutral-300 px-4 font-medium">
-                  <Phone className="size-4" aria-hidden />
-                  Call {l.agent.phone}
-                </a>
-              )}
-            </div>
-            <p className="mt-3 text-small text-neutral-600">
-              Information is provided by the listing brokerage and is deemed reliable but not guaranteed. {l.source === "synthetic" ? "This is demonstration data, not a real listing." : ""}
-            </p>
-          </Section>
+              <p className="mt-3 text-small text-neutral-600">This listing was posted by its owner and reviewed by {brand.name}. Details are provided by the owner and are not guaranteed.</p>
+            </Section>
+          ) : (
+            <Section id="agent" title="Listing agent">
+              <div className="flex flex-wrap items-center gap-4 rounded-lg border border-neutral-200 p-5" data-testid="agent-card">
+                <div aria-hidden className="grid size-14 place-items-center rounded-full bg-neutral-100 text-h3 text-neutral-700">
+                  {(l.agent?.displayName ?? l.brokerageName ?? brand.short).split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {l.agent ? (
+                    <Link href={`/agent/${l.agent.slug}`} className="text-h3 hover:underline">
+                      {l.agent.displayName}
+                    </Link>
+                  ) : (
+                    <p className="text-h3">{l.brokerageName ?? "Listing brokerage"}</p>
+                  )}
+                  <p className="text-small text-neutral-600">Listing courtesy of {l.brokerageName ?? "the listing brokerage"}</p>
+                </div>
+                {l.agent?.phone && (
+                  <a href={`tel:${l.agent.phone.replace(/\D/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-neutral-300 px-4 font-medium">
+                    <Phone className="size-4" aria-hidden />
+                    Call {l.agent.phone}
+                  </a>
+                )}
+              </div>
+              <p className="mt-3 text-small text-neutral-600">
+                Information is provided by the listing brokerage and is deemed reliable but not guaranteed. {l.source === "synthetic" ? "This is demonstration data, not a real listing." : ""}
+              </p>
+            </Section>
+          )}
         </div>
       </div>
 

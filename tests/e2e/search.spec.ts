@@ -113,6 +113,8 @@ test.describe("filters", () => {
     { name: "status", qs: "status=sold" },
     { name: "pets", qs: "pets=true", base: "type=rent&city=toronto" },
     { name: "furnished", qs: "furnished=true", base: "type=rent&city=toronto" },
+    { name: "laundry", qs: "laundry=true", base: "type=rent&city=toronto" },
+    { name: "parking", qs: "parking=true", base: "type=rent&city=toronto" },
     { name: "availableBy", qs: "availableBy=2026-10-05", base: "type=rent&city=toronto" },
     { name: "type", qs: "type=rent" },
   ];

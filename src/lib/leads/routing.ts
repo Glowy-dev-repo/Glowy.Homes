@@ -79,8 +79,10 @@ export function decideRoute(input: RouteInput): RouteDecision {
   const type = targetProType(input.leadType);
   const byId = new Map(input.candidates.map((c) => [c.proId, c]));
 
-  if ((input.leadType === "rental_inquiry" || input.leadType === "rental_application") && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
-    return { assign: input.listingOwnerProId, reason: "listing owner (landlord)", considered: [input.listingOwnerProId] };
+  // Listings posted by their owner (landlord or FSBO seller): every consumer lead goes to the owner.
+  const ownerTypes: LeadType[] = ["tour", "contact", "rental_inquiry", "rental_application"];
+  if (ownerTypes.includes(input.leadType) && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
+    return { assign: input.listingOwnerProId, reason: "listing owner", considered: [input.listingOwnerProId] };
   }
 
   if (input.requestedProId && !exclude.has(input.requestedProId)) {

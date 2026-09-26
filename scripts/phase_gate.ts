@@ -221,6 +221,21 @@ async function noAreaNoLeads() {
   return { ok: n === 0 && pros > 0, note: `${pros} agents without areas, ${n} leads routed to them` };
 }
 
+/**
+ * Phase 5 criteria 1 and 2 against the database after the e2e run: every live user listing went
+ * through an approved moderation item, none has fewer than 3 photos, and the flow ran at least once.
+ */
+async function moderationFlow() {
+  const live = await dbCount(`select count(*) from listings where source in ('fsbo', 'landlord') and status = 'active'`);
+  const unmoderated = await dbCount(`
+    select count(*) from listings l where l.source in ('fsbo', 'landlord') and l.status <> 'in_review'
+      and not exists (select 1 from moderation_items m where m.item_type = 'listing' and m.item_id = l.id and m.status in ('approved', 'rejected'))`);
+  const thin = await dbCount(`
+    select count(*) from listings l where l.source in ('fsbo', 'landlord')
+      and (select count(*) from listing_media m where m.listing_id = l.id and m.kind = 'photo') < 3`);
+  return { ok: live > 0 && unmoderated === 0 && thin === 0, note: `${live} live user listings, ${unmoderated} skipped moderation, ${thin} under 3 photos` };
+}
+
 type Ctx = { baseUrl: string };
 type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
 
@@ -243,6 +258,10 @@ const PHASE_CHECKS: Record<number, Check[]> = {
   4: [
     { name: "routing scenario tests", fn: routingScenarios },
     { name: "agents without a service area get no leads", fn: noAreaNoLeads },
+  ],
+  5: [
+    { name: "user listings pass moderation with 3+ photos", fn: moderationFlow },
+    { name: "moderation and schema unit tests", fn: async () => (await run("npx vitest run tests/unit/user-listings.test.ts")).ok },
   ],
 };
 

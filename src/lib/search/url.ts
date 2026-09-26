@@ -8,7 +8,7 @@ type Raw = URLSearchParams | Record<string, string | string[] | undefined>;
 const NUMBER_KEYS = ["priceMin", "priceMax", "bedsMin", "bathsMin", "sqftMin", "sqftMax", "yearBuiltMin", "daysOnMarketMax", "page"] as const;
 const STRING_KEYS = ["q", "city", "neighborhood", "keywords", "availableBy", "type", "sort"] as const;
 const LIST_KEYS = ["status", "propertyTypes"] as const;
-const BOOL_KEYS = ["pets", "furnished"] as const;
+const BOOL_KEYS = ["pets", "furnished", "laundry", "parking"] as const;
 
 function get(raw: Raw, key: string): string | undefined {
   if (raw instanceof URLSearchParams) return raw.get(key) ?? undefined;
@@ -80,6 +80,8 @@ export function toQueryString(params: SearchParamsInput): string {
   if (p.propertyTypes?.length) qs.set("propertyTypes", p.propertyTypes.join(","));
   if (p.pets !== undefined) qs.set("pets", String(p.pets));
   if (p.furnished !== undefined) qs.set("furnished", String(p.furnished));
+  if (p.laundry !== undefined) qs.set("laundry", String(p.laundry));
+  if (p.parking !== undefined) qs.set("parking", String(p.parking));
   if (p.sort !== DEFAULTS.sort) qs.set("sort", p.sort);
   if (p.page !== DEFAULTS.page) qs.set("page", String(p.page));
   return qs.toString();
@@ -87,7 +89,7 @@ export function toQueryString(params: SearchParamsInput): string {
 
 /** Number of active filters shown on the mobile Filters badge (location and sort do not count). */
 export function activeFilterCount(p: SearchParams): number {
-  const keys = ["priceMin", "priceMax", "bedsMin", "bathsMin", "sqftMin", "sqftMax", "yearBuiltMin", "daysOnMarketMax", "keywords", "pets", "furnished", "availableBy"] as const;
+  const keys = ["priceMin", "priceMax", "bedsMin", "bathsMin", "sqftMin", "sqftMax", "yearBuiltMin", "daysOnMarketMax", "keywords", "pets", "furnished", "laundry", "parking", "availableBy"] as const;
   let n = keys.filter((k) => p[k] !== undefined).length;
   if (p.propertyTypes?.length) n++;
   if (p.status.join(",") !== "active") n++;

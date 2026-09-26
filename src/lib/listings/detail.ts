@@ -58,7 +58,13 @@ export type ListingDetail = {
   media: ListingMediaItem[];
   priceHistory: PriceEvent[];
   agent: ListingAgent | null;
+  /** Set for listings posted by owners and landlords (source fsbo or landlord). */
+  contactPrefs: { preferred: "email" | "phone"; phone: string | null; showPhone: boolean } | null;
 };
+
+export function isOwnerListing(l: Pick<ListingDetail, "source">): boolean {
+  return l.source === "fsbo" || l.source === "landlord";
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -75,7 +81,7 @@ export async function getListingDetail(id: string): Promise<ListingDetail | null
       l.available_date::text as "availableDate", l.description, l.features, l.rental_terms as "rentalTerms",
       l.hoa_fee as "hoaFee", l.tax_annual as "taxAnnual", l.virtual_tour_url as "virtualTourUrl",
       l.brokerage_name as "brokerageName", l.is_featured as "isFeatured", l.save_count as "saveCount",
-      l.updated_at::text as "updatedAt", l.listing_agent_id as "agentId",
+      l.updated_at::text as "updatedAt", l.listing_agent_id as "agentId", l.contact_prefs as "contactPrefs",
       json_build_object('line1', p.address_line1, 'line2', p.address_line2, 'city', p.city, 'regionCode', p.region_code,
         'postalCode', p.postal_code, 'country', p.country) as address,
       ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng,

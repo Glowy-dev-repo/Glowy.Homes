@@ -51,8 +51,10 @@ describe("routing scenarios", () => {
     });
   }
 
-  it("rental inquiries go straight to the listing owner", () => {
+  it("leads on owner posted listings go straight to the owner", () => {
     expect(route([pro("a")], { leadType: "rental_inquiry", listingOwnerProId: "owner" }).assign).toBe("owner");
+    expect(route([pro("a")], { leadType: "tour", listingOwnerProId: "owner" }).assign).toBe("owner");
+    expect(route([pro("a")], { leadType: "sell", listingOwnerProId: "owner" }).assign).toBe("a");
   });
 
   it("explains why nothing was assigned", () => {

@@ -93,7 +93,7 @@ export function FilterFields({ draft, onChange, sections }: Props) {
                 type="button"
                 aria-pressed={draft.type === t}
                 onClick={() =>
-                  onChange({ type: t, status: ["active"], priceMin: undefined, priceMax: undefined, pets: undefined, furnished: undefined, availableBy: undefined })
+                  onChange({ type: t, status: ["active"], priceMin: undefined, priceMax: undefined, pets: undefined, furnished: undefined, laundry: undefined, parking: undefined, availableBy: undefined })
                 }
                 className={cn(
                   "min-h-11 rounded-md border text-body font-medium",
@@ -272,6 +272,12 @@ export function FilterFields({ draft, onChange, sections }: Props) {
           </Check>
           <Check checked={draft.furnished === true} onChange={(on) => onChange({ furnished: on ? true : undefined })}>
             Furnished
+          </Check>
+          <Check checked={draft.laundry === true} onChange={(on) => onChange({ laundry: on ? true : undefined })}>
+            In suite laundry
+          </Check>
+          <Check checked={draft.parking === true} onChange={(on) => onChange({ parking: on ? true : undefined })}>
+            Parking included
           </Check>
           <label htmlFor={`${id}-avail`} className="mb-1 mt-3 block text-small text-neutral-600">Available by</label>
           <Input

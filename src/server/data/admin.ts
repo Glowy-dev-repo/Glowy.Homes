@@ -99,14 +99,11 @@ export async function moderationQueue(): Promise<ModerationRow[]> {
         when 'review' then (select coalesce(rv.body, '') from pro_reviews rv where rv.id = m.item_id)
         when 'listing' then (select left(coalesce(l.description, ''), 240) from listings l where l.id = m.item_id)
       end as detail,
-      case when jsonb_array_length(coalesce(checks.failed, '[]'::jsonb)) > 0 then 'high' else 'low' end as priority,
-      coalesce(array(select jsonb_array_elements_text(checks.failed)), '{}') as "failedChecks"
+      case when jsonb_array_length(m.failed_checks) > 0 then 'high' else 'low' end as priority,
+      coalesce(array(select jsonb_array_elements_text(m.failed_checks)), '{}') as "failedChecks"
     from moderation_items m
-    left join lateral (
-      select l.features -> '_moderation' -> 'failed' as failed from listings l where l.id = m.item_id and m.item_type = 'listing'
-    ) checks on true
     where m.status = 'open'
-    order by (jsonb_array_length(coalesce(checks.failed, '[]'::jsonb)) > 0) desc, m.created_at`;
+    order by (jsonb_array_length(m.failed_checks) > 0) desc, m.created_at`;
 }
 
 export async function recomputeProRating(proId: string) {

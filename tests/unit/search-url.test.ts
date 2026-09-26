@@ -24,6 +24,8 @@ describe("search URL codec", () => {
       keywords: "balcony",
       pets: true,
       furnished: false,
+      laundry: true,
+      parking: true,
       availableBy: "2026-11-01",
       sort: "price_asc",
       page: 3,

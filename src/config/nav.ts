@@ -46,6 +46,7 @@ export const accountNav: NavLink[] = [
   { label: "Saved homes", href: "/account" },
   { label: "Saved searches", href: "/account/searches" },
   { label: "Tours and inquiries", href: "/account/inquiries" },
+  { label: "Rental applications", href: "/account/applications" },
   { label: "My homes", href: "/account/homes" },
   { label: "Settings", href: "/account/settings" },
 ];
