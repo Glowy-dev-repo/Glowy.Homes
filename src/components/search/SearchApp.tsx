@@ -10,6 +10,7 @@ import type { SearchResult } from "@/types/search";
 import { FilterBar, clearedFilters } from "./FilterBar";
 import type { Bounds } from "./MapView";
 import { ResultsList } from "./ResultsList";
+import { SaveSearchButton } from "./SaveSearchButton";
 import { SearchBar } from "./SearchBar";
 import { HoverProvider, useHover, useSearchState } from "./search-state";
 
@@ -89,6 +90,7 @@ function SearchAppInner({
         onApply={(next) => setParams({ ...next, page: 1 })}
         mobileView={mobileView}
         onMobileViewChange={setMobileView}
+        saveSearchSlot={<SaveSearchButton params={params} defaultName={title} />}
       />
       <div className="lg:grid lg:grid-cols-[55fr_45fr]">
         <div className={mobileView === "map" && isDesktop === false ? "hidden" : ""}>
@@ -103,6 +105,9 @@ function SearchAppInner({
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             onClearFilters={() => setParams({ ...params, ...clearedFilters(params), page: 1 })}
+            saveSearchSlot={
+              <SaveSearchButton params={params} defaultName={title} variant="primary" label="Save this search to get alerts" resumeIntent={false} />
+            }
           />
         </div>
         {showMap && (

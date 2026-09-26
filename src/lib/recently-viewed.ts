@@ -34,6 +34,17 @@ export function recordRecentlyViewed(listing: ListingSummary) {
   }
 }
 
+/** Replaces the local list, e.g. with the account's list after a sync. */
+export function writeRecentlyViewed(items: RecentItem[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(items.slice(0, MAX)));
+    window.dispatchEvent(new Event(EVENT));
+  } catch {
+    // Storage unavailable.
+  }
+}
+
 export function subscribeRecentlyViewed(callback: () => void): () => void {
   window.addEventListener(EVENT, callback);
   window.addEventListener("storage", callback);

@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard, ListingCardSkeleton } from "@/components/listing/ListingCard";
+import { SaveButton } from "@/components/listing/saved-homes";
 import { Button } from "@/components/ui/button";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -82,7 +83,13 @@ export function ResultsList({
           <ul className={cn("grid gap-4 transition-opacity sm:grid-cols-2", loading && "opacity-60")} aria-busy={loading}>
             {result!.items.map((item, i) => (
               <li key={item.id}>
-                <ListingCard listing={item} highlighted={hoveredId === item.id} onHoverChange={setHoveredId} priority={i < 2} />
+                <ListingCard
+                  listing={item}
+                  highlighted={hoveredId === item.id}
+                  onHoverChange={setHoveredId}
+                  priority={i < 2}
+                  action={<SaveButton listingId={item.id} />}
+                />
               </li>
             ))}
           </ul>

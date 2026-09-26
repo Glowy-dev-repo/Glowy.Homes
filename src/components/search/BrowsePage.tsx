@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/listing/ListingCard";
+import { SaveButton } from "@/components/listing/saved-homes";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { formatNumber } from "@/lib/format";
@@ -107,7 +108,7 @@ export async function BrowsePage(props: Props) {
           <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {result.items.map((item, i) => (
               <li key={item.id}>
-                <ListingCard listing={item} priority={i < 2} />
+                <ListingCard listing={item} priority={i < 2} action={<SaveButton listingId={item.id} />} />
               </li>
             ))}
           </ul>

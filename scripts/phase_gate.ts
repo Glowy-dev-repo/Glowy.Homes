@@ -135,6 +135,30 @@ async function citySeo(ctx: Ctx) {
   return { ok: scores.seo === 100, note: `SEO ${scores.seo}${failing.length ? `, failing: ${failing.join(", ")}` : ""}` };
 }
 
+/** Phase 2 criterion 1: LDP Lighthouse mobile performance at least 90 and accessibility at least 95. */
+async function ldpLighthouse(ctx: Ctx) {
+  const sql = postgres(process.env.DATABASE_URL ?? "", { max: 1, onnotice: () => {} });
+  const [row] = await sql<{ id: string }[]>`
+    select id from listings where listing_type = 'sale' and status = 'active' order by list_date desc, id limit 1`;
+  await sql.end();
+  // The bare id route redirects to the canonical slug, which Lighthouse follows.
+  const res = await fetch(`${ctx.baseUrl}/listing/${row.id}`, { redirect: "manual" });
+  const url = new URL(res.headers.get("location") ?? `/listing/${row.id}`, ctx.baseUrl).toString();
+  await fetch(url); // warm the ISR cache so the audit measures the cached page
+  const { runLighthouse } = await import("./lib/lighthouse");
+  const { scores, failing } = await runLighthouse(url, ["performance", "accessibility"]);
+  return {
+    ok: scores.performance >= 90 && scores.accessibility >= 95,
+    note: `perf ${scores.performance}, a11y ${scores.accessibility}${failing.length ? `, failing: ${failing.join(", ")}` : ""}`,
+  };
+}
+
+/** Phase 2 criterion 5: similar homes coverage across all active listings. */
+async function similarCoverage() {
+  const { ok, output } = await run("npx tsx tests/perf/similar.ts");
+  return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("similar")).at(-1) };
+}
+
 type Ctx = { baseUrl: string };
 type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
 
@@ -145,6 +169,10 @@ const PHASE_CHECKS: Record<number, Check[]> = {
     { name: "ingest replay is idempotent", fn: ingestIdempotent },
     { name: "search p95 under 300ms", fn: searchPerf },
     { name: "Lighthouse SEO 100 on /homes/toronto", fn: citySeo },
+  ],
+  2: [
+    { name: "LDP Lighthouse perf 90 and a11y 95", fn: ldpLighthouse },
+    { name: "similar homes for 95% of active listings", fn: similarCoverage },
   ],
 };
 

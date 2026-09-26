@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 declare global {
-  var __glowyPg: postgres.Sql | undefined;
+  var __glowyPg: { orm: postgres.Sql; raw: postgres.Sql } | undefined;
 }
 
 function connectionString(): string {
@@ -12,12 +12,17 @@ function connectionString(): string {
   return url;
 }
 
-// Reuse one pool across hot reloads in dev so connections do not pile up.
-const client =
-  globalThis.__glowyPg ??
-  postgres(connectionString(), { max: process.env.NODE_ENV === "production" ? 5 : 10 });
-if (process.env.NODE_ENV !== "production") globalThis.__glowyPg = client;
+// Two pools on purpose: drizzle replaces its client's json serializers with a pass through
+// (it stringifies itself), which would break sql.json() in raw queries sharing that client.
+// Reused across hot reloads in dev so connections do not pile up.
+const prod = process.env.NODE_ENV === "production";
+const clients = globalThis.__glowyPg ?? {
+  orm: postgres(connectionString(), { max: prod ? 4 : 5 }),
+  raw: postgres(connectionString(), { max: prod ? 6 : 8, onnotice: () => {} }),
+};
+if (!prod) globalThis.__glowyPg = clients;
 
-export const db = drizzle(client, { schema });
-export const sqlClient = client;
+export const db = drizzle(clients.orm, { schema });
+/** Raw postgres.js client for PostGIS and bulk queries; sql.json() works as documented here. */
+export const sqlClient = clients.raw;
 export { schema };

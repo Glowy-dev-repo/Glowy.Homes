@@ -37,7 +37,7 @@ export const CITY_DEFS: CityDef[] = [
     annualGrowth: 0.035,
     neighborhoods: 20,
     fsa: ["M4C", "M4E", "M4K", "M4L", "M4M", "M5A", "M5V", "M6G", "M6H", "M6J", "M6K", "M6P", "M6R", "M8V", "M8W", "M9A", "M9B", "M1B", "M1E", "M1K", "M2N", "M3H", "M4R", "M5R"],
-    typeMix: { condo: 44, detached: 25, semi: 12, townhouse: 13, multi: 5.5, land: 0.5 },
+    typeMix: { condo: 45, detached: 26, semi: 12, townhouse: 13.5, multi: 2, land: 0.1 },
     timezone: "America/Toronto",
   },
   {
@@ -53,7 +53,7 @@ export const CITY_DEFS: CityDef[] = [
     annualGrowth: 0.03,
     neighborhoods: 16,
     fsa: ["L4T", "L4W", "L4X", "L4Y", "L4Z", "L5A", "L5B", "L5C", "L5E", "L5G", "L5H", "L5J", "L5K", "L5L", "L5M", "L5N", "L5R", "L5V", "L5W"],
-    typeMix: { condo: 30, detached: 35, semi: 15, townhouse: 18, multi: 1.5, land: 0.5 },
+    typeMix: { condo: 30, detached: 35, semi: 15, townhouse: 18, multi: 1.5, land: 0.1 },
     timezone: "America/Toronto",
   },
   {
@@ -70,7 +70,7 @@ export const CITY_DEFS: CityDef[] = [
     annualGrowth: 0.028,
     neighborhoods: 18,
     fsa: ["K1G", "K1H", "K1K", "K1L", "K1M", "K1N", "K1R", "K1S", "K1V", "K1Y", "K1Z", "K2A", "K2B", "K2C", "K2E", "K2G", "K2H", "K2J"],
-    typeMix: { condo: 22, detached: 40, semi: 10, townhouse: 25, multi: 2.5, land: 0.5 },
+    typeMix: { condo: 22, detached: 40, semi: 10, townhouse: 25, multi: 2, land: 0.1 },
     timezone: "America/Toronto",
   },
   {
@@ -86,7 +86,7 @@ export const CITY_DEFS: CityDef[] = [
     annualGrowth: 0.025,
     neighborhoods: 14,
     fsa: ["L8E", "L8G", "L8H", "L8K", "L8L", "L8M", "L8N", "L8P", "L8R", "L8S", "L8T", "L8V", "L8W", "L9A", "L9B", "L9C", "L9G", "L9H", "L9K"],
-    typeMix: { condo: 15, detached: 55, semi: 10, townhouse: 15, multi: 4.5, land: 0.5 },
+    typeMix: { condo: 15, detached: 56, semi: 10, townhouse: 15.5, multi: 2, land: 0.1 },
     timezone: "America/Toronto",
   },
   {
@@ -102,7 +102,7 @@ export const CITY_DEFS: CityDef[] = [
     annualGrowth: 0.022,
     neighborhoods: 12,
     fsa: ["N5V", "N5W", "N5X", "N5Y", "N5Z", "N6A", "N6B", "N6C", "N6E", "N6G", "N6H", "N6J", "N6K", "N6L", "N6M", "N6P"],
-    typeMix: { condo: 18, detached: 55, semi: 7, townhouse: 17, multi: 2.5, land: 0.5 },
+    typeMix: { condo: 18, detached: 55, semi: 7, townhouse: 17, multi: 2, land: 0.1 },
     timezone: "America/Toronto",
   },
 ];

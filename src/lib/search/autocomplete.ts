@@ -5,10 +5,11 @@ import { allRegions } from "./regions";
 
 // /api/autocomplete (docs/02 section 5, docs/04 SearchBar): grouped Places, Addresses, Listing IDs; max 8.
 
+/** point is [lng, lat], used by the commute estimate. */
 export type Suggestion =
-  | { group: "places"; label: string; sublabel: string; href: string; type: "city" | "neighborhood" }
-  | { group: "addresses"; label: string; sublabel: string; href: string }
-  | { group: "listings"; label: string; sublabel: string; href: string };
+  | { group: "places"; label: string; sublabel: string; href: string; type: "city" | "neighborhood"; point?: [number, number] }
+  | { group: "addresses"; label: string; sublabel: string; href: string; point?: [number, number] }
+  | { group: "listings"; label: string; sublabel: string; href: string; point?: [number, number] };
 
 const MAX = 8;
 
@@ -28,6 +29,7 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
       label: r.name,
       sublabel: r.type === "city" ? "City" : `Neighbourhood in ${r.parentName}`,
       href: r.type === "city" ? `/${browse}/${r.slug}` : `/homes/${r.parentSlug}/${r.slug}`,
+      point: r.bbox ? ([(r.bbox[0] + r.bbox[2]) / 2, (r.bbox[1] + r.bbox[3]) / 2] as [number, number]) : undefined,
     }));
 
   const listingIds: Suggestion[] = /^gh\d{2,}/i.test(query)
@@ -47,8 +49,9 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
 
   const addresses: Suggestion[] = /\d/.test(query)
     ? (
-        await sqlClient<{ property_id: string; listing_id: string | null; line1: string; line2: string | null; city: string }[]>`
+        await sqlClient<{ property_id: string; listing_id: string | null; line1: string; line2: string | null; city: string; lng: number; lat: number }[]>`
           select p.id as property_id, p.address_line1 as line1, p.address_line2 as line2, p.city,
+            ST_X(p.location::geometry) as lng, ST_Y(p.location::geometry) as lat,
             (select l.id from listings l where l.property_id = p.id order by (l.status = 'active') desc, l.list_date desc limit 1) as listing_id
           from properties p
           where p.address_normalized like ${`${normalizeStreet(query)}%`}
@@ -60,6 +63,7 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
           label: [r.line2, r.line1].filter(Boolean).join(", "),
           sublabel: r.city,
           href: r.listing_id ? `/listing/${r.listing_id}/${slug}` : `/home-value/${r.property_id}/${slug}`,
+          point: [r.lng, r.lat] as [number, number],
         };
       })
     : [];

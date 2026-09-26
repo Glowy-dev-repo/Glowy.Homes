@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 0 Foundation | BLOCKED | 2026-09-26 | Gate green. Criteria 1 to 4 pass. Criterion 5 (preview URL) waits on the deploy decision, see BLOCKED. |
 | 1 Data and search | DONE | 2026-09-26 | All 7 criteria pass: 50,000 listings, idempotent ingest, search p95 75ms, map drag under 500ms, filters survive reload, city page SEO 100, clusters above 200. |
-| 2 LDP and accounts | NOT STARTED | | |
+| 2 LDP and accounts | DONE | 2026-09-26 | All 5 criteria pass: LDP Lighthouse mobile perf 95 and a11y 100, facts in server HTML, save intent survives sign in, saved search round trip verified in the database, similar homes 95.8%. |
 | 3 Valuation | NOT STARTED | | |
 | 4 Leads and pros | NOT STARTED | | |
 | 5 Rentals and user listings | NOT STARTED | | |
@@ -52,6 +52,20 @@
 38. Phase 1: docs/04 does not place a search box on the search page; a SearchBar sits above the filter chips.
 39. Phase 1: Feed listings link to a pro when the feed agent's licence number matches a pro's licence number.
 40. Phase 1: The ui-ux-pro-max review items applied to search: 44px targets, visible focus, labelled controls, skeletons while loading, empty state with recovery actions, reduced motion respected.
+41. Phase 2: Synthetic data was made more realistic so similar homes behave like a real market: each neighbourhood has its own home type mix, rental share, typical home size and construction era; rentals are mostly condos; multi unit homes are about 2% and vacant land 0.1% of listings. Similar homes coverage is 95.8% with seed 42 and 95.3% with seed 7. The criterion script itself was not changed.
+42. Phase 2: When fewer than 6 homes meet the strict similar rule (same type, 3 km, 20% of price), the section is filled from a wider ring (15 km, 40% of price) and the API marks which results are strict.
+43. Phase 2: Until the Phase 4 lead forms exist, "Request a tour" and "Contact agent" on the listing page scroll to the listing agent card, which shows the agent's phone number.
+44. Phase 2: The estimate card shows the docs/04 "not enough recent sales" state until Phase 3 computes valuations. The monthly payment on the card is a range (rate plus or minus half a point) with a Medium confidence label and its own disclaimer.
+45. Phase 2: There is no licensed school or walkability data, so the neighbourhood section shows local density (homes within 1 km) and says school information is not available yet. The commute input is a straight line estimate with a time range, a Low confidence label and a disclaimer, using our own autocomplete for destinations.
+46. Phase 2: Tax history shows the annual tax the feed provides; there is no multi year tax data yet.
+47. Phase 2: The mortgage calculator uses Canadian semi annual compounding, a default 4.79% rate, standard mortgage default insurance premiums below 20% down (none at $1.5M and above) and the Canadian minimum down payment rules. Down payment, rate, amortization and insurance persist in local storage; price, tax and fees come from each listing.
+48. Phase 2: Intent survives sign in through the return URL: `?save=<listingId>` completes a save, and `?saveSearch=1` reopens the save search dialog.
+49. Phase 2: Recently viewed stays in local storage and, for signed in users, is pushed to and pulled from the database so it follows the user across devices.
+50. Phase 2: Saved searches store the SearchParams filters without the page number; a drawn polygon is also stored in the `boundary` column. Each user can keep up to 50.
+51. Phase 2: Drizzle and raw SQL use separate connection pools, because Drizzle replaces its client's JSON serializers and that broke `sql.json()` in raw queries.
+52. Phase 2: Server action forms echo submitted values back, because React 19 resets uncontrolled fields after an action.
+53. Phase 2: "Tours and inquiries" and "My homes" in the account area are empty states until Phases 4 and 3 fill them.
+54. Phase 2: Listing pages render on first request and are cached (ISR, hourly); each has its own Open Graph image. First load JavaScript is 257 KB on the listing page and 276 KB on search, to be brought under 250 KB in Phase 6.
 
 ## BLOCKED
 
@@ -68,3 +82,4 @@
 
 - 2026-09-26, Phase 0: Scaffolded Next.js 15.5 (TypeScript strict, Tailwind v4, shadcn style primitives, ESLint, Prettier). Brand sync script and generated brand files. Drizzle schema for 23 tables with PostGIS and pg_trgm, migrations verified on an empty database. Auth.js with magic link (log transport in dev) and Google, roles, protected routes. Inngest client and hello job, verified against the Inngest dev server. R2 client and presigned upload route. Header, Footer, MobileNav and home page shell. Sentry wiring and security headers. Phase gate script. Gate result: PASS (lint, typecheck, 22 unit tests, build, 14 e2e tests, migrations on empty database). Next: Phase 1, data and search.
 - 2026-09-26, Phase 1: Deterministic synthetic market (5 cities, 80 neighbourhoods, 50,000 properties and listings, 200 pros, 20 consumers, 1 admin) seeded in about 80 seconds through the real ingestion path. Ingestion with address normalization, owner override rules, price history diffing, media diffing and feed run stats; Inngest functions for ingest_feed, process_media and refresh_region_stats. Search API with clusters and pins, autocomplete, rate limiting and caching. Search page with SearchBar, FilterBar (chips and mobile sheet), MapLibre map with hover sync, results list with sort, pagination and empty state. City, neighbourhood and rental browse pages with stats, internal links, map preview and breadcrumb JSON LD. Recently viewed. Render blueprint and health check. Gate result: PASS (47 unit tests, 50 e2e tests, seed count, idempotent replay, search p95 75ms, SEO 100). Next: Phase 2, listing detail and accounts.
+- 2026-09-26, Phase 2: Listing detail page with all 14 sections in the docs/01 order (gallery with full screen viewer, price block, actions, estimate card, key facts, description, facts and features, price history, tax history, monthly cost calculator, neighbourhood with commute estimate, similar homes, agent attribution, mobile sticky bar), RealEstateListing JSON LD and per listing Open Graph image. Saved homes with optimistic toggles and intent preserved through sign in; saved searches with create, edit frequency and delete; recently viewed synced to the account; account area with settings and notification preferences. Fixed a sideways scroll bug on the account page on phones and added a regression test for it. Gate result: PASS (57 unit tests, 68 e2e tests, LDP perf 95 and a11y 100, similar homes 95.8%). Next: Phase 3, valuation and the owner loop.

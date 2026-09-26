@@ -1,3 +1,5 @@
+import { mkdirSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
@@ -9,9 +11,13 @@ export type LighthouseScores = { performance: number; accessibility: number; seo
  * using Playwright's Chromium, so no system Chrome is needed. Scores are 0 to 100.
  */
 export async function runLighthouse(url: string, categories = ["performance", "accessibility", "seo", "best-practices"]) {
+  // Own profile dir: chrome-launcher's temp dir cleanup fails on Windows while Chrome still holds files.
+  const userDataDir = resolve(process.cwd(), ".gate", `lighthouse-${process.pid}-${Date.now()}`);
+  mkdirSync(userDataDir, { recursive: true });
   const chrome = await chromeLauncher.launch({
     chromePath: chromium.executablePath(),
     chromeFlags: ["--headless=new", "--no-sandbox", "--disable-gpu"],
+    userDataDir,
   });
   try {
     const result = await lighthouse(url, { port: chrome.port, output: "json", logLevel: "error", onlyCategories: categories });
@@ -26,7 +32,12 @@ export async function runLighthouse(url: string, categories = ["performance", "a
       failing,
     };
   } finally {
-    await chrome.kill();
+    try {
+      chrome.kill();
+    } catch {
+      // Process already gone.
+    }
+    setTimeout(() => rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5 }), 1000).unref();
   }
 }
 

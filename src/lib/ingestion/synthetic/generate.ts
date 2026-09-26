@@ -42,7 +42,21 @@ const planar2 = (a: Pt, b: Pt) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
 // ---------- types ----------
 
-export type NeighborhoodSeed = { name: string; slug: string; point: Pt; factor: number; fsa: string };
+export type NeighborhoodSeed = {
+  name: string;
+  slug: string;
+  point: Pt;
+  factor: number;
+  fsa: string;
+  /** Local housing mix: real neighbourhoods skew heavily toward a few home types. */
+  typeMix: Partial<Record<PropertyType, number>>;
+  /** Local share of rentals relative to the city (dense cores rent more). */
+  rentFactor: number;
+  /** Typical home size relative to the city norm. */
+  sizeScale: number;
+  /** Year most houses here were built. */
+  era: number;
+};
 
 type Building = { line1: string; point: Pt; floors: number; yearBuilt: number; units: Set<number>; postal: string };
 
@@ -119,12 +133,20 @@ function buildCity(rng: Rng, def: CityDef): SyntheticCity {
     while (names.has(name));
     names.add(name);
     const central = 1 + 0.3 * Math.exp(-distanceKm(point, def.center) / 5);
+    const typeMix = Object.fromEntries(
+      Object.entries(def.typeMix).map(([t, w]) => [t, (w as number) * rng.lognormal(1.3)]),
+    ) as Partial<Record<PropertyType, number>>;
     return {
       name,
       slug: slugify(name),
       point,
-      factor: clamp(rng.lognormal(0.14) * central, 0.6, 1.9),
+      factor: clamp(rng.lognormal(0.1) * central, 0.6, 1.9),
       fsa: def.fsa[i % def.fsa.length],
+      typeMix,
+      rentFactor: clamp(rng.lognormal(0.6) * (0.7 + 0.6 * Math.exp(-distanceKm(point, def.center) / 6)), 0.2, 4),
+      sizeScale: clamp(rng.lognormal(0.2), 0.65, 1.5),
+      // Older cores near the centre, newer suburbs further out.
+      era: Math.round(clamp(1915 + distanceKm(point, def.center) * 6 + rng.normal(0, 15), 1900, 2020)),
     };
   });
 
@@ -161,10 +183,10 @@ function nearestHood(city: SyntheticCity, p: Pt): NeighborhoodSeed {
 
 function samplePoint(rng: Rng, city: SyntheticCity): Pt {
   const box = bbox(city.boundary);
-  const spread = 0.35 * Math.sqrt(((box.maxX - box.minX) * (box.maxY - box.minY)) / city.hoods.length);
+  const spread = 0.22 * Math.sqrt(((box.maxX - box.minX) * (box.maxY - box.minY)) / city.hoods.length);
   for (;;) {
     let p: Pt;
-    if (rng.bool(0.6)) {
+    if (rng.bool(0.85)) {
       const h = rng.pick(city.hoods);
       p = [rng.normal(h.point[0], spread), rng.normal(h.point[1], spread * 0.75)];
     } else {
@@ -235,50 +257,56 @@ type Draft = {
   rng: Rng;
 };
 
-function houseSize(rng: Rng, type: PropertyType) {
+/**
+ * Home size by type. Each neighbourhood has its own typical size (hood.sizeScale), and homes
+ * vary around it less than they vary across the city, as in real subdivisions.
+ */
+function houseSize(rng: Rng, type: PropertyType, hood: NeighborhoodSeed) {
+  const s = hood.sizeScale;
   switch (type) {
     case "condo": {
-      const sqft = Math.round(clamp(rng.normal(760, 230), 380, 2200));
+      const sqft = Math.round(clamp(rng.normal(760 * s, 160), 380, 2200));
       return { sqft, beds: sqft < 560 ? 1 : sqft < 900 ? 2 : 3, baths: sqft < 800 ? 1 : 2, lot: undefined };
     }
     case "detached": {
-      const sqft = Math.round(clamp(rng.normal(2100, 700), 900, 6500));
+      const sqft = Math.round(clamp(rng.normal(2100 * s, 2100 * s * 0.16), 900, 6500));
       return {
         sqft,
         beds: clamp(Math.round(sqft / 550), 2, 7),
         baths: clamp(Math.round((sqft / 700) * 2) / 2, 1, 6),
-        lot: Math.round(clamp(rng.normal(4500, 1800), 2000, 20000)),
+        lot: Math.round(clamp(rng.normal(4500 * s, 900), 2000, 20000)),
       };
     }
     case "semi": {
-      const sqft = Math.round(clamp(rng.normal(1500, 380), 800, 3200));
-      return { sqft, beds: clamp(Math.round(sqft / 500), 2, 5), baths: clamp(Math.round((sqft / 650) * 2) / 2, 1, 4), lot: rng.int(2400, 4600) };
+      const sqft = Math.round(clamp(rng.normal(1500 * s, 1500 * s * 0.14), 800, 3200));
+      return { sqft, beds: clamp(Math.round(sqft / 500), 2, 5), baths: clamp(Math.round((sqft / 650) * 2) / 2, 1, 4), lot: rng.int(2600, 4200) };
     }
     case "townhouse": {
-      const sqft = Math.round(clamp(rng.normal(1450, 350), 800, 3000));
+      const sqft = Math.round(clamp(rng.normal(1450 * s, 1450 * s * 0.14), 800, 3000));
       return { sqft, beds: clamp(Math.round(sqft / 500), 2, 4), baths: clamp(Math.round((sqft / 600) * 2) / 2, 1.5, 4), lot: rng.bool(0.5) ? rng.int(1500, 3000) : undefined };
     }
     case "multi": {
-      const sqft = Math.round(clamp(rng.normal(2800, 800), 1500, 6000));
-      return { sqft, beds: clamp(Math.round(sqft / 450), 3, 10), baths: clamp(Math.round(sqft / 700), 2, 6), lot: rng.int(3000, 8000) };
+      const sqft = Math.round(clamp(rng.normal(2800 * s, 2800 * s * 0.16), 1500, 6000));
+      return { sqft, beds: clamp(Math.round(sqft / 450), 3, 10), baths: clamp(Math.round(sqft / 700), 2, 6), lot: rng.int(3500, 7000) };
     }
     default:
       return { sqft: undefined, beds: undefined, baths: undefined, lot: rng.int(4000, 40000) };
   }
 }
 
-function yearBuilt(rng: Rng, type: PropertyType): number | undefined {
+/** Houses in a neighbourhood were mostly built in the same era; condos get their building's year. */
+function yearBuilt(rng: Rng, type: PropertyType, hood: NeighborhoodSeed): number | undefined {
   if (type === "land") return undefined;
   if (type === "condo") return Math.round(1965 + 60 * Math.sqrt(rng.next()));
-  if (type === "townhouse") return Math.round(1970 + 55 * Math.sqrt(rng.next()));
-  return Math.round(1900 + 125 * Math.pow(rng.next(), 0.8));
+  const year = Math.round(clamp(rng.normal(hood.era, 9), 1880, 2025));
+  return type === "townhouse" ? Math.max(1965, year) : year;
 }
 
 function draftProperty(rng: Rng, city: SyntheticCity): Draft {
-  const type = rng.weighted(city.typeMix as Record<PropertyType, number>);
   let point = samplePoint(rng, city);
   const hood = nearestHood(city, point);
-  const size = houseSize(rng, type);
+  const type = rng.weighted(hood.typeMix as Record<PropertyType, number>);
+  const size = houseSize(rng, type, hood);
 
   if (type === "condo") {
     const list = city.buildings.get(hood.slug) ?? [];
@@ -292,7 +320,7 @@ function draftProperty(rng: Rng, city: SyntheticCity): Draft {
       do line1 = `${rng.int(1, 400)} ${street.name}`;
       while (city.usedAddresses.has(line1));
       city.usedAddresses.add(line1);
-      b = { line1, point, floors: rng.int(6, 48), yearBuilt: yearBuilt(rng, "condo")!, units: new Set(), postal: `${hood.fsa} ${street.ldu}` };
+      b = { line1, point, floors: rng.int(6, 48), yearBuilt: yearBuilt(rng, "condo", hood)!, units: new Set(), postal: `${hood.fsa} ${street.ldu}` };
       list.push(b);
     }
     let unit: number;
@@ -318,7 +346,7 @@ function draftProperty(rng: Rng, city: SyntheticCity): Draft {
 
   return {
     city, hood, point, line1, postal: `${hood.fsa} ${street.ldu}`, type,
-    beds: size.beds, baths: size.baths, sqft: size.sqft, lotSqft: size.lot, yearBuilt: yearBuilt(rng, type),
+    beds: size.beds, baths: size.baths, sqft: size.sqft, lotSqft: size.lot, yearBuilt: yearBuilt(rng, type, hood),
     stories: type === "land" ? undefined : type === "detached" ? rng.int(1, 3) : 2,
     parking: type === "land" ? undefined : type === "detached" ? rng.int(1, 4) : rng.int(0, 2), rng,
   };
@@ -399,19 +427,19 @@ function buildListing(
     soldDate = addDays(asOf, -r.int(3, 730));
     listDate = addDays(soldDate, -dom);
     statusDate = soldDate;
-    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.03) * (listingType === "sale" ? 1.02 : 1), step);
+    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.02) * (listingType === "sale" ? 1.02 : 1), step);
     soldPrice = roundTo(priceOf(soldDate) * r.lognormal(listingType === "sale" ? 0.045 : 0.04), step);
     price = originalPrice;
   } else if (status === "pending") {
     const pendingAge = r.int(1, 30);
     statusDate = addDays(asOf, -pendingAge);
     listDate = addDays(statusDate, -dom);
-    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.03) * (listingType === "sale" ? 1.02 : 1), step);
+    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.02) * (listingType === "sale" ? 1.02 : 1), step);
     price = originalPrice;
   } else {
     listDate = addDays(asOf, -dom);
     statusDate = listDate;
-    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.03) * (listingType === "sale" ? 1.02 : 1), step);
+    originalPrice = roundTo(priceOf(listDate) * r.lognormal(0.02) * (listingType === "sale" ? 1.02 : 1), step);
     price = originalPrice;
   }
 
@@ -526,9 +554,13 @@ export function generateMarket(opts: { seed: number; total: number; asOf: Date }
   });
 
   // Exactly 30% rentals, weighted towards condos and multi unit homes.
-  const rentWeight: Record<PropertyType, number> = { condo: 3, multi: 2, townhouse: 1.6, semi: 1.3, detached: 0.6, land: 0, other: 1 };
+  // Ontario rentals are mostly condos; whole house rentals are comparatively rare.
+  const rentWeight: Record<PropertyType, number> = { condo: 4, multi: 0.4, townhouse: 1.3, semi: 0.6, detached: 0.12, land: 0, other: 1 };
   const pickRng = root.fork(400);
-  const keyed = drafts.map((d, i) => ({ i, key: rentWeight[d.type] === 0 ? -1 : Math.pow(pickRng.next(), 1 / rentWeight[d.type]) }));
+  const keyed = drafts.map((d, i) => {
+    const w = rentWeight[d.type] * d.hood.rentFactor;
+    return { i, key: w === 0 ? -1 : Math.pow(pickRng.next(), 1 / w) };
+  });
   keyed.sort((a, b) => b.key - a.key);
   const rentCount = Math.round(opts.total * 0.3);
   const isRent = new Set(keyed.slice(0, rentCount).map((k) => k.i));

@@ -11,6 +11,18 @@ async function apiTotal(page: Page, qs: string): Promise<number> {
   return ((await res.json()) as { data: { total: number } }).data.total;
 }
 
+/** A search with between 1 and 59 results (price label pins), found against the current seed. */
+async function smallSearch(page: Page): Promise<string> {
+  for (const city of ["london", "hamilton", "mississauga", "ottawa"]) {
+    for (const priceMax of [500000, 550000, 600000, 650000, 700000, 800000]) {
+      const qs = `city=${city}&propertyTypes=condo&bedsMin=2&priceMax=${priceMax}`;
+      const n = await apiTotal(page, qs);
+      if (n > 0 && n < 60) return qs;
+    }
+  }
+  throw new Error("No search with 1 to 59 results in the seed");
+}
+
 test.describe("map search", () => {
   test("dragging the map updates results and URL within 500ms", async ({ page, isMobile }) => {
     test.skip(isMobile, "desktop map interaction; mobile map is covered by the toggle test");
@@ -50,7 +62,7 @@ test.describe("map search", () => {
     expect(await countOf(page)).toBeGreaterThan(200);
     await expect(page.getByTestId("cluster").first()).toBeVisible();
 
-    await page.goto("/search?city=london&propertyTypes=condo&bedsMin=3&priceMax=650000");
+    await page.goto(`/search?${await smallSearch(page)}`);
     await expect(page.getByTestId("map")).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
     const n = await countOf(page);
     expect(n).toBeGreaterThan(0);
@@ -61,7 +73,7 @@ test.describe("map search", () => {
 
   test("hovering a card highlights its pin", async ({ page, isMobile }) => {
     test.skip(isMobile, "hover is a pointer interaction");
-    await page.goto("/search?city=london&propertyTypes=condo&bedsMin=3&priceMax=650000");
+    await page.goto(`/search?${await smallSearch(page)}`);
     await expect(page.getByTestId("map")).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
     const card = page.getByTestId("listing-card").first();
     const id = await card.getAttribute("data-listing-id");
