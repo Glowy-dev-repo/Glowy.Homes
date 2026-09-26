@@ -42,7 +42,7 @@ export function CommuteEstimator({ from }: { from: [number, number] }) {
         type="text"
         list={`${id}-list`}
         value={q}
-        placeholder="A neighbourhood, city or address"
+        placeholder="A neighborhood, city or address"
         onChange={(e) => {
           const value = e.target.value;
           setQ(value);

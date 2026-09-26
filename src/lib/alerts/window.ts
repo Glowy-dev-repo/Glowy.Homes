@@ -1,9 +1,11 @@
 // Frequency windows for saved search alerts (docs/03 section 6). Pure, so the "exactly once per
 // window" rule can be tested with a fixed clock.
 
+import { market } from "@/config/market";
+
 export type AlertFrequency = "instant" | "daily" | "weekly";
 
-export const ALERT_TIMEZONE = "America/Toronto";
+export const ALERT_TIMEZONE = market.timezone;
 export const INSTANT_WINDOW_MINUTES = 5;
 export const MAX_ALERT_CARDS = 10;
 

@@ -10,6 +10,7 @@ import type { LeadType } from "@/db/schema/leads";
 import { CONSENT_TEXT } from "@/lib/leads/schema";
 import { cn } from "@/lib/utils";
 import { Turnstile } from "./Turnstile";
+import { market } from "@/config/market";
 
 type Assigned = { name: string; photoUrl: string | null; brokerage: string | null } | null;
 
@@ -230,7 +231,7 @@ export function LeadForm({
               >
                 {days.map((d) => (
                   <option key={d} value={d}>
-                    {new Date(`${d}T12:00:00Z`).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+                    {new Date(`${d}T12:00:00Z`).toLocaleDateString(market.locale, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
                   </option>
                 ))}
               </select>

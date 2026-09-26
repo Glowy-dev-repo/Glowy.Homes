@@ -13,7 +13,7 @@ const base: NormalizedListing = {
   originalPrice: 950000,
   listDate: "2026-08-01",
   statusDate: "2026-09-01",
-  address: { line1: "12 Maple Ave", city: "Toronto", regionCode: "ON", postalCode: "M5V 1A1", country: "CA" },
+  address: { line1: "12 Maple Ave", city: "Los Angeles", regionCode: "ON", postalCode: "M5V 1A1", country: "CA" },
   location: { lat: 43.6, lng: -79.4 },
   propertyType: "detached",
   facts: {},
@@ -32,6 +32,12 @@ describe("address normalization", () => {
   it("formats Canadian postal codes", () => {
     expect(normalizePostalCode("m5v1a1")).toBe("M5V 1A1");
     expect(normalizePostalCode("M5V-1A1")).toBe("M5V 1A1");
+  });
+
+  it("formats US ZIP codes", () => {
+    expect(normalizePostalCode("94110")).toBe("94110");
+    expect(normalizePostalCode("941101234")).toBe("94110-1234");
+    expect(normalizePostalCode("94110-1234")).toBe("94110-1234");
     expect(normalizePostalCode("90210")).toBe("90210");
   });
 });

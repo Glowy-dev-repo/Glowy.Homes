@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
 // The type scale in tailwind.config.ts (text-body, text-h1 and so on) is custom. Without this,
-// tailwind-merge reads text-body as a text colour and drops text-white next to it.
+// tailwind-merge reads text-body as a text color and drops text-white next to it.
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {

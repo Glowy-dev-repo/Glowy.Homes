@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Providers } from "@/components/layout/Providers";
 import { brand } from "@/config/brand";
 import "./globals.css";
+import { market } from "@/config/market";
 
 // Self hosted so builds never depend on a font CDN.
 // Jost for text and interface, Bodoni Moda for headings (CLAUDE.md brand config).
@@ -42,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-CA" className={`${sans.variable} ${display.variable}`}>
+    <html lang={market.locale} className={`${sans.variable} ${display.variable}`}>
       <body className="flex min-h-dvh flex-col">
         <a
           href="#main"

@@ -2,14 +2,15 @@ import { z } from "zod";
 import { sqlClient } from "@/db";
 import { nightlyScope, refreshValuations, scoreRecentSales } from "@/lib/valuation/engine";
 import { inngest } from "../client";
+import { market } from "@/config/market";
 
-/** refresh_valuations (docs/03 section 3.3): nightly at 02:00 Toronto time, or for given properties. */
+/** refresh_valuations (docs/03 section 3.3): nightly at 02:00 market time, or for given properties. */
 export const refreshValuationsFn = inngest.createFunction(
   {
     id: "refresh-valuations",
     concurrency: { limit: 1 },
     retries: 2,
-    triggers: [{ cron: "TZ=America/Toronto 0 2 * * *" }, { event: "valuation/refresh.requested" }],
+    triggers: [{ cron: `TZ=${market.timezone} 0 2 * * *` }, { event: "valuation/refresh.requested" }],
   },
   async ({ event, step }) => {
     const ids = z.object({ propertyIds: z.array(z.string().uuid()).max(5000).optional() }).parse(event.data ?? {}).propertyIds;
@@ -27,7 +28,7 @@ export const refreshValuationsFn = inngest.createFunction(
 
 /** score_valuations (docs/03 section 3.4): nightly accuracy against the day's sales. */
 export const scoreValuationsFn = inngest.createFunction(
-  { id: "score-valuations", triggers: [{ cron: "TZ=America/Toronto 30 2 * * *" }] },
+  { id: "score-valuations", triggers: [{ cron: `TZ=${market.timezone} 30 2 * * *` }] },
   async ({ step }) => ({ scored: await step.run("score", () => scoreRecentSales(sqlClient)) }),
 );
 

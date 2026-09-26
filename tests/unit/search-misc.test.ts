@@ -29,22 +29,22 @@ describe("rate limiter", () => {
 });
 
 describe("formatting", () => {
-  it("formats CAD prices, rents and metric areas", () => {
+  it("formats USD prices, rents and areas in square feet", () => {
     expect(formatPrice(1249000)).toBe("$1,249,000");
     expect(formatPrice(3025, { listingType: "rent" })).toBe("$3,025/mo");
-    expect(formatArea(2150)).toBe("200 m²");
-    expect(toSqft(100)).toBe(1076);
+    expect(formatArea(2150)).toBe("2,150 sq ft");
+    expect(toSqft(100)).toBe(100);
     expect(listedAgo("2026-09-23", new Date("2026-09-26T15:00:00Z"))).toBe("Listed 3 days ago");
   });
 });
 
 describe("browse copy", () => {
   it("writes stats sentences without dashes", () => {
-    const text = browseSummary("Toronto", "sale", { listing_count: 7806, median_price: 1348000, median_dom: 17 });
+    const text = browseSummary("Los Angeles", "sale", { listing_count: 7806, median_price: 1348000, median_dom: 17 });
     expect(text).toBe(
-      "There are 7,806 homes for sale in Toronto. The median list price is $1,348,000. Homes here have typically been listed for 17 days.",
+      "There are 7,806 homes for sale in Los Angeles. The median list price is $1,348,000. Homes here have typically been listed for 17 days.",
     );
-    for (const s of [text, browseSummary("Ottawa", "rent", {}), ...quickLinks("Toronto", "sale").map((q) => q.label)]) {
+    for (const s of [text, browseSummary("San Jose", "rent", {}), ...quickLinks("Los Angeles", "sale").map((q) => q.label)]) {
       expect(s).not.toMatch(/[–—]| - /);
     }
   });

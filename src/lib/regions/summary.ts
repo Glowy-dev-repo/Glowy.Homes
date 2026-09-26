@@ -1,7 +1,7 @@
 import type postgres from "postgres";
 import { formatNumber, formatPrice } from "@/lib/format";
 
-// Neighbourhood summaries (docs/05 Phase 6 task 3), cached on regions.summary and regenerated
+// Neighborhood summaries (docs/05 Phase 6 task 3), cached on regions.summary and regenerated
 // weekly. They describe the housing stock and the market only: never people, schools, safety or
 // anything touching protected grounds (docs/06 fair housing). With an ANTHROPIC_API_KEY the LLM
 // rewrites the same facts into prose; the template below is the default and the fallback.
@@ -91,7 +91,7 @@ async function llmSummary(facts: SummaryFacts, apiKey: string): Promise<string |
       model: process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
       max_tokens: 300,
       system:
-        "Write a factual two to three sentence summary of a neighbourhood's housing market for a real estate site, using only the facts given. Describe homes and prices only. Never describe the people who live there, schools, safety, or who the area suits. Do not use dashes. Plain text, no headings.",
+        "Write a factual two to three sentence summary of a neighborhood's housing market for a real estate site, using only the facts given. Describe homes and prices only. Never describe the people who live there, schools, safety, or who the area suits. Do not use dashes. Plain text, no headings.",
       messages: [{ role: "user", content: JSON.stringify(facts) }],
     }),
   });

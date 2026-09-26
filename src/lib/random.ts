@@ -49,7 +49,7 @@ export class Rng {
     return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
 
-  /** Multiplicative noise centred on 1. */
+  /** Multiplicative noise centerd on 1. */
   lognormal(sd: number): number {
     return Math.exp(this.normal(0, sd));
   }

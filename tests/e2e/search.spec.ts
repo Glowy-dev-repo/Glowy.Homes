@@ -13,7 +13,7 @@ async function apiTotal(page: Page, qs: string): Promise<number> {
 
 /** A search with between 1 and 59 results (price label pins), found against the current seed. */
 async function smallSearch(page: Page): Promise<string> {
-  for (const city of ["london", "hamilton", "mississauga", "ottawa"]) {
+  for (const city of ["san-francisco", "sacramento", "san-diego", "san-jose"]) {
     for (const priceMax of [500000, 550000, 600000, 650000, 700000, 800000]) {
       const qs = `city=${city}&propertyTypes=condo&bedsMin=2&priceMax=${priceMax}`;
       const n = await apiTotal(page, qs);
@@ -26,7 +26,7 @@ async function smallSearch(page: Page): Promise<string> {
 test.describe("map search", () => {
   test("dragging the map updates results and URL within 500ms", async ({ page, isMobile }) => {
     test.skip(isMobile, "desktop map interaction; mobile map is covered by the toggle test");
-    await page.goto("/search?city=toronto");
+    await page.goto("/search?city=los-angeles");
     const map = page.getByTestId("map");
     await expect(map).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
     const before = await countOf(page);
@@ -52,12 +52,12 @@ test.describe("map search", () => {
     );
     const elapsed = Date.now() - released;
     expect(elapsed, `results and URL updated in ${elapsed}ms`).toBeLessThan(500);
-    expect(page.url()).not.toContain("city=toronto");
+    expect(page.url()).not.toContain("city=los-angeles");
   });
 
   test("clusters appear above 200 results and price pins below", async ({ page, isMobile }) => {
     test.skip(isMobile, "map shown on desktop by default");
-    await page.goto("/search?city=toronto");
+    await page.goto("/search?city=los-angeles");
     await expect(page.getByTestId("map")).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
     expect(await countOf(page)).toBeGreaterThan(200);
     await expect(page.getByTestId("cluster").first()).toBeVisible();
@@ -83,7 +83,7 @@ test.describe("map search", () => {
 
   test("mobile shows the list first and toggles to the map", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mobile layout");
-    await page.goto("/search?city=ottawa");
+    await page.goto("/search?city=san-jose");
     await expect(page.getByTestId("listing-card").first()).toBeVisible();
     await expect(page.getByTestId("map")).toHaveCount(0);
     await page.getByRole("button", { name: "Show map" }).click();
@@ -98,8 +98,8 @@ test.describe("filters", () => {
   const CASES: { name: string; qs: string; base?: string }[] = [
     { name: "q", qs: "q=Unit" },
     { name: "neighborhood", qs: "" },
-    { name: "bounds", qs: "bounds=-79.45,43.64,-79.35,43.7" },
-    { name: "polygon", qs: "polygon=-79.45 43.64;-79.35 43.64;-79.40 43.70" },
+    { name: "bounds", qs: "bounds=-118.35,34.03,-118.25,34.09" },
+    { name: "polygon", qs: "polygon=-118.35 34.03;-118.25 34.03;-118.30 34.09" },
     { name: "priceMin", qs: "priceMin=1000000" },
     { name: "priceMax", qs: "priceMax=900000" },
     { name: "bedsMin", qs: "bedsMin=4" },
@@ -111,24 +111,24 @@ test.describe("filters", () => {
     { name: "daysOnMarketMax", qs: "daysOnMarketMax=7" },
     { name: "keywords", qs: "keywords=fireplace" },
     { name: "status", qs: "status=sold" },
-    { name: "pets", qs: "pets=true", base: "type=rent&city=toronto" },
-    { name: "furnished", qs: "furnished=true", base: "type=rent&city=toronto" },
-    { name: "laundry", qs: "laundry=true", base: "type=rent&city=toronto" },
-    { name: "parking", qs: "parking=true", base: "type=rent&city=toronto" },
-    { name: "availableBy", qs: "availableBy=2026-10-05", base: "type=rent&city=toronto" },
+    { name: "pets", qs: "pets=true", base: "type=rent&city=los-angeles" },
+    { name: "furnished", qs: "furnished=true", base: "type=rent&city=los-angeles" },
+    { name: "laundry", qs: "laundry=true", base: "type=rent&city=los-angeles" },
+    { name: "parking", qs: "parking=true", base: "type=rent&city=los-angeles" },
+    { name: "availableBy", qs: "availableBy=2026-10-05", base: "type=rent&city=los-angeles" },
     { name: "type", qs: "type=rent" },
   ];
 
   for (const c of CASES) {
     test(`${c.name} changes results and survives reload`, async ({ page, isMobile }) => {
       test.skip(isMobile, "URL state is viewport independent; run once");
-      const base = c.base ?? "city=toronto";
+      const base = c.base ?? "city=los-angeles";
       let qs = `${base}&${c.qs}`;
       if (c.name === "neighborhood") {
-        // Pick a real Toronto neighbourhood from the city page's links.
-        const html = await (await page.request.get("/homes/toronto")).text();
-        const slug = html.match(/href="\/homes\/toronto\/([a-z0-9-]+)"/)![1];
-        qs = `city=toronto&neighborhood=${slug}`;
+        // Pick a real Los Angeles neighborhood from the city page's links.
+        const html = await (await page.request.get("/homes/los-angeles")).text();
+        const slug = html.match(/href="\/homes\/los-angeles\/([a-z0-9-]+)"/)![1];
+        qs = `city=los-angeles&neighborhood=${slug}`;
       }
       const baseline = await apiTotal(page, base);
       await page.goto(`/search?${qs}`);
@@ -144,9 +144,9 @@ test.describe("filters", () => {
 
   test("sort changes the order and survives reload", async ({ page, isMobile }) => {
     test.skip(isMobile, "run once");
-    await page.goto("/search?city=toronto&sort=price_desc");
+    await page.goto("/search?city=los-angeles&sort=price_desc");
     const first = await page.getByTestId("listing-card").first().getAttribute("data-listing-id");
-    await page.goto("/search?city=toronto&sort=price_asc");
+    await page.goto("/search?city=los-angeles&sort=price_asc");
     const cheapest = await page.getByTestId("listing-card").first().getAttribute("data-listing-id");
     expect(cheapest).not.toBe(first);
     await page.reload();
@@ -157,7 +157,7 @@ test.describe("filters", () => {
 
   test("desktop chips apply filters to the URL", async ({ page, isMobile }) => {
     test.skip(isMobile, "desktop chips");
-    await page.goto("/search?city=hamilton");
+    await page.goto("/search?city=sacramento");
     const before = await countOf(page);
     await page.getByRole("button", { name: "Beds" }).click();
     await page.getByRole("button", { name: "3+" }).click();
@@ -169,7 +169,7 @@ test.describe("filters", () => {
 
   test("mobile filter sheet shows a live count and applies", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mobile sheet");
-    await page.goto("/search?city=hamilton");
+    await page.goto("/search?city=sacramento");
     await page.getByRole("button", { name: /^Filters/ }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Condo").check();
@@ -180,7 +180,7 @@ test.describe("filters", () => {
   });
 
   test("no results shows the empty state with clear filters", async ({ page }) => {
-    await page.goto("/search?city=london&priceMin=5000000&propertyTypes=condo");
+    await page.goto("/search?city=san-francisco&priceMin=5000000&propertyTypes=condo");
     await expect(page.getByRole("heading", { name: "No homes match" })).toBeVisible();
     await page.getByRole("button", { name: "Clear filters" }).click();
     await expect(page).not.toHaveURL(/priceMin/);
@@ -191,40 +191,40 @@ test.describe("filters", () => {
 test.describe("autocomplete and browse", () => {
   test("autocomplete groups places and navigates to the browse page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("combobox").fill("Missis");
-    const option = page.getByRole("option", { name: /Mississauga/ });
+    await page.getByRole("combobox").fill("San Di");
+    const option = page.getByRole("option", { name: /San Diego/ });
     await expect(option).toBeVisible();
     await expect(page.getByRole("listbox")).toContainText("Places");
     await option.click();
-    await expect(page).toHaveURL(/\/homes\/mississauga$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Homes for sale in Mississauga");
+    await expect(page).toHaveURL(/\/homes\/san-diego$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Homes for sale in San Diego");
   });
 
   test("city page renders on the server with the right count, stats and 40 cards", async ({ page, request }) => {
-    const html = await (await request.get("/homes/toronto")).text();
-    const total = await apiTotal(page, "city=toronto");
-    expect(html).toContain("Homes for sale in Toronto");
-    expect(html).toContain(`${total.toLocaleString("en-CA")} homes for sale in Toronto`);
+    const html = await (await request.get("/homes/los-angeles")).text();
+    const total = await apiTotal(page, "city=los-angeles");
+    expect(html).toContain("Homes for sale in Los Angeles");
+    expect(html).toContain(`${total.toLocaleString("en-US")} homes for sale in Los Angeles`);
     expect(html).toMatch(/The median list price is \$[\d,]+/);
     expect(html.match(/data-testid="listing-card"/g)?.length).toBe(40);
-    expect(html).toContain('href="/homes/toronto/');
+    expect(html).toContain('href="/homes/los-angeles/');
     expect(html).toContain('"@type":"BreadcrumbList"');
   });
 
   test("neighborhood and rental browse pages render and link internally", async ({ page }) => {
-    await page.goto("/rentals/ottawa");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Rentals in Ottawa");
-    await page.getByRole("link", { name: "Homes for sale in Ottawa" }).click();
-    await expect(page).toHaveURL(/\/homes\/ottawa$/);
-    const hood = page.getByRole("navigation", { name: /Neighbourhoods in Ottawa/ }).getByRole("link").first();
+    await page.goto("/rentals/san-jose");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Rentals in San Jose");
+    await page.getByRole("link", { name: "Homes for sale in San Jose" }).click();
+    await expect(page).toHaveURL(/\/homes\/san-jose$/);
+    const hood = page.getByRole("navigation", { name: /Neighborhoods in San Jose/ }).getByRole("link").first();
     const name = (await hood.textContent())!;
     await hood.click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Homes for sale in ${name}, Ottawa`);
-    expect((await page.request.get("/homes/ottawa/not-a-place")).status()).toBe(404);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Homes for sale in ${name}, San Jose`);
+    expect((await page.request.get("/homes/san-jose/not-a-place")).status()).toBe(404);
   });
 
   test("recently viewed homes appear on the home page", async ({ page }) => {
-    await page.goto("/homes/london");
+    await page.goto("/homes/san-francisco");
     const card = page.getByTestId("listing-card").first();
     const address = (await card.getByRole("heading").textContent())!;
     await card.getByRole("link").click();

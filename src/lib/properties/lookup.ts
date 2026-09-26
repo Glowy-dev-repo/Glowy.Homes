@@ -1,4 +1,6 @@
 import type postgres from "postgres";
+import { brand } from "@/config/brand";
+import { market } from "@/config/market";
 import { configuredGeocoder, parseAddress, type Geocoder } from "@/lib/geocode";
 import { normalizeAddress, normalizePostalCode } from "@/lib/ingestion/address";
 import { addressSlug } from "@/lib/slug";
@@ -14,7 +16,7 @@ export type LookupResult =
 export async function lookupProperty(sql: postgres.Sql, input: string, geocoder: Geocoder = configuredGeocoder(sql)): Promise<LookupResult> {
   const parsed = parseAddress(input);
   if (!parsed) {
-    return { ok: false, reason: "unparseable", message: "Enter a street address with a house number, like 12 Maple Ave, Toronto." };
+    return { ok: false, reason: "unparseable", message: `Enter a street address with a house number, like 12 Maple Ave, ${brand.market.cities[0].name}.` };
   }
   const line1 = `${parsed.number} ${parsed.street}`;
   const normalized = normalizeAddress(line1, parsed.unit ? `Unit ${parsed.unit}` : null);
@@ -52,7 +54,7 @@ export async function lookupProperty(sql: postgres.Sql, input: string, geocoder:
   const [created] = await sql<{ id: string; line1: string; line2: string | null; city: string }[]>`
     insert into properties (address_line1, address_line2, city, region_code, postal_code, country, address_normalized,
       location, city_region_id, neighborhood_region_id, property_type, source)
-    values (${`${parsed.number} ${streetTitle}`}, ${unitLine}, ${geo.city}, 'ON', ${postal}, 'CA', ${normalized},
+    values (${`${parsed.number} ${streetTitle}`}, ${unitLine}, ${geo.city}, ${market.regionCode}, ${postal}, ${brand.market.country}, ${normalized},
       ST_SetSRID(ST_MakePoint(${geo.lng}, ${geo.lat}), 4326)::geography, ${regions.city_id}, ${regions.hood_id},
       ${geo.propertyType ?? "detached"}, 'lookup')
     on conflict (address_normalized, postal_code) do update set updated_at = now()

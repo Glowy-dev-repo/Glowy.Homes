@@ -23,7 +23,7 @@ export default async function ProLeadsPage({ searchParams }: { searchParams: Pro
       </div>
       {pro.status !== "active" && (
         <p role="status" className="mb-6 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-body">
-          Your profile is {pro.status}. Leads start once your licence is verified.
+          Your profile is {pro.status}. Leads start once your license is verified.
         </p>
       )}
       <LeadInbox initialOpenId={lead} />

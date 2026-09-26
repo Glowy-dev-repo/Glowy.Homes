@@ -39,7 +39,7 @@ export type Candidate = {
   assignedToday: number;
   responseTimeMinutes: number | null;
   rating: number | null;
-  /** How the pro covers the lead's location: its neighbourhood, its city, or not at all. */
+  /** How the pro covers the lead's location: its neighborhood, its city, or not at all. */
   areaMatch: "neighborhood" | "city" | null;
 };
 
@@ -97,11 +97,11 @@ export function decideRoute(input: RouteInput): RouteDecision {
     if (c && eligible(c, "agent", exclude)) return { assign: c.proId, reason: "listing agent", considered: [c.proId] };
   }
 
-  // docs/03 step 4: service area must contain the lead's region, neighbourhood first, then city.
+  // docs/03 step 4: service area must contain the lead's region, neighborhood first, then city.
   const pool = input.candidates.filter((c) => c.areaMatch !== null && eligible(c, type, exclude));
   const considered = pool.map((c) => c.proId);
-  const neighbourhood = rankCandidates(pool.filter((c) => c.areaMatch === "neighborhood"));
-  if (neighbourhood.length) return { assign: neighbourhood[0].proId, reason: "neighbourhood coverage, fewest leads today", considered };
+  const neighborhood = rankCandidates(pool.filter((c) => c.areaMatch === "neighborhood"));
+  if (neighborhood.length) return { assign: neighborhood[0].proId, reason: "neighborhood coverage, fewest leads today", considered };
   const city = rankCandidates(pool.filter((c) => c.areaMatch === "city"));
   if (city.length) return { assign: city[0].proId, reason: "city coverage, fewest leads today", considered };
 

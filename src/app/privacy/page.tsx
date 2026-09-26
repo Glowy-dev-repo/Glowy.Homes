@@ -22,7 +22,9 @@ export default function PrivacyPage() {
         <li>To send your request to the professional, owner or landlord you contacted, and only to them.</li>
         <li>To improve the site, using usage data in aggregate.</li>
       </ul>
-      <p>We do not sell your personal information. We never ask for a social insurance number and never run credit checks.</p>
+      <p>We do not sell your personal information. We never ask for a Social Security number and never run credit checks.</p>
+      <h2>Your California privacy rights</h2>
+      <p>If you live in California, you can ask us what personal information we hold about you, ask us to correct or delete it, and opt out of its sale or sharing. We do not sell or share personal information for advertising, and we will not treat you differently for using these rights. Write to the address below to make a request.</p>
       <h2>Emails</h2>
       <p>You get search alerts only for searches you save, at the frequency you choose. Every alert has a link to stop it. Change or stop alerts any time in your account.</p>
       <h2>Cookies</h2>

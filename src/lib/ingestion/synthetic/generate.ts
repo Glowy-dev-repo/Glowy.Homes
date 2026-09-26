@@ -1,5 +1,7 @@
 import type { PropertyType } from "@/db/schema/listings";
 import { clamp, Rng } from "@/lib/random";
+import { brand } from "@/config/brand";
+import { market } from "@/config/market";
 import { slugify } from "@/lib/slug";
 import type { NormalizedListing } from "../types";
 import {
@@ -40,6 +42,11 @@ export function distanceKm([lng1, lat1]: Pt, [lng2, lat2]: Pt): number {
 
 const planar2 = (a: Pt, b: Pt) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
+/** US: the ZIP code. Canada: the area plus a local delivery unit, like "M5V 1A1". */
+function postalCode(hood: { postalArea: string }, street: { ldu: string }): string {
+  return brand.market.country === "US" ? hood.postalArea : `${hood.postalArea} ${street.ldu}`;
+}
+
 // ---------- types ----------
 
 export type NeighborhoodSeed = {
@@ -47,8 +54,9 @@ export type NeighborhoodSeed = {
   slug: string;
   point: Pt;
   factor: number;
-  fsa: string;
-  /** Local housing mix: real neighbourhoods skew heavily toward a few home types. */
+  /** ZIP code (US) or forward sortation area (Canada) for addresses here. */
+  postalArea: string;
+  /** Local housing mix: real neighborhoods skew heavily toward a few home types. */
   typeMix: Partial<Record<PropertyType, number>>;
   /** Local share of rentals relative to the city (dense cores rent more). */
   rentFactor: number;
@@ -141,11 +149,11 @@ function buildCity(rng: Rng, def: CityDef): SyntheticCity {
       slug: slugify(name),
       point,
       factor: clamp(rng.lognormal(0.1) * central, 0.6, 1.9),
-      fsa: def.fsa[i % def.fsa.length],
+      postalArea: def.postalAreas[i % def.postalAreas.length],
       typeMix,
       rentFactor: clamp(rng.lognormal(0.6) * (0.7 + 0.6 * Math.exp(-distanceKm(point, def.center) / 6)), 0.2, 4),
       sizeScale: clamp(rng.lognormal(0.2), 0.65, 1.5),
-      // Older cores near the centre, newer suburbs further out.
+      // Older cores near the center, newer suburbs further out.
       era: Math.round(clamp(1915 + distanceKm(point, def.center) * 6 + rng.normal(0, 15), 1900, 2020)),
     };
   });
@@ -221,7 +229,7 @@ function buildPros(rng: Rng, cities: SyntheticCity[]): SyntheticPro[] {
         proType,
         displayName: name,
         email: `pro${String(n + 1).padStart(3, "0")}@example.com`,
-        phone: `(416) 555 01${String(n % 100).padStart(2, "0")}`,
+        phone: `(${brand.market.country === "US" ? 213 : 416}) 555 01${String(n % 100).padStart(2, "0")}`,
         brokerageName: proType === "agent" ? rng.pick(BROKERAGES) : proType === "lender" ? "Northstar Mortgage Group" : null,
         licenseNumber: proType === "agent" || proType === "lender" ? String(4_000_000 + n * 37) : null,
         yearsExperience: years,
@@ -258,7 +266,7 @@ type Draft = {
 };
 
 /**
- * Home size by type. Each neighbourhood has its own typical size (hood.sizeScale), and homes
+ * Home size by type. Each neighborhood has its own typical size (hood.sizeScale), and homes
  * vary around it less than they vary across the city, as in real subdivisions.
  */
 function houseSize(rng: Rng, type: PropertyType, hood: NeighborhoodSeed) {
@@ -294,7 +302,7 @@ function houseSize(rng: Rng, type: PropertyType, hood: NeighborhoodSeed) {
   }
 }
 
-/** Houses in a neighbourhood were mostly built in the same era; condos get their building's year. */
+/** Houses in a neighborhood were mostly built in the same era; condos get their building's year. */
 function yearBuilt(rng: Rng, type: PropertyType, hood: NeighborhoodSeed): number | undefined {
   if (type === "land") return undefined;
   if (type === "condo") return Math.round(1965 + 60 * Math.sqrt(rng.next()));
@@ -320,7 +328,7 @@ function draftProperty(rng: Rng, city: SyntheticCity): Draft {
       do line1 = `${rng.int(1, 400)} ${street.name}`;
       while (city.usedAddresses.has(line1));
       city.usedAddresses.add(line1);
-      b = { line1, point, floors: rng.int(6, 48), yearBuilt: yearBuilt(rng, "condo", hood)!, units: new Set(), postal: `${hood.fsa} ${street.ldu}` };
+      b = { line1, point, floors: rng.int(6, 48), yearBuilt: yearBuilt(rng, "condo", hood)!, units: new Set(), postal: postalCode(hood, street) };
       list.push(b);
     }
     let unit: number;
@@ -345,7 +353,7 @@ function draftProperty(rng: Rng, city: SyntheticCity): Draft {
   city.usedAddresses.add(line1);
 
   return {
-    city, hood, point, line1, postal: `${hood.fsa} ${street.ldu}`, type,
+    city, hood, point, line1, postal: postalCode(hood, street), type,
     beds: size.beds, baths: size.baths, sqft: size.sqft, lotSqft: size.lot, yearBuilt: yearBuilt(rng, type, hood),
     stories: type === "land" ? undefined : type === "detached" ? rng.int(1, 3) : 2,
     parking: type === "land" ? undefined : type === "detached" ? rng.int(1, 4) : rng.int(0, 2), rng,
@@ -362,7 +370,7 @@ const INTERIOR = ["Hardwood floors", "Updated kitchen", "Quartz counters", "Stai
 const EXTERIOR_HOUSE = ["Private backyard", "Deck", "Patio", "Double garage", "Fenced yard", "Garden", "Interlock driveway", "Covered porch"];
 const EXTERIOR_CONDO = ["Balcony", "Terrace", "Lake view", "City view"];
 const BUILDING = ["Concierge", "Gym", "Party room", "Rooftop terrace", "Visitor parking", "Bike storage", "Pool", "Guest suites"];
-const COMMUNITY = ["Close to transit", "Near parks", "Walk to shops", "Near schools", "Trail access", "Community centre nearby"];
+const COMMUNITY = ["Close to transit", "Near parks", "Walk to shops", "Near schools", "Trail access", "Community center nearby"];
 const ROOMS: Record<string, string[]> = {
   condo: ["Living room", "Kitchen", "Primary bedroom", "Bathroom", "Balcony view", "Building lobby", "Second bedroom", "Dining area", "Gym", "Rooftop terrace"],
   house: ["Front exterior", "Living room", "Kitchen", "Dining room", "Primary bedroom", "Bathroom", "Backyard", "Second bedroom", "Basement", "Family room", "Office", "Laundry room", "Garage", "Street view"],
@@ -475,7 +483,7 @@ function buildListing(
     statusDate: iso(statusDate),
     soldDate: soldDate ? iso(soldDate) : undefined,
     availableDate: listingType === "rent" && status !== "closed" ? iso(addDays(asOf, r.int(0, 60))) : undefined,
-    address: { line1: d.line1, line2: d.line2, city: d.city.name, regionCode: "ON", postalCode: d.postal, country: "CA" },
+    address: { line1: d.line1, line2: d.line2, city: d.city.name, regionCode: market.regionCode, postalCode: d.postal, country: brand.market.country },
     location: { lng: d.point[0], lat: d.point[1] },
     propertyType: d.type,
     beds: d.beds,
@@ -511,7 +519,7 @@ function buildListing(
         : undefined,
     description: "",
     hoaFee: isCondo ? Math.round(((d.sqft ?? 700) * r.range(0.6, 0.9)) / 5) * 5 : undefined,
-    taxAnnual: listingType === "sale" ? Math.round((value * r.range(0.006, 0.0085)) / 10) * 10 : undefined,
+    taxAnnual: listingType === "sale" ? Math.round((value * r.range(market.finance.taxRate * 0.85, market.finance.taxRate * 1.15)) / 10) * 10 : undefined,
     media: Array.from({ length: mediaCount }, (_, i) => ({
       url: `synthetic://${sourceListingId}/${i}`,
       kind: "photo" as const,
@@ -554,7 +562,7 @@ export function generateMarket(opts: { seed: number; total: number; asOf: Date }
   });
 
   // Exactly 30% rentals, weighted towards condos and multi unit homes.
-  // Ontario rentals are mostly condos; whole house rentals are comparatively rare.
+  // Rentals skew to condos and apartments; whole house rentals are comparatively rare.
   const rentWeight: Record<PropertyType, number> = { condo: 4, multi: 0.4, townhouse: 1.3, semi: 0.6, detached: 0.12, land: 0, other: 1 };
   const pickRng = root.fork(400);
   const keyed = drafts.map((d, i) => {

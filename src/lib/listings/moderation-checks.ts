@@ -6,12 +6,16 @@ export const MIN_PHOTOS = 3;
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 const PHONE = /(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 const URL = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|ca|net|org|io|co)\b/i;
-// Protected grounds under the Ontario Human Rights Code; listings may not exclude people on them.
+// Protected classes under the federal Fair Housing Act and California law (FEHA and the Unruh Act), and
+// protected grounds under Canadian human rights codes; listings may not exclude people on them.
 const FAIR_HOUSING = [
   /\bno (?:kids|children|families)\b/i,
   /\badults? only\b/i,
   /\b(?:christians?|muslims?|jewish|hindus?|sikhs?) only\b/i,
   /\bno (?:immigrants|newcomers|foreigners|students on social assistance|welfare|odsp)\b/i,
+  // Source of income is protected in California: refusing housing vouchers is discrimination.
+  /\bno (?:section 8|section eight|vouchers?|housing vouchers?|housing assistance)\b/i,
+  /\b(?:english speakers?|citizens|us citizens) only\b/i,
   /\b(?:perfect for|ideal for|suits) (?:a )?(?:single|married|young) (?:man|woman|couple|professional)s?\b/i,
   /\bno (?:disabled|wheelchairs?)\b/i,
 ];

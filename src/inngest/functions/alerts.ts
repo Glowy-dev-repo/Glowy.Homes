@@ -1,6 +1,7 @@
 import { sendDueAlerts } from "@/lib/alerts/send";
 import type { AlertFrequency } from "@/lib/alerts/window";
 import { inngest } from "../client";
+import { market } from "@/config/market";
 
 // send_saved_search_alerts (docs/03 section 6): instant every 5 minutes, daily at 08:00 and weekly
 // on Monday at 08:00, both in the market's timezone. Safe to rerun: sends are keyed by window.
@@ -13,5 +14,5 @@ function alertsFn(frequency: AlertFrequency, cron: string) {
 }
 
 export const instantAlertsFn = alertsFn("instant", "*/5 * * * *");
-export const dailyAlertsFn = alertsFn("daily", "TZ=America/Toronto 0 8 * * *");
-export const weeklyAlertsFn = alertsFn("weekly", "TZ=America/Toronto 0 8 * * 1");
+export const dailyAlertsFn = alertsFn("daily", `TZ=${market.timezone} 0 8 * * *`);
+export const weeklyAlertsFn = alertsFn("weekly", `TZ=${market.timezone} 0 8 * * 1`);

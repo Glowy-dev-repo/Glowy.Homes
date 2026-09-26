@@ -60,8 +60,10 @@ export function normalizeAddress(line1: string, line2?: string | null): string {
   return [normalizeStreet(line1), normalizeUnit(line2)].filter(Boolean).join(" ");
 }
 
-/** Canadian postal codes as "A1A 1A1"; other formats are uppercased and trimmed. */
+/** Canadian postal codes as "A1A 1A1", US ZIP codes as "94110" or "94110-1234"; others uppercased and trimmed. */
 export function normalizePostalCode(postal: string): string {
   const compact = postal.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(compact) ? `${compact.slice(0, 3)} ${compact.slice(3)}` : postal.toUpperCase().trim();
+  if (/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(compact)) return `${compact.slice(0, 3)} ${compact.slice(3)}`;
+  if (/^\d{9}$/.test(compact)) return `${compact.slice(0, 5)}-${compact.slice(5)}`;
+  return postal.toUpperCase().trim();
 }

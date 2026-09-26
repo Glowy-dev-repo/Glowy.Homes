@@ -1,8 +1,7 @@
 import type { PropertyType } from "@/db/schema/listings";
 
 // Synthetic market definitions for the configured cities. Boundaries are simplified
-// approximations drawn for this project (no third party data); values are plausible 2026
-// Ontario figures, not market data.
+// approximations drawn for this project (no third party data).
 
 export type CityDef = {
   name: string;
@@ -12,103 +11,103 @@ export type CityDef = {
   center: [number, number];
   /** Share of the 50,000 synthetic properties. */
   share: number;
-  /** Base value per sqft in CAD. */
+  /** Base value per sqft in the market currency. */
   ppsf: number;
   /** Annual market growth used for the hidden market index. */
   annualGrowth: number;
   neighborhoods: number;
-  fsa: string[];
+  /** ZIP codes (US) or forward sortation areas (Canada) handed out to neighborhoods in turn. */
+  postalAreas: string[];
   typeMix: Partial<Record<PropertyType, number>>;
   timezone: string;
 };
 
+// California example market. Values are plausible 2026 figures for the demo, not market data.
 export const CITY_DEFS: CityDef[] = [
   {
-    name: "Toronto",
-    slug: "toronto",
+    name: "Los Angeles",
+    slug: "los-angeles",
     boundary: [
-      [-79.545, 43.587], [-79.58, 43.6], [-79.639, 43.625], [-79.639, 43.75], [-79.42, 43.793],
-      [-79.17, 43.855], [-79.117, 43.822], [-79.155, 43.76], [-79.25, 43.695], [-79.32, 43.66],
-      [-79.38, 43.64], [-79.47, 43.63], [-79.5, 43.61], [-79.545, 43.587],
+      [-118.5, 34.03], [-118.45, 34.1], [-118.35, 34.13], [-118.25, 34.16], [-118.17, 34.15], [-118.16, 34.08],
+      [-118.2, 33.99], [-118.28, 33.93], [-118.37, 33.93], [-118.43, 33.96], [-118.5, 34.03],
     ],
-    center: [-79.387, 43.653],
-    share: 0.4,
-    ppsf: 860,
+    center: [-118.2437, 34.0522],
+    share: 0.38,
+    ppsf: 780,
     annualGrowth: 0.035,
     neighborhoods: 20,
-    fsa: ["M4C", "M4E", "M4K", "M4L", "M4M", "M5A", "M5V", "M6G", "M6H", "M6J", "M6K", "M6P", "M6R", "M8V", "M8W", "M9A", "M9B", "M1B", "M1E", "M1K", "M2N", "M3H", "M4R", "M5R"],
-    typeMix: { condo: 45, detached: 26, semi: 12, townhouse: 13.5, multi: 2, land: 0.1 },
-    timezone: "America/Toronto",
+    postalAreas: ["90004", "90005", "90006", "90012", "90013", "90019", "90020", "90024", "90025", "90026", "90027", "90028", "90034", "90035", "90036", "90039", "90046", "90048", "90064", "90066"],
+    typeMix: { condo: 28, detached: 50, townhouse: 12, multi: 8, semi: 1, land: 0.1 },
+    timezone: "America/Los_Angeles",
   },
   {
-    name: "Mississauga",
-    slug: "mississauga",
+    name: "San Diego",
+    slug: "san-diego",
     boundary: [
-      [-79.545, 43.587], [-79.58, 43.6], [-79.639, 43.625], [-79.639, 43.735], [-79.7, 43.74],
-      [-79.79, 43.67], [-79.81, 43.63], [-79.7, 43.52], [-79.63, 43.49], [-79.58, 43.52], [-79.545, 43.587],
+      [-117.25, 32.8], [-117.2, 32.87], [-117.1, 32.9], [-117.03, 32.87], [-117.02, 32.75], [-117.05, 32.7],
+      [-117.12, 32.7], [-117.16, 32.72], [-117.2, 32.74], [-117.25, 32.8],
     ],
-    center: [-79.644, 43.589],
-    share: 0.17,
-    ppsf: 690,
-    annualGrowth: 0.03,
+    center: [-117.1611, 32.7157],
+    share: 0.2,
+    ppsf: 720,
+    annualGrowth: 0.032,
     neighborhoods: 16,
-    fsa: ["L4T", "L4W", "L4X", "L4Y", "L4Z", "L5A", "L5B", "L5C", "L5E", "L5G", "L5H", "L5J", "L5K", "L5L", "L5M", "L5N", "L5R", "L5V", "L5W"],
-    typeMix: { condo: 30, detached: 35, semi: 15, townhouse: 18, multi: 1.5, land: 0.1 },
-    timezone: "America/Toronto",
+    postalAreas: ["92101", "92102", "92103", "92104", "92105", "92106", "92107", "92108", "92109", "92110", "92111", "92115", "92116", "92117", "92120", "92122"],
+    typeMix: { condo: 30, detached: 52, townhouse: 14, multi: 3, semi: 1, land: 0.1 },
+    timezone: "America/Los_Angeles",
   },
   {
-    name: "Ottawa",
-    slug: "ottawa",
+    name: "San Jose",
+    slug: "san-jose",
     boundary: [
-      [-75.93, 45.35], [-75.85, 45.39], [-75.76, 45.41], [-75.7, 45.43], [-75.66, 45.45], [-75.6, 45.47],
-      [-75.52, 45.47], [-75.5, 45.42], [-75.55, 45.33], [-75.62, 45.26], [-75.72, 45.25], [-75.8, 45.27],
-      [-75.9, 45.28], [-75.95, 45.31], [-75.93, 45.35],
+      [-121.98, 37.3], [-121.95, 37.38], [-121.87, 37.42], [-121.8, 37.39], [-121.76, 37.32], [-121.8, 37.25],
+      [-121.88, 37.22], [-121.95, 37.25], [-121.98, 37.3],
     ],
-    center: [-75.697, 45.421],
-    share: 0.22,
-    ppsf: 480,
-    annualGrowth: 0.028,
-    neighborhoods: 18,
-    fsa: ["K1G", "K1H", "K1K", "K1L", "K1M", "K1N", "K1R", "K1S", "K1V", "K1Y", "K1Z", "K2A", "K2B", "K2C", "K2E", "K2G", "K2H", "K2J"],
-    typeMix: { condo: 22, detached: 40, semi: 10, townhouse: 25, multi: 2, land: 0.1 },
-    timezone: "America/Toronto",
-  },
-  {
-    name: "Hamilton",
-    slug: "hamilton",
-    boundary: [
-      [-79.99, 43.27], [-79.94, 43.29], [-79.87, 43.28], [-79.8, 43.27], [-79.73, 43.24], [-79.68, 43.23],
-      [-79.7, 43.18], [-79.8, 43.16], [-79.9, 43.17], [-80.0, 43.2], [-80.03, 43.24], [-79.99, 43.27],
-    ],
-    center: [-79.871, 43.256],
-    share: 0.12,
-    ppsf: 500,
-    annualGrowth: 0.025,
+    center: [-121.8863, 37.3382],
+    share: 0.15,
+    ppsf: 900,
+    annualGrowth: 0.03,
     neighborhoods: 14,
-    fsa: ["L8E", "L8G", "L8H", "L8K", "L8L", "L8M", "L8N", "L8P", "L8R", "L8S", "L8T", "L8V", "L8W", "L9A", "L9B", "L9C", "L9G", "L9H", "L9K"],
-    typeMix: { condo: 15, detached: 56, semi: 10, townhouse: 15.5, multi: 2, land: 0.1 },
-    timezone: "America/Toronto",
+    postalAreas: ["95110", "95112", "95116", "95117", "95118", "95120", "95121", "95122", "95123", "95124", "95125", "95126", "95127", "95128", "95129", "95130"],
+    typeMix: { condo: 18, detached: 60, townhouse: 18, multi: 3, semi: 1, land: 0.1 },
+    timezone: "America/Los_Angeles",
   },
   {
-    name: "London",
-    slug: "london",
+    name: "San Francisco",
+    slug: "san-francisco",
     boundary: [
-      [-81.36, 42.95], [-81.33, 43.02], [-81.27, 43.06], [-81.19, 43.06], [-81.14, 43.02], [-81.14, 42.94],
-      [-81.19, 42.9], [-81.28, 42.89], [-81.35, 42.91], [-81.36, 42.95],
+      [-122.505, 37.71], [-122.51, 37.78], [-122.48, 37.79], [-122.45, 37.805], [-122.4, 37.807], [-122.385, 37.79],
+      [-122.39, 37.75], [-122.385, 37.71], [-122.505, 37.71],
     ],
-    center: [-81.245, 42.985],
-    share: 0.09,
-    ppsf: 420,
-    annualGrowth: 0.022,
+    center: [-122.4194, 37.7749],
+    share: 0.12,
+    ppsf: 1050,
+    annualGrowth: 0.028,
+    neighborhoods: 14,
+    postalAreas: ["94102", "94103", "94107", "94109", "94110", "94112", "94114", "94115", "94116", "94117", "94118", "94121", "94122", "94123", "94124", "94131", "94133"],
+    typeMix: { condo: 42, detached: 30, townhouse: 6, multi: 20, semi: 2, land: 0.1 },
+    timezone: "America/Los_Angeles",
+  },
+  {
+    name: "Sacramento",
+    slug: "sacramento",
+    boundary: [
+      [-121.56, 38.5], [-121.56, 38.6], [-121.52, 38.66], [-121.43, 38.66], [-121.38, 38.6], [-121.4, 38.51],
+      [-121.47, 38.47], [-121.56, 38.5],
+    ],
+    center: [-121.4944, 38.5816],
+    share: 0.15,
+    ppsf: 370,
+    annualGrowth: 0.025,
     neighborhoods: 12,
-    fsa: ["N5V", "N5W", "N5X", "N5Y", "N5Z", "N6A", "N6B", "N6C", "N6E", "N6G", "N6H", "N6J", "N6K", "N6L", "N6M", "N6P"],
-    typeMix: { condo: 18, detached: 55, semi: 7, townhouse: 17, multi: 2, land: 0.1 },
-    timezone: "America/Toronto",
+    postalAreas: ["95811", "95814", "95815", "95816", "95817", "95818", "95819", "95820", "95821", "95822", "95823", "95825", "95831", "95834", "95838"],
+    typeMix: { condo: 10, detached: 72, townhouse: 10, multi: 6, semi: 1, land: 0.1 },
+    timezone: "America/Los_Angeles",
   },
 ];
 
 export const NEIGHBORHOOD_PREFIXES = [
-  "Maple", "Cedar", "Birch", "Willow", "Oak", "Pine", "Elm", "Aspen", "Harbour", "Lake", "River", "Stone",
+  "Maple", "Cedar", "Birch", "Willow", "Oak", "Pine", "Elm", "Aspen", "Harbor", "Lake", "River", "Stone",
   "Mill", "Orchard", "Meadow", "Fox", "Heron", "Crystal", "Summer", "Kings", "Queens", "Garden", "Bridge",
   "Forest", "Spring", "Silver", "Ash", "Cherry", "Clover", "Juniper", "Linden", "Hawthorn", "Sparrow", "Beacon",
 ];
@@ -119,20 +118,20 @@ export const NEIGHBORHOOD_SUFFIXES = [
 ];
 
 export const STREET_NAMES = [
-  "Alder", "Balsam", "Beech", "Bluebell", "Bramble", "Briar", "Brook", "Buttonwood", "Chestnut", "Clearview",
+  "Alder", "Bayview", "Beech", "Bluebell", "Bramble", "Briar", "Brook", "Buttonwood", "Chestnut", "Clearview",
   "Coral", "Cottonwood", "Crescent", "Daisy", "Dogwood", "Driftwood", "Fairview", "Fern", "Fieldstone",
   "Foxglove", "Glenwood", "Goldfinch", "Granite", "Greenbriar", "Hazel", "Heather", "Hemlock", "Highland",
   "Holly", "Ironwood", "Ivy", "Jasmine", "Kestrel", "Lakeview", "Larch", "Laurel", "Lilac", "Magnolia",
-  "Mapleleaf", "Marigold", "Meadowlark", "Millstone", "Mulberry", "Northwood", "Oakridge", "Parkside",
+  "Manzanita", "Marigold", "Meadowlark", "Millstone", "Mulberry", "Northwood", "Oakridge", "Parkside",
   "Pebble", "Poplar", "Primrose", "Quarry", "Raven", "Redwood", "Ridgeview", "Riverside", "Robin", "Rosewood",
-  "Sage", "Sandalwood", "Seaton", "Shoreline", "Silverbirch", "Skyline", "Snowberry", "Spruce", "Starling",
-  "Stonegate", "Sumac", "Sunset", "Sycamore", "Tamarack", "Thistle", "Timber", "Trillium", "Tulip", "Valley",
+  "Sage", "Sandalwood", "Sequoia", "Shoreline", "Silverbirch", "Skyline", "Snowberry", "Spruce", "Starling",
+  "Stonegate", "Sumac", "Sunset", "Sycamore", "Tamarack", "Thistle", "Timber", "Toyon", "Tulip", "Valley",
   "Violet", "Walnut", "Westwood", "Wheatfield", "Whitebirch", "Wildflower", "Windermere", "Wren", "Yew",
 ];
 
-export const STREET_SUFFIXES = ["Ave", "St", "Rd", "Cres", "Dr", "Blvd", "Crt", "Lane", "Way", "Pl"];
+export const STREET_SUFFIXES = ["Ave", "St", "Rd", "Dr", "Blvd", "Ct", "Ln", "Way", "Pl", "Ter"];
 
 export const BROKERAGES = [
-  "Northlight Realty", "Harbourfront Homes Brokerage", "Cedarline Real Estate", "Keystone Property Group",
-  "Bluewater Realty", "Summit Lane Brokerage", "Oakmere Realty", "Trillium Key Realty",
+  "Northlight Realty", "Harborfront Homes", "Cedarline Real Estate", "Keystone Property Group",
+  "Bluewater Realty", "Summit Lane Properties", "Oakmere Realty", "Golden Poppy Realty",
 ];

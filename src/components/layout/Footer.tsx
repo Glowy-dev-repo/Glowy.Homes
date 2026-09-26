@@ -3,8 +3,12 @@ import { brand } from "@/config/brand";
 import { footerNav } from "@/config/nav";
 import { Logo } from "./Logo";
 
+// Protected classes for the market: federal Fair Housing Act plus California FEHA and Unruh Act,
+// or the Canadian human rights codes.
 export const FAIR_HOUSING_STATEMENT =
-  "We are committed to fair housing. We do not allow listings, advertising or search tools that discriminate on the basis of race, colour, ancestry, place of origin, religion, sex, sexual orientation, gender identity, age, marital or family status, disability or receipt of public assistance.";
+  brand.market.country === "US"
+    ? "We are committed to fair housing under federal and California law. We do not allow listings, advertising or search tools that discriminate on the basis of race, color, religion, sex, gender, gender identity or expression, sexual orientation, marital status, national origin, ancestry, familial status, source of income (including housing vouchers), disability, veteran or military status, genetic information, age, or citizenship or immigration status."
+    : "We are committed to fair housing. We do not allow listings, advertising or search tools that discriminate on the basis of race, color, ancestry, place of origin, religion, sex, sexual orientation, gender identity, age, marital or family status, disability or receipt of public assistance.";
 
 export function Footer() {
   return (

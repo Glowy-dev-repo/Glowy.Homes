@@ -143,7 +143,7 @@ export async function BrowsePage(props: Props) {
 
           {hoods.length > 0 && (
             <nav aria-labelledby="hoods-heading">
-              <h2 id="hoods-heading" className="text-h3">Neighbourhoods in {city.name}</h2>
+              <h2 id="hoods-heading" className="text-h3">Neighborhoods in {city.name}</h2>
               <ul className="mt-2 grid grid-cols-2 gap-x-4">
                 {hoods.map((h) => (
                   <li key={h.id}>

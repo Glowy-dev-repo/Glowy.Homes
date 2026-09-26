@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { affordabilityRange, qualifyingRate } from "@/lib/affordability";
+import { market } from "@/config/market";
+import { affordabilityRange } from "@/lib/affordability";
 import { formatPrice } from "@/lib/format";
 import { DEFAULT_RATE_PERCENT } from "@/lib/mortgage";
 
@@ -32,7 +33,7 @@ export function AffordabilityCalculator() {
         ) : (
           <p className="text-body text-neutral-800">These numbers do not qualify for a mortgage. Try a larger down payment or lower debts.</p>
         )}
-        <p className="mt-1 text-small text-neutral-700">Confidence: <span className="font-semibold">Medium</span>. Lenders qualify you at {qualifyingRate(v.ratePercent).toFixed(2)}%, and the range covers rates half a point either side of yours.</p>
+        <p className="mt-1 text-small text-neutral-700">Confidence: <span className="font-semibold">Medium</span>. {market.finance.qualifyingNote} The range covers rates half a point either side of yours.</p>
         <p className="mt-3 text-small text-neutral-600">This is an estimate, not a preapproval or loan offer. Approval depends on your credit, income verification and the lender&apos;s rules.</p>
       </div>
     </div>

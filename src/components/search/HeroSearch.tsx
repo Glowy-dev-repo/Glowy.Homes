@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { SearchBar } from "./SearchBar";
+import { market } from "@/config/market";
 
 type TabId = "buy" | "rent" | "value";
 
 const TABS: { id: TabId; label: string; placeholder: string }[] = [
-  { id: "buy", label: "Buy", placeholder: "City, neighbourhood, address or postal code" },
-  { id: "rent", label: "Rent", placeholder: "City, neighbourhood, address or postal code" },
+  { id: "buy", label: "Buy", placeholder: `City, neighborhood, address or ${market.postalLabel}` },
+  { id: "rent", label: "Rent", placeholder: `City, neighborhood, address or ${market.postalLabel}` },
   { id: "value", label: "Home value", placeholder: "Enter your home address" },
 ];
 

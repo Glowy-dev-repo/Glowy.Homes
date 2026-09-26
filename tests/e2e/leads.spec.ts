@@ -38,7 +38,7 @@ test.describe("lead routing", () => {
   test("a tour request is assigned within 60 seconds and shows in the agent inbox as New", async ({ page, browser, isMobile }) => {
     test.skip(isMobile, "one routing flow per run");
     test.setTimeout(150_000);
-    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'toronto' and type = 'city')");
+    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city')");
     await page.goto(path);
     await page.getByRole("button", { name: "Request a tour" }).first().click();
     const dialog = page.getByRole("dialog");
@@ -79,7 +79,7 @@ test.describe("lead routing", () => {
     test.setTimeout(180_000);
     const [listing] = await db()`
       select l.id from listings l where l.status = 'active' and l.listing_type = 'sale'
-        and l.city_region_id = (select id from regions where slug = 'ottawa' and type = 'city') order by l.list_date desc limit 1`;
+        and l.city_region_id = (select id from regions where slug = 'san-jose' and type = 'city') order by l.list_date desc limit 1`;
     const email = uniqueEmail("reassign");
     const res = await request.post("/api/leads", {
       data: { leadType: "contact", listingId: listing.id, name: "Riley Quiet", email, consent: true, message: "Is it available?" },
@@ -99,7 +99,7 @@ test.describe("lead routing", () => {
     test.skip(isMobile, "authorization is viewport independent");
     test.setTimeout(120_000);
     const email = await signIn(page, "inquirer", "/");
-    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'mississauga' and type = 'city')");
+    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-diego' and type = 'city')");
     await page.goto(path);
     await page.getByRole("button", { name: "Contact agent" }).first().click();
     const dialog = page.getByRole("dialog");
@@ -132,7 +132,7 @@ test.describe("lead routing", () => {
     const email = uniqueEmail("preapproval");
     await page.getByLabel("Name").fill("Morgan Borrower");
     await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Where are you buying?").selectOption("toronto");
+    await page.getByLabel("Where are you buying?").selectOption("los-angeles");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Request preapproval" }).click();
     await expect(page.getByTestId("lead-success")).toBeVisible();
@@ -146,7 +146,7 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   test.skip(isMobile, "multi party desktop flow");
   test.setTimeout(150_000);
   const email = await signIn(page, "reviewer", "/");
-  const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'london' and type = 'city')");
+  const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-francisco' and type = 'city')");
   await page.goto(path);
   await page.getByRole("button", { name: "Contact agent" }).first().click();
   const dialog = page.getByRole("dialog");
@@ -215,15 +215,15 @@ test.describe("admin and pros", () => {
     await signIn(page, "newagent", "/pro/join");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name clients will see").fill(agentName);
-    await page.getByLabel("Real estate licence number").fill("7654321");
+    await page.getByLabel("Real estate license number").fill("7654321");
     await page.getByLabel("Business phone").fill("416 555 0199");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByText("Choose at least one area you serve.")).toBeVisible();
-    await page.getByLabel("All of Hamilton").check();
+    await page.getByLabel("All of Sacramento").check();
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
-    await expect(page.locator("dd").filter({ hasText: "Hamilton" })).toBeVisible();
+    await expect(page.locator("dd").filter({ hasText: "Sacramento" })).toBeVisible();
     await page.getByRole("button", { name: "Create my profile" }).click();
     await expect(page).toHaveURL(/\/pro\/profile/);
     await expect(page.getByTestId("pro-pending")).toBeVisible();
@@ -239,8 +239,8 @@ test.describe("admin and pros", () => {
     expect(pro).toMatchObject({ status: "active", verified: true });
     await page.goto(`/agent/${pro.slug}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(agentName);
-    await expect(page.getByText("Licence verified")).toBeVisible();
-    await page.goto("/agents/hamilton");
+    await expect(page.getByText("License verified")).toBeVisible();
+    await page.goto("/agents/sacramento");
     await expect(page.getByTestId("agent-list")).toContainText(agentName);
   });
 });

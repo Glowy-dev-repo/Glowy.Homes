@@ -12,7 +12,7 @@ type Expect = { path: string; status: 200 } | { path: string; redirectTo: RegExp
 const slug = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 async function samples() {
-  const [hood] = await sql<{ slug: string }[]>`select n.slug from regions n join regions c on c.id = n.parent_id where c.slug = 'toronto' and n.type = 'neighborhood' order by n.slug limit 1`;
+  const [hood] = await sql<{ slug: string }[]>`select n.slug from regions n join regions c on c.id = n.parent_id where c.slug = 'los-angeles' and n.type = 'neighborhood' order by n.slug limit 1`;
   const [l] = await sql<{ id: string; line1: string; line2: string | null; city: string }[]>`
     select l.id, p.address_line1 as line1, p.address_line2 as line2, p.city from listings l join properties p on p.id = l.property_id
     where l.status = 'active' order by l.list_date desc, l.id limit 1`;
@@ -28,11 +28,11 @@ async function main() {
   const signin = /^\/signin\?callbackUrl=/;
   const routes: Expect[] = [
     { path: "/", status: 200 },
-    { path: "/homes/toronto", status: 200 },
-    { path: `/homes/toronto/${s.hood}`, status: 200 },
-    { path: "/rentals/toronto", status: 200 },
-    { path: "/search?city=toronto", status: 200 },
-    { path: "/search?type=rent&city=toronto", status: 200 },
+    { path: "/homes/los-angeles", status: 200 },
+    { path: `/homes/los-angeles/${s.hood}`, status: 200 },
+    { path: "/rentals/los-angeles", status: 200 },
+    { path: "/search?city=los-angeles", status: 200 },
+    { path: "/search?type=rent&city=los-angeles", status: 200 },
     { path: `/listing/${s.listing.id}/${s.listing.slug}`, status: 200 },
     { path: `/listing/${s.listing.id}`, redirectTo: new RegExp(`^/listing/${s.listing.id}/${s.listing.slug}$`) },
     { path: "/home-value", status: 200 },
@@ -41,7 +41,7 @@ async function main() {
     { path: "/sell/list", redirectTo: signin },
     { path: "/mortgage", status: 200 },
     { path: "/mortgage/preapproval", status: 200 },
-    { path: "/agents/toronto", status: 200 },
+    { path: "/agents/los-angeles", status: 200 },
     { path: `/agent/${s.agent}`, status: 200 },
     { path: "/account", redirectTo: signin },
     { path: "/account/homes", redirectTo: signin },

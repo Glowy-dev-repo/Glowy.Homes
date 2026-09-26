@@ -22,14 +22,14 @@ test.describe("home page shell", () => {
 
     const footer = page.getByRole("contentinfo");
     await expect(footer).toContainText("fair housing");
-    await expect(footer.getByRole("link", { name: "Toronto" })).toHaveAttribute("href", "/homes/toronto");
+    await expect(footer.getByRole("link", { name: "Los Angeles" })).toHaveAttribute("href", "/homes/los-angeles");
   });
 
   test("hero search submits the selected mode", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("combobox").fill("Toronto");
+    await page.getByRole("combobox").fill("Los Angeles");
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect(page).toHaveURL(/\/search\?type=sale&q=Toronto/);
+    await expect(page).toHaveURL(/\/search\?type=sale&q=Los(\+|%20)Angeles/);
 
     await page.goto("/");
     await page.getByRole("tab", { name: "Home value" }).click();

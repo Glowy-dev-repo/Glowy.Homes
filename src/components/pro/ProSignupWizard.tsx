@@ -28,7 +28,7 @@ const ROLES = [
   { value: "landlord", label: "Landlord or property manager", hint: "Post rentals and receive inquiries" },
 ] as const;
 
-/** Pro signup wizard (docs/01 P1): role, details with licence, service areas, review. */
+/** Pro signup wizard (docs/01 P1): role, details with license, service areas, review. */
 export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; defaultName: string }) {
   const router = useRouter();
   const { update } = useSession();
@@ -45,7 +45,7 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
     const e: Record<string, string> = {};
     if (step === 1) {
       if (draft.displayName.trim().length < 2) e.displayName = "Enter the name clients will see.";
-      if (licensed && !draft.licenseNumber.trim()) e.licenseNumber = "Enter your licence number.";
+      if (licensed && !draft.licenseNumber.trim()) e.licenseNumber = "Enter your license number.";
       if (!/^\+?\d{10,15}$/.test(draft.phone.replace(/[^\d+]/g, ""))) e.phone = "Enter a phone number with area code.";
     }
     if (step === 2 && !draft.serviceAreaIds.length) e.serviceAreaIds = "Choose at least one area you serve.";
@@ -147,7 +147,7 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
         <div className="grid gap-4">
           {text("displayName", "Name clients will see", { autoComplete: "name" })}
           {licensed && text("brokerageName", draft.proType === "lender" ? "Company (optional)" : "Brokerage (optional)", { autoComplete: "organization" })}
-          {licensed && text("licenseNumber", draft.proType === "lender" ? "Mortgage licence number" : "Real estate licence number")}
+          {licensed && text("licenseNumber", draft.proType === "lender" ? "Mortgage license number" : "Real estate license number")}
           {text("phone", "Business phone", { type: "tel", inputMode: "tel", autoComplete: "tel" })}
           {licensed && text("yearsExperience", "Years of experience (optional)", { type: "number", inputMode: "numeric", min: 0 })}
           {text("languages", "Languages (codes, for example en, fr)")}
@@ -172,7 +172,7 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
             <dd>{draft.displayName}</dd>
             {licensed && (
               <>
-                <dt className="text-neutral-600">Licence</dt>
+                <dt className="text-neutral-600">License</dt>
                 <dd>{draft.licenseNumber}</dd>
               </>
             )}
@@ -181,7 +181,7 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
             <dt className="text-neutral-600">Areas</dt>
             <dd>{draft.serviceAreaIds.map((a) => areas.find((x) => x.id === a)?.name).join(", ")}</dd>
           </dl>
-          {licensed && <p className="text-small text-neutral-600">We verify licences with the regulator before you receive leads. This typically takes one business day.</p>}
+          {licensed && <p className="text-small text-neutral-600">We verify licenses with the regulator before you receive leads. This typically takes one business day.</p>}
         </div>
       )}
 

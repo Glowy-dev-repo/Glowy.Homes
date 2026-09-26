@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { sqlClient } from "@/db";
 import { formatDate, formatNumber } from "@/lib/format";
 import { feedHealth, leadStats } from "@/server/data/admin";
+import { market } from "@/config/market";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -66,7 +67,7 @@ export default async function AdminOverview() {
             <tbody>
               {feed.runs.map((r) => (
                 <tr key={r.id} className="border-b border-neutral-100">
-                  <td className="py-2 pr-3 whitespace-nowrap">{new Date(r.startedAt).toLocaleString("en-CA")}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{new Date(r.startedAt).toLocaleString(market.locale)}</td>
                   <td className="py-2 pr-3">{r.source}</td>
                   <td className="py-2 pr-3">{r.status}</td>
                   {(["fetched", "created", "updated", "removed", "errors"] as const).map((k) => (

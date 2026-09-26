@@ -54,11 +54,11 @@ describe("synthetic market generator", () => {
 });
 
 describe("hidden pricing model", () => {
-  const toronto = CITY_DEFS[0];
+  const city = CITY_DEFS[0];
   it("grows with the market and with size", () => {
-    expect(marketIndex(toronto, new Date("2026-06-01"))).toBeGreaterThan(marketIndex(toronto, new Date("2024-06-01")));
+    expect(marketIndex(city, new Date("2026-06-01"))).toBeGreaterThan(marketIndex(city, new Date("2024-06-01")));
     const input = { propertyType: "detached" as const, sqft: 1500, beds: 3, baths: 2, yearBuilt: 1990, lotSqft: 4000, neighborhoodFactor: 1 };
-    expect(trueValue(toronto, { ...input, sqft: 2500 }, asOf)).toBeGreaterThan(trueValue(toronto, input, asOf));
+    expect(trueValue(city, { ...input, sqft: 2500 }, asOf)).toBeGreaterThan(trueValue(city, input, asOf));
   });
 });
 

@@ -71,7 +71,7 @@ export default async function AgentProfilePage({ params }: Props) {
             {pro.licenseVerified && (
               <span className="inline-flex items-center gap-1">
                 <BadgeCheck className="size-4 text-success" aria-hidden />
-                Licence verified
+                License verified
               </span>
             )}
             {pro.yearsExperience ? <span>{pro.yearsExperience} years of experience</span> : null}

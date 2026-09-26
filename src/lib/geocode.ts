@@ -1,4 +1,5 @@
 import type postgres from "postgres";
+import { brand } from "@/config/brand";
 import { normalizeStreet } from "@/lib/ingestion/address";
 
 // Geocoding for address lookup (docs/02 GET /api/properties/lookup) and for feeds without
@@ -8,19 +9,30 @@ import { normalizeStreet } from "@/lib/ingestion/address";
 export type ParsedAddress = { number: number; street: string; unit: string | null; city: string | null; postal: string | null };
 
 const POSTAL = /\b([A-Za-z]\d[A-Za-z])\s?(\d[A-Za-z]\d)\b/;
+// A US ZIP only counts at the end of the input, so a five digit house number is never taken for one.
+const ZIP = /(?:,|\s)\s*(\d{5})(?:-(\d{4}))?\s*$/;
+const REGION_WORDS = /\b(ON|Ontario|Canada|CA|California|USA|United States)\b\.?/gi;
 // "#" is not a word character, so it cannot sit after a \b like the word forms.
 const UNIT = /(?:\b(?:unit|apt|apartment|suite|ste)\b\.?\s*|#\s*)([A-Za-z0-9]+)\b/i;
 
-/** "Unit 1204, 88 Harbour St, Toronto, ON M5V 1A1" -> { number: 88, street: "Harbour St", unit: "1204", ... } */
+/**
+ * "Unit 1204, 88 Harbor St, San Francisco, CA 94110" or "Unit 1204, 88 Harbor St, Toronto, ON M5V 1A1"
+ * -> { number: 88, street: "Harbor St", unit: "1204", city, postal }
+ */
 export function parseAddress(input: string): ParsedAddress | null {
   let rest = input.trim();
   const postalMatch = rest.match(POSTAL);
-  const postal = postalMatch ? `${postalMatch[1]} ${postalMatch[2]}`.toUpperCase() : null;
+  let postal = postalMatch ? `${postalMatch[1]} ${postalMatch[2]}`.toUpperCase() : null;
   if (postalMatch) rest = rest.replace(postalMatch[0], " ");
+  const zipMatch = postal ? null : rest.match(ZIP);
+  if (zipMatch) {
+    postal = zipMatch[2] ? `${zipMatch[1]}-${zipMatch[2]}` : zipMatch[1];
+    rest = rest.slice(0, zipMatch.index);
+  }
   const unitMatch = rest.match(UNIT);
   const unit = unitMatch ? unitMatch[1] : null;
   if (unitMatch) rest = rest.replace(unitMatch[0], " ");
-  rest = rest.replace(/\b(ON|Ontario|Canada)\b/gi, " ");
+  rest = rest.replace(REGION_WORDS, " ");
 
   const parts = rest.split(",").map((p) => p.trim()).filter(Boolean);
   const streetPartIndex = parts.findIndex((p) => /^\d+\s+\S/.test(p));
@@ -28,7 +40,14 @@ export function parseAddress(input: string): ParsedAddress | null {
   const m = parts[streetPartIndex].match(/^(\d+)\s+(.+)$/)!;
   let street = m[2].trim();
   let city = parts.slice(streetPartIndex + 1).find((p) => /[A-Za-z]/.test(p)) ?? null;
-  // "88 Harbour St Toronto" without commas: a trailing known city word is split off by the caller.
+  // "88 Harbor St San Francisco" without commas: split off a known city name at the end first.
+  if (!city) {
+    const known = brand.market.cities.find((c) => street.toLowerCase().endsWith(` ${c.name.toLowerCase()}`));
+    if (known) {
+      city = known.name;
+      street = street.slice(0, -known.name.length).trim();
+    }
+  }
   if (!city) {
     const words = street.split(/\s+/);
     if (words.length > 2) {
@@ -50,8 +69,8 @@ export function mapTilerGeocoder(key: string, fetchImpl: typeof fetch = fetch): 
   return {
     name: "maptiler",
     async geocode(a) {
-      const q = `${a.number} ${a.street}${a.city ? `, ${a.city}` : ""}, Ontario`;
-      const res = await fetchImpl(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${key}&country=ca&limit=1&types=address`, {
+      const q = `${a.number} ${a.street}${a.city ? `, ${a.city}` : ""}, ${brand.market.region}`;
+      const res = await fetchImpl(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${key}&country=${brand.market.country.toLowerCase()}&limit=1&types=address`, {
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) return null;

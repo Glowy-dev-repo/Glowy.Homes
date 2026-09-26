@@ -8,7 +8,7 @@ export const SYNTHETIC_WIDTHS = [400, 800, 1600] as const;
 export const SYNTHETIC_ASPECT = 2 / 3;
 
 // Cool, muted tones (slate, steel blue, mist, sky grey, eucalyptus) that sit quietly next to the
-// blue and white brand, instead of the full colour wheel.
+// blue and white brand, instead of the full color wheel.
 const HUES = [210, 220, 200, 228, 190, 215] as const;
 
 /** Deterministic muted pair for a media source URL. */

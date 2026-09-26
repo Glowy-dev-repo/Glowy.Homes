@@ -9,6 +9,7 @@ import { areaUnitLabel, formatPrice, toSqft } from "@/lib/format";
 import { contactInfoIn, fairHousingIssue, MIN_PHOTOS } from "@/lib/listings/moderation-checks";
 import { cn } from "@/lib/utils";
 import { PhotoUploader, type UploadedPhoto } from "./PhotoUploader";
+import { market } from "@/config/market";
 
 type Kind = "sale" | "rent";
 const STEPS = ["Address", "Facts", "Photos", "Price", "Description", "Contact", "Review"] as const;
@@ -184,8 +185,8 @@ export function ListingWizard({ kind }: { kind: Kind }) {
 
       {step === 0 && (
         <div className="grid gap-2">
-          {text("address", "Street address and city", { autoComplete: "street-address", placeholder: "12 Maple Ave, Toronto" })}
-          <p className="text-small text-neutral-600">For a condo, include the unit, like Unit 1204, 88 Harbour St, Toronto.</p>
+          {text("address", "Street address and city", { autoComplete: "street-address", placeholder: market.exampleAddress })}
+          <p className="text-small text-neutral-600">For a condo, include the unit, like {market.exampleUnitAddress}.</p>
           {d.propertyId && d.resolved === d.address && <p className="text-small text-success" role="status">Address found.</p>}
         </div>
       )}

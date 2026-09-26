@@ -4,6 +4,7 @@ import type { LeadType, RoutingLogEntry } from "@/db/schema/leads";
 import { sendEmail } from "@/lib/email";
 import { adminUnassignedEmail, consumerConfirmationEmail, proNewLeadEmail } from "@/lib/email/templates/leads";
 import { decideRoute, scoreLead, type Candidate } from "./routing";
+import { market } from "@/config/market";
 
 // route_lead database orchestration (docs/03 section 5).
 
@@ -79,7 +80,7 @@ async function loadCandidates(sql: Sql, lead: LeadRow, extraIds: string[]): Prom
     select pr.id as "proId", pr.pro_type as "proType", pr.status, pr.is_accepting_leads as "isAccepting",
       pr.lead_cap_per_day as "capPerDay", pr.response_time_minutes as "responseTimeMinutes", pr.rating::float8 as rating,
       (select count(*)::int from leads x where x.assigned_pro_id = pr.id
-        and x.assigned_at >= (date_trunc('day', now() at time zone 'America/Toronto') at time zone 'America/Toronto')) as "assignedToday",
+        and x.assigned_at >= (date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})) as "assignedToday",
       case
         when exists (select 1 from pro_service_areas a where a.pro_id = pr.id and a.region_id = ${lead.hoodId} and (a.active_until is null or a.active_until > now())) then 'neighborhood'
         when exists (select 1 from pro_service_areas a where a.pro_id = pr.id and a.region_id = ${lead.cityId} and (a.active_until is null or a.active_until > now())) then 'city'
@@ -138,7 +139,7 @@ export async function routeLead(sql: Sql, leadId: string, mode: "initial" | "ret
       const [p] = await tx<{ cap: number; today: number }[]>`
         select lead_cap_per_day as cap,
           (select count(*)::int from leads x where x.assigned_pro_id = pros.id
-            and x.assigned_at >= (date_trunc('day', now() at time zone 'America/Toronto') at time zone 'America/Toronto')) as today
+            and x.assigned_at >= (date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})) as today
         from pros where id = ${decision.assign} for update`;
       if (!p || p.today >= p.cap) return false;
       const entry: RoutingLogEntry = {

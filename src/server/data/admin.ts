@@ -95,7 +95,7 @@ export async function moderationQueue(): Promise<ModerationRow[]> {
           from listings l join properties pp on pp.id = l.property_id where l.id = m.item_id)
       end as title,
       case m.item_type
-        when 'pro' then (select 'Licence ' || coalesce(p.license_number, 'not given') || coalesce(', ' || p.brokerage_name, '') from pros p where p.id = m.item_id)
+        when 'pro' then (select 'License ' || coalesce(p.license_number, 'not given') || coalesce(', ' || p.brokerage_name, '') from pros p where p.id = m.item_id)
         when 'review' then (select coalesce(rv.body, '') from pro_reviews rv where rv.id = m.item_id)
         when 'listing' then (select left(coalesce(l.description, ''), 240) from listings l where l.id = m.item_id)
       end as detail,

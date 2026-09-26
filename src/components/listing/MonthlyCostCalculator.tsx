@@ -3,11 +3,15 @@
 import { useEffect, useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
-import { DEFAULT_RATE_PERCENT, monthlyCost, monthlyCostRange, RATE_SPREAD, type MortgageInputs } from "@/lib/mortgage";
+import { market } from "@/config/market";
+import { DEFAULT_AMORTIZATION_YEARS, DEFAULT_RATE_PERCENT, monthlyCost, monthlyCostRange, RATE_SPREAD, type MortgageInputs } from "@/lib/mortgage";
 
-const STORAGE_KEY = "gh:mortgage-inputs";
+// Versioned by market, so saved inputs from another market's defaults are not reused.
+const STORAGE_KEY = `gh:mortgage-inputs:${market.regionCode}`;
 type Persisted = Pick<MortgageInputs, "downPaymentPercent" | "ratePercent" | "amortizationYears" | "insuranceMonthly">;
-const DEFAULTS: Persisted = { downPaymentPercent: 20, ratePercent: DEFAULT_RATE_PERCENT, amortizationYears: 25, insuranceMonthly: 100 };
+const DEFAULTS: Persisted = { downPaymentPercent: 20, ratePercent: DEFAULT_RATE_PERCENT, amortizationYears: DEFAULT_AMORTIZATION_YEARS, insuranceMonthly: 125 };
+const US = market.finance.mortgageInsurance.kind === "monthly_pmi";
+const FEE_LABEL = US ? "HOA fee" : "Condo or HOA fee";
 
 /**
  * docs/01 LDP section 10: principal and interest, tax, insurance and condo fee, all editable.
@@ -18,7 +22,7 @@ export function MonthlyCostCalculator({ price, taxAnnual, hoaMonthly }: { price:
   const id = useId();
   const [persisted, setPersisted] = useState<Persisted>(DEFAULTS);
   const [homePrice, setHomePrice] = useState(price);
-  const [tax, setTax] = useState(taxAnnual ?? Math.round(price * 0.007));
+  const [tax, setTax] = useState(taxAnnual ?? Math.round(price * market.finance.taxRate));
   const [hoa, setHoa] = useState(hoaMonthly ?? 0);
 
   useEffect(() => {
@@ -72,7 +76,8 @@ export function MonthlyCostCalculator({ price, taxAnnual, hoaMonthly }: { price:
     { label: "Principal and interest", value: cost.principalAndInterest },
     { label: "Property tax", value: cost.propertyTax },
     { label: "Home insurance", value: cost.insurance },
-    { label: "Condo or HOA fee", value: cost.hoa },
+    { label: FEE_LABEL, value: cost.hoa },
+    ...(cost.mortgageInsuranceMonthly > 0 ? [{ label: "Mortgage insurance (PMI)", value: cost.mortgageInsuranceMonthly }] : []),
   ];
 
   return (
@@ -81,10 +86,10 @@ export function MonthlyCostCalculator({ price, taxAnnual, hoaMonthly }: { price:
         {field("Home price", homePrice, setHomePrice, { suffix: "$", step: 1000 })}
         {field("Down payment", persisted.downPaymentPercent, (v) => update({ downPaymentPercent: Math.min(100, v) }), { suffix: "%", step: 1, max: 100 })}
         {field("Interest rate", persisted.ratePercent, (v) => update({ ratePercent: Math.min(25, v) }), { suffix: "%", step: 0.05, max: 25 })}
-        {field("Amortization", persisted.amortizationYears, (v) => update({ amortizationYears: Math.min(30, Math.max(5, Math.round(v))) }), { suffix: "years", min: 5, max: 30 })}
+        {field(US ? "Loan term" : "Amortization", persisted.amortizationYears, (v) => update({ amortizationYears: Math.min(30, Math.max(5, Math.round(v))) }), { suffix: "years", min: 5, max: 30 })}
         {field("Property tax", tax, setTax, { suffix: "$ per year", step: 100 })}
         {field("Home insurance", persisted.insuranceMonthly, (v) => update({ insuranceMonthly: v }), { suffix: "$ per month", step: 10 })}
-        {field("Condo or HOA fee", hoa, setHoa, { suffix: "$ per month", step: 10 })}
+        {field(FEE_LABEL, hoa, setHoa, { suffix: "$ per month", step: 10 })}
       </div>
 
       <div className="rounded-lg bg-neutral-50 p-5" aria-live="polite" data-testid="monthly-cost">
@@ -107,6 +112,11 @@ export function MonthlyCostCalculator({ price, taxAnnual, hoaMonthly }: { price:
             <dd className="tabular">{formatPrice(Math.round(cost.total))}</dd>
           </div>
         </dl>
+        {cost.mortgageInsuranceMonthly > 0 && (
+          <p className="mt-3 text-small text-neutral-700">
+            Includes private mortgage insurance of about {formatPrice(Math.round(cost.mortgageInsuranceMonthly))} a month, which lenders typically require below 20% down.
+          </p>
+        )}
         {cost.insurancePremium > 0 && (
           <p className="mt-3 text-small text-neutral-700">
             Includes a mortgage default insurance premium of about {formatPrice(Math.round(cost.insurancePremium))} added to the loan, which typically applies below 20% down.

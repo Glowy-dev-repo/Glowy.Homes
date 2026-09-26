@@ -23,7 +23,8 @@ import { getListingDetail, isOwnerListing, type ListingDetail } from "@/lib/list
 import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription, toSummary } from "@/lib/listings/ldp";
 import { similarListings } from "@/lib/listings/similar";
 import { mediaUrl } from "@/lib/media/urls";
-import { DEFAULT_RATE_PERCENT, monthlyCostRange } from "@/lib/mortgage";
+import { market } from "@/config/market";
+import { DEFAULT_AMORTIZATION_YEARS, DEFAULT_RATE_PERCENT, monthlyCostRange } from "@/lib/mortgage";
 import { getOrComputeEstimate } from "@/lib/valuation/read";
 
 // ISR: rendered on first request, cached, refreshed hourly and on listing change (docs/02 section 7).
@@ -89,9 +90,9 @@ export default async function ListingPage({ params }: Props) {
         price: l.price,
         downPaymentPercent: 20,
         ratePercent: DEFAULT_RATE_PERCENT,
-        amortizationYears: 25,
-        propertyTaxAnnual: l.taxAnnual ?? l.price * 0.007,
-        insuranceMonthly: 100,
+        amortizationYears: DEFAULT_AMORTIZATION_YEARS,
+        propertyTaxAnnual: l.taxAnnual ?? l.price * market.finance.taxRate,
+        insuranceMonthly: 125,
         hoaMonthly: l.hoaFee ?? 0,
       })
     : null;
@@ -238,9 +239,9 @@ export default async function ListingPage({ params }: Props) {
             </Section>
           )}
 
-          {/* 11. Neighbourhood */}
-          <Section id="neighbourhood" title={l.neighborhood ? `Neighbourhood: ${l.neighborhood.name}` : "Neighbourhood"}>
-            {l.neighborhood?.summary && <p className="mb-4 max-w-prose text-body text-neutral-700" data-testid="neighbourhood-summary">{l.neighborhood.summary}</p>}
+          {/* 11. Neighborhood */}
+          <Section id="neighborhood" title={l.neighborhood ? `Neighborhood: ${l.neighborhood.name}` : "Neighborhood"}>
+            {l.neighborhood?.summary && <p className="mb-4 max-w-prose text-body text-neutral-700" data-testid="neighborhood-summary">{l.neighborhood.summary}</p>}
             <div className="grid gap-6 md:grid-cols-2">
               <dl className="space-y-2 text-body">
                 {hoodStats.median_price ? (

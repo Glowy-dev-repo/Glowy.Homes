@@ -16,20 +16,20 @@ async function signInAs(page: Page, email: string, callbackUrl: string) {
 
 test.describe("natural language search", () => {
   test("text becomes removable chips, then a search", async ({ page }) => {
-    await page.goto("/search?city=toronto");
-    await page.getByLabel("Describe the home you want").fill("3 bed condo under 900k in Mississauga with parking");
+    await page.goto("/search?city=los-angeles");
+    await page.getByLabel("Describe the home you want").fill("3 bed condo under 900k in San Diego with parking");
     await page.getByRole("button", { name: "Read it" }).click();
     const chips = page.getByTestId("nl-chips");
-    await expect(chips).toContainText("Mississauga");
+    await expect(chips).toContainText("San Diego");
     await expect(chips).toContainText("3+ beds");
     await expect(chips).toContainText("Condo");
     await expect(chips).toContainText("Under $900,000");
     await chips.getByRole("button", { name: "Remove Parking" }).click();
     await expect(chips).not.toContainText("Parking");
     await chips.getByRole("button", { name: "Show homes" }).click();
-    await expect(page).toHaveURL(/city=mississauga/);
+    await expect(page).toHaveURL(/city=san-diego/);
     const url = new URL(page.url());
-    expect(Object.fromEntries(url.searchParams)).toMatchObject({ city: "mississauga", bedsMin: "3", propertyTypes: "condo", priceMax: "900000" });
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ city: "san-diego", bedsMin: "3", propertyTypes: "condo", priceMax: "900000" });
     expect(url.searchParams.has("parking")).toBe(false);
   });
 });
@@ -70,12 +70,12 @@ test.describe("saved search alerts", () => {
   test("the unsubscribe link stops alerts for that search only", async ({ page }) => {
     const email = uniqueEmail("unsub");
     const [user] = await db()<{ id: string }[]>`insert into users (email) values (${email}) returning id`;
-    const [a] = await db()<{ id: string }[]>`insert into saved_searches (user_id, name, filters, alert_frequency) values (${user.id}, 'Condos in Toronto', ${db().json({ type: "sale", city: "toronto" })}, 'daily') returning id`;
+    const [a] = await db()<{ id: string }[]>`insert into saved_searches (user_id, name, filters, alert_frequency) values (${user.id}, 'Condos in Los Angeles', ${db().json({ type: "sale", city: "los-angeles" })}, 'daily') returning id`;
     const [b] = await db()<{ id: string }[]>`insert into saved_searches (user_id, name, filters, alert_frequency) values (${user.id}, 'Rentals', ${db().json({ type: "rent" })}, 'weekly') returning id`;
     const token = createHmac("sha256", process.env.AUTH_SECRET ?? "dev-secret").update(`unsubscribe:${a.id}`).digest("base64url").slice(0, 32);
 
     await page.goto(`/alerts/unsubscribe?id=${a.id}&token=${token}`);
-    await expect(page.getByText("You will no longer get emails about new homes for Condos in Toronto")).toBeVisible();
+    await expect(page.getByText("You will no longer get emails about new homes for Condos in Los Angeles")).toBeVisible();
     await page.getByRole("button", { name: "Stop alerts" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Alerts stopped" })).toBeVisible();
     const rows = await db()<{ id: string; f: string }[]>`select id, alert_frequency as f from saved_searches where user_id = ${user.id}`;
@@ -91,9 +91,9 @@ test.describe("saved search alerts", () => {
 test.describe("analytics and admin funnel", () => {
   test("search and listing views are recorded and the funnel shows the city", async ({ page, browser, isMobile }) => {
     test.skip(isMobile, "run once");
-    await page.goto("/search?city=hamilton");
+    await page.goto("/search?city=sacramento");
     await expect(page.getByTestId("result-count")).toBeVisible();
-    const listing = await sampleListingPath("l.status = 'active' and l.city_region_id = (select id from regions where slug = 'hamilton' and type = 'city')");
+    const listing = await sampleListingPath("l.status = 'active' and l.city_region_id = (select id from regions where slug = 'sacramento' and type = 'city')");
     await page.goto(listing.path);
     // Leaving the page flushes the batch.
     await page.goto("/about");
@@ -103,18 +103,18 @@ test.describe("analytics and admin funnel", () => {
       .poll(async () => (await db()<{ name: string }[]>`select name from events where anon_id = ${anon!} order by id`).map((e) => e.name), { timeout: 20_000 })
       .toEqual(expect.arrayContaining(["page_view", "search", "listing_view"]));
     const [view] = await db()<{ props: { city: string; listingId: string } }[]>`select props from events where anon_id = ${anon!} and name = 'listing_view'`;
-    expect(view.props).toMatchObject({ city: "hamilton", listingId: listing.id });
+    expect(view.props).toMatchObject({ city: "sacramento", listingId: listing.id });
 
     const admin = await browser.newPage();
     await signInAs(admin, "admin@example.com", "/admin/funnel");
-    await expect(admin.getByTestId("funnel-table").locator('tr[data-city="hamilton"]')).toBeVisible();
+    await expect(admin.getByTestId("funnel-table").locator('tr[data-city="sacramento"]')).toBeVisible();
     await admin.close();
   });
 });
 
-test("neighbourhood pages show the generated summary", async ({ page }) => {
-  const html = await (await page.request.get("/homes/toronto")).text();
-  const hood = html.match(/href="\/homes\/toronto\/([a-z0-9-]+)"/)![1];
-  await page.goto(`/homes/toronto/${hood}`);
+test("neighborhood pages show the generated summary", async ({ page }) => {
+  const html = await (await page.request.get("/homes/los-angeles")).text();
+  const hood = html.match(/href="\/homes\/los-angeles\/([a-z0-9-]+)"/)![1];
+  await page.goto(`/homes/los-angeles/${hood}`);
   await expect(page.getByTestId("region-summary")).toContainText("The median asking price in");
 });

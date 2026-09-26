@@ -45,7 +45,7 @@ test.describe("estimates", () => {
   test("an unknown address inside a covered city becomes a new property with an estimate", async ({ page }) => {
     const [street] = await db()`
       select regexp_replace(address_line1, '^[0-9]+ ', '') as street, city, max(split_part(address_normalized, ' ', 1)::int) as maxnum
-      from properties where city = 'Hamilton' and property_type = 'detached' and address_line2 is null
+      from properties where city = 'Sacramento' and property_type = 'detached' and address_line2 is null
       group by 1, 2 having count(*) > 5 order by count(*) desc limit 1`;
     const address = `${street.maxnum + 2} ${street.street}, ${street.city}`;
     await page.goto("/home-value");

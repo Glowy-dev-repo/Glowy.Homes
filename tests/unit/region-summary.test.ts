@@ -3,7 +3,7 @@ import { acceptableSummary, templateSummary, type SummaryFacts } from "@/lib/reg
 
 const facts: SummaryFacts = {
   name: "Lake Commons",
-  cityName: "Toronto",
+  cityName: "Los Angeles",
   saleCount: 436,
   rentCount: 255,
   medianPrice: 1_252_500,
@@ -14,10 +14,10 @@ const facts: SummaryFacts = {
   typeMix: [{ type: "condo", share: 0.62 }, { type: "townhouse", share: 0.21 }, { type: "detached", share: 0.1 }],
 };
 
-describe("neighbourhood summaries (docs/05 Phase 6 task 3)", () => {
+describe("neighborhood summaries (docs/05 Phase 6 task 3)", () => {
   it("states the market from the facts, with the city comparison", () => {
     const s = templateSummary(facts);
-    expect(s).toContain("The median asking price in Lake Commons is $1,252,500, about 18% above the Toronto median.");
+    expect(s).toContain("The median asking price in Lake Commons is $1,252,500, about 18% above the Los Angeles median.");
     expect(s).toContain("condos (62%) and townhouses (21%)");
     expect(s).toContain("built around 1998");
     expect(s).toContain("436 homes for sale and 255 rentals");
@@ -25,7 +25,7 @@ describe("neighbourhood summaries (docs/05 Phase 6 task 3)", () => {
     expect(acceptableSummary(s)).toBe(true);
   });
 
-  it("handles a neighbourhood with no listings", () => {
+  it("handles a neighborhood with no listings", () => {
     expect(templateSummary({ ...facts, saleCount: 0, rentCount: 0, medianPrice: null, medianRent: null, medianDom: null, typeMix: [] })).toBe("Lake Commons has no active listings right now.");
   });
 

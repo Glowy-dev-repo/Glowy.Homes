@@ -21,7 +21,7 @@ export const ProProfileFields = z.object({
 export const ProSignup = ProProfileFields.extend({
   proType: z.enum(PRO_SIGNUP_TYPES),
   licenseNumber: z.string().trim().max(40).optional().transform((v) => v || null),
-}).refine((v) => v.proType === "landlord" || !!v.licenseNumber, { message: "Enter your licence number.", path: ["licenseNumber"] });
+}).refine((v) => v.proType === "landlord" || !!v.licenseNumber, { message: "Enter your license number.", path: ["licenseNumber"] });
 
 export const ProProfileUpdate = ProProfileFields.partial().extend({
   isAcceptingLeads: z.boolean().optional(),

@@ -3,6 +3,7 @@ import { sqlClient } from "@/db";
 import { checkFirstResponse, refreshProResponseTimes, routeLead } from "@/lib/leads/route";
 import { responseWindowMs } from "@/lib/leads/routing";
 import { inngest } from "../client";
+import { market } from "@/config/market";
 
 const retryEvery = () => {
   const s = Number(process.env.LEAD_RETRY_SECONDS);
@@ -58,7 +59,7 @@ export const sweepLeadsFn = inngest.createFunction(
 );
 
 export const proResponseTimesFn = inngest.createFunction(
-  { id: "pro-response-times", triggers: [{ cron: "TZ=America/Toronto 15 3 * * *" }] },
+  { id: "pro-response-times", triggers: [{ cron: `TZ=${market.timezone} 15 3 * * *` }] },
   async ({ step }) => {
     await step.run("refresh", () => refreshProResponseTimes(sqlClient));
   },

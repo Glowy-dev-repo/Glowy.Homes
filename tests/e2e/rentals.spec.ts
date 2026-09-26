@@ -20,12 +20,12 @@ async function signInAs(page: Page, email: string, callbackUrl: string) {
   await page.goto(await waitForEmailLink(email));
 }
 
-/** A Toronto condo with no owner and nothing listed, so the landlord can list it. */
+/** A Los Angeles condo with no owner and nothing listed, so the landlord can list it. */
 async function freeCondo() {
   const [p] = await db()<{ id: string; line1: string; line2: string; city: string; lat: number; lng: number }[]>`
     select p.id, p.address_line1 as line1, p.address_line2 as line2, p.city,
       ST_Y(p.location::geometry) as lat, ST_X(p.location::geometry) as lng
-    from properties p join regions c on c.id = p.city_region_id and c.slug = 'toronto'
+    from properties p join regions c on c.id = p.city_region_id and c.slug = 'los-angeles'
     where p.property_type = 'condo' and p.address_line2 is not null and p.owner_user_id is null
       and not exists (select 1 from listings l where l.property_id = p.id and l.status in ('active', 'pending', 'in_review'))
     order by random() limit 1`;

@@ -21,7 +21,7 @@ const ICONS: Record<Suggestion["group"], typeof MapPin> = { places: MapPin, addr
  */
 export function SearchBar({
   listingType = "sale",
-  placeholder = "City, neighbourhood, address or listing ID",
+  placeholder = "City, neighborhood, address or listing ID",
   defaultValue = "",
   size = "md",
   label = "Search homes",

@@ -4,6 +4,7 @@ import { Loader2, Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { market } from "@/config/market";
 
 /** /home-value lookup (docs/01 US3): any address in the covered cities opens its value page. */
 export function AddressLookup(props: { defaultValue?: string; autoFocus?: boolean; prefillFromUrl?: boolean }) {
@@ -55,7 +56,7 @@ function Lookup({ defaultValue = "", autoFocus = false }: { defaultValue?: strin
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="12 Maple Ave, Toronto"
+          placeholder={market.exampleAddress}
           aria-invalid={!!error || undefined}
           aria-describedby={error ? `${id}-error` : `${id}-help`}
           className="h-12 min-w-0 flex-1 bg-transparent text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none"
@@ -71,7 +72,7 @@ function Lookup({ defaultValue = "", autoFocus = false }: { defaultValue?: strin
         </p>
       ) : (
         <p id={`${id}-help`} className="mt-2 text-small text-neutral-600">
-          Include the street number and city. For a condo, add the unit, like Unit 1204, 88 Harbour St, Toronto.
+          Include the street number and city. For a condo, add the unit, like {market.exampleUnitAddress}.
         </p>
       )}
     </form>

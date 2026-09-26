@@ -91,7 +91,7 @@ export function ApplicationForm({ initial, email, next }: { initial: RentalAppli
         <label htmlFor={`${id}-notes`} className="text-small font-medium text-neutral-800">Anything else (optional)</label>
         <textarea id={`${id}-notes`} name="notes" rows={3} maxLength={1500} defaultValue={initial?.notes ?? ""} className="rounded-md border border-neutral-300 p-3 text-base" />
       </div>
-      <p className="text-small text-neutral-600">We never ask for your SIN or run credit checks. Share only what you are comfortable with.</p>
+      <p className="text-small text-neutral-600">We never ask for your Social Security number or run credit checks. Share only what you are comfortable with.</p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={state === "saving"}>{state === "saving" && <Loader2 className="animate-spin" aria-hidden />}Save application</Button>
         <p role="status" className="text-small">{state === "saved" ? "Application saved." : ""}</p>

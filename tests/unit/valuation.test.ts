@@ -101,9 +101,12 @@ describe("market index", () => {
 
 describe("address parsing", () => {
   it("parses common formats", () => {
-    expect(parseAddress("12 Maple Ave, Toronto")).toMatchObject({ number: 12, street: "Maple Ave", unit: null, city: "Toronto" });
+    expect(parseAddress("12 Maple Ave, Los Angeles")).toMatchObject({ number: 12, street: "Maple Ave", unit: null, city: "Los Angeles" });
     expect(parseAddress("Unit 1204, 88 Harbour St, Toronto, ON M5V 1A1")).toMatchObject({ number: 88, street: "Harbour St", unit: "1204", city: "Toronto", postal: "M5V 1A1" });
-    expect(parseAddress("88 Harbour St #1204 Toronto")).toMatchObject({ number: 88, unit: "1204", city: "Toronto" });
+    expect(parseAddress("Unit 1204, 88 Harbor St, San Francisco, CA 94110")).toMatchObject({ number: 88, street: "Harbor St", unit: "1204", city: "San Francisco", postal: "94110" });
+    expect(parseAddress("12345 Ventura Blvd San Diego")).toMatchObject({ number: 12345, street: "Ventura Blvd", city: "San Diego", postal: null });
+    expect(parseAddress("500 Oak St, Sacramento, California 95814-1234")).toMatchObject({ number: 500, street: "Oak St", city: "Sacramento", postal: "95814-1234" });
+    expect(parseAddress("88 Harbor St #1204 Los Angeles")).toMatchObject({ number: 88, unit: "1204", city: "Los Angeles" });
     expect(parseAddress("Maple Ave")).toBeNull();
   });
 });

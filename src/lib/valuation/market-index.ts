@@ -1,7 +1,7 @@
 import type postgres from "postgres";
 
 // market_index(city, month): median sold price per sqft per city per month, from price events
-// (docs/03 section 3.2). Missing months are linearly interpolated; a centred three month moving
+// (docs/03 section 3.2). Missing months are linearly interpolated; a centerd three month moving
 // average smooths small monthly samples. Stored in regions.stats.ppsf_index (and rent_ppsf_index).
 
 export type MonthlyIndex = Record<string, number>;

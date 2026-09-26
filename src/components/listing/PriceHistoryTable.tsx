@@ -26,7 +26,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 /**
- * docs/04 PriceHistoryTable: Date, Event, Price, Change (percent, coloured with a sign so colour
+ * docs/04 PriceHistoryTable: Date, Event, Price, Change (percent, colored with a sign so color
  * is not the only cue), Source. Newest first, collapsed to five rows.
  */
 export function PriceHistoryTable({ events, listingType }: { events: PriceEvent[]; listingType: "sale" | "rent" }) {

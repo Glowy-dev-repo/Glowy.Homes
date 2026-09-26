@@ -12,11 +12,18 @@ export const metadata: Metadata = {
 };
 
 // docs/01 B3: static partner rate table in the MVP. Shown as typical rates, not offers.
-const RATES = [
-  { term: "5 year fixed", rate: "4.79%", lender: "Northstar Mortgage Group" },
-  { term: "3 year fixed", rate: "4.94%", lender: "Northstar Mortgage Group" },
-  { term: "5 year variable", rate: "5.10%", lender: "Northstar Mortgage Group" },
-];
+const RATES =
+  brand.market.country === "US"
+    ? [
+        { term: "30 year fixed", rate: "6.25%", lender: "Northstar Mortgage Group" },
+        { term: "15 year fixed", rate: "5.60%", lender: "Northstar Mortgage Group" },
+        { term: "7/1 adjustable (ARM)", rate: "5.95%", lender: "Northstar Mortgage Group" },
+      ]
+    : [
+        { term: "5 year fixed", rate: "4.79%", lender: "Northstar Mortgage Group" },
+        { term: "3 year fixed", rate: "4.94%", lender: "Northstar Mortgage Group" },
+        { term: "5 year variable", rate: "5.10%", lender: "Northstar Mortgage Group" },
+      ];
 
 export default function MortgagePage() {
   return (

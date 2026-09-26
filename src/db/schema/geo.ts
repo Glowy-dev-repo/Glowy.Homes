@@ -23,7 +23,7 @@ export const regions = pgTable(
     boundary: geography("boundary", "multipolygon"),
     centroid: geography("centroid", "point"),
     stats: jsonb("stats").$type<RegionStats>().notNull().default({}),
-    /** Generated neighbourhood summary (docs/05 Phase 6 task 3), regenerated weekly. */
+    /** Generated neighborhood summary (docs/05 Phase 6 task 3), regenerated weekly. */
     summary: text("summary"),
     summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
   },

@@ -2,7 +2,7 @@
 
 export type AreaOption = { id: string; name: string; type: "city" | "neighborhood"; parentId: string | null };
 
-/** Service area picker: whole cities or individual neighbourhoods, grouped by city. */
+/** Service area picker: whole cities or individual neighborhoods, grouped by city. */
 export function AreaPicker({ areas, value, onChange, error }: { areas: AreaOption[]; value: string[]; onChange: (ids: string[]) => void; error?: string }) {
   const cities = areas.filter((a) => a.type === "city");
   const toggle = (id: string, on: boolean) => onChange(on ? [...new Set([...value, id])] : value.filter((v) => v !== id));
@@ -25,7 +25,7 @@ export function AreaPicker({ areas, value, onChange, error }: { areas: AreaOptio
                   <input type="checkbox" checked={cityOn} onChange={(e) => toggle(c.id, e.target.checked)} className="size-5 accent-[var(--color-accent)]" />
                   All of {c.name}
                 </label>
-                <span className="text-small text-neutral-600">or choose neighbourhoods</span>
+                <span className="text-small text-neutral-600">or choose neighborhoods</span>
               </summary>
               <div className="grid gap-x-4 pb-3 sm:grid-cols-2">
                 {hoods.map((h) => (

@@ -17,7 +17,7 @@ export const revalidate = 3600;
 const ENTRY_POINTS = [
   {
     title: "Buy a home",
-    body: "Search every home for sale on a map, save your favourites and get alerts when new ones appear.",
+    body: "Search every home for sale on a map, save your favorites and get alerts when new ones appear.",
     href: "/search?type=sale",
     cta: "Browse homes",
     icon: House,

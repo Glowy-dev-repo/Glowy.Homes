@@ -9,11 +9,11 @@ test.describe("listing detail page", () => {
     const [row] = await db()`
       select l.price, l.beds::float8 as beds, l.baths::float8 as baths, l.sqft, l.description, p.address_line1
       from listings l join properties p on p.id = l.property_id where l.id = ${path.split("/")[2]}`;
-    expect(html).toContain(`$${Number(row.price).toLocaleString("en-CA")}`);
+    expect(html).toContain(`$${Number(row.price).toLocaleString("en-US")}`);
     expect(html).toContain(row.address_line1);
     expect(html).toContain(`${row.beds} bd`);
     expect(html).toContain(`${row.baths} ba`);
-    expect(html).toContain(`${Math.round(row.sqft / 10.7639).toLocaleString("en-CA")} m²`);
+    expect(html).toContain(`${Number(row.sqft).toLocaleString("en-US")} sq ft`);
     expect(html).toContain(row.description.slice(0, 60));
     expect(html).toContain('"@type":"RealEstateListing"');
   });
@@ -22,7 +22,7 @@ test.describe("listing detail page", () => {
     const { path } = await sampleListingPath();
     await page.goto(path);
     const headings = await page.locator("main h2").allTextContents();
-    const order = ["Our estimate", "Key facts", "About this home", "Facts and features", "Price history", "Monthly cost", "Neighbourhood", "Similar homes", "Listing agent"];
+    const order = ["Our estimate", "Key facts", "About this home", "Facts and features", "Price history", "Monthly cost", "Neighborhood", "Similar homes", "Listing agent"];
     const positions = order.map((h) => headings.findIndex((t) => t.toLowerCase().startsWith(h.toLowerCase())));
     expect(positions.every((p) => p >= 0), JSON.stringify(headings)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
@@ -47,12 +47,12 @@ test.describe("listing detail page", () => {
 
   test("monthly cost inputs persist across listings", async ({ page, isMobile }) => {
     test.skip(isMobile, "local storage behaviour is viewport independent");
-    // Under $1.5M, where mortgage default insurance applies below 20% down.
+    // Below 20% down, US lenders typically require private mortgage insurance.
     const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.price < 900000");
     await page.goto(path);
     const calc = page.locator("#monthly-cost");
     await calc.getByLabel("Down payment (%)").fill("10");
-    await expect(calc.getByTestId("monthly-cost")).toContainText("mortgage default insurance");
+    await expect(calc.getByTestId("monthly-cost")).toContainText("private mortgage insurance");
     const other = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.property_type = 'condo' and l.price < 900000");
     await page.goto(other.path);
     await expect(page.locator("#monthly-cost").getByLabel("Down payment (%)")).toHaveValue("10");
@@ -88,11 +88,11 @@ test.describe("saving", () => {
   });
 
   test("saved search round trip: save, reload, edit frequency, delete", async ({ page }) => {
-    const email = await signIn(page, "saved-search", "/search?city=hamilton&bedsMin=3");
-    await expect(page).toHaveURL(/\/search\?city=hamilton&bedsMin=3/);
+    const email = await signIn(page, "saved-search", "/search?city=sacramento&bedsMin=3");
+    await expect(page).toHaveURL(/\/search\?city=sacramento&bedsMin=3/);
     await page.getByRole("button", { name: "Save search" }).first().click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Name").fill("Hamilton 3 beds");
+    await dialog.getByLabel("Name").fill("Sacramento 3 beds");
     await dialog.getByLabel("Email alerts").selectOption("daily");
     await dialog.getByRole("button", { name: "Save search" }).click();
     await expect(dialog.getByRole("status")).toContainText("Saved");
@@ -101,19 +101,19 @@ test.describe("saving", () => {
     await expect.poll(async () => (await rows()).length).toBe(1);
     const [row] = await rows();
     expect(row.alert_frequency).toBe("daily");
-    expect(row.filters).toMatchObject({ city: "hamilton", bedsMin: 3 });
+    expect(row.filters).toMatchObject({ city: "sacramento", bedsMin: 3 });
 
     await page.goto("/account/searches");
     await page.reload();
     const item = page.getByTestId("saved-search");
-    await expect(item).toContainText("Hamilton 3 beds");
+    await expect(item).toContainText("Sacramento 3 beds");
     await item.getByLabel(/Email alerts for/).selectOption("weekly");
     await expect(page.getByRole("status")).toContainText("updated");
     await expect.poll(async () => (await rows())[0]?.alert_frequency).toBe("weekly");
     await page.reload();
     await expect(page.getByTestId("saved-search").getByLabel(/Email alerts for/)).toHaveValue("weekly");
 
-    await page.getByRole("button", { name: "Delete Hamilton 3 beds" }).click();
+    await page.getByRole("button", { name: "Delete Sacramento 3 beds" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
     await expect(page.getByRole("heading", { name: "No saved searches yet" })).toBeVisible();
     await expect.poll(async () => (await rows()).length).toBe(0);
@@ -123,7 +123,7 @@ test.describe("saving", () => {
 test("key pages never scroll sideways on a phone", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile layout check");
   const { path } = await sampleListingPath();
-  for (const url of ["/", "/search?city=toronto", "/homes/toronto", path, "/signin"]) {
+  for (const url of ["/", "/search?city=los-angeles", "/homes/los-angeles", path, "/signin"]) {
     await page.goto(url);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, `${url} overflows by ${overflow}px`).toBeLessThanOrEqual(0);

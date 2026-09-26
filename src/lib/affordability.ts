@@ -1,28 +1,27 @@
-import { minimumDownPayment, monthlyPrincipalAndInterest } from "./mortgage";
+import { market, type FinanceRules } from "@/config/market";
+import { monthlyPrincipalAndInterest } from "./mortgage";
 
-// Affordability calculator (docs/01 B1): income, debts, down payment and rate to a maximum price.
-// Uses the usual Canadian lender limits: housing costs within 39% of gross income (GDS) and all
-// debts within 44% (TDS), qualified at the stress test rate (the greater of rate + 2 and 5.25%).
+// Affordability calculator (docs/01 B1): income, debts, down payment and rate to a maximum price,
+// using the lender limits of the market (src/config/market.ts). US: housing within 28% of gross
+// income and all debts within 36%, at the note rate. Canada: 39% and 44% at the stress test rate.
 
 export type AffordabilityInput = { annualIncome: number; monthlyDebts: number; downPayment: number; ratePercent: number; amortizationYears?: number };
 
-const HEATING = 100;
-const TAX_RATE = 0.007;
-
-export function qualifyingRate(rate: number): number {
-  return Math.max(rate + 2, 5.25);
+export function qualifyingRate(rate: number, rules: FinanceRules = market.finance): number {
+  return rules.qualifyingRate(rate);
 }
 
 /** Largest price whose qualifying payment fits both ratios and whose down payment meets the minimum. */
-export function maxPrice(input: AffordabilityInput, ratePercent = input.ratePercent): number {
+export function maxPrice(input: AffordabilityInput, ratePercent = input.ratePercent, rules: FinanceRules = market.finance): number {
   const monthlyIncome = input.annualIncome / 12;
-  const years = input.amortizationYears ?? 25;
-  const q = qualifyingRate(ratePercent);
+  const years = input.amortizationYears ?? rules.defaultAmortizationYears;
+  const q = rules.qualifyingRate(ratePercent);
   const fits = (price: number) => {
-    if (input.downPayment < minimumDownPayment(price)) return false;
+    if (input.downPayment < rules.minimumDownPayment(price)) return false;
     const loan = Math.max(0, price - input.downPayment);
-    const housing = monthlyPrincipalAndInterest(loan, q, years) + (price * TAX_RATE) / 12 + HEATING;
-    return housing <= 0.39 * monthlyIncome && housing + input.monthlyDebts <= 0.44 * monthlyIncome;
+    const pmi = rules.mortgageInsurance.kind === "monthly_pmi" && input.downPayment < price * 0.2 ? (loan * rules.mortgageInsurance.annualRate) / 12 : 0;
+    const housing = monthlyPrincipalAndInterest(loan, q, years, rules) + (price * rules.taxRate) / 12 + rules.otherMonthlyHousing + pmi;
+    return housing <= rules.ratios.housing * monthlyIncome && housing + input.monthlyDebts <= rules.ratios.total * monthlyIncome;
   };
   let lo = 0;
   let hi = 20_000_000;
@@ -36,10 +35,10 @@ export function maxPrice(input: AffordabilityInput, ratePercent = input.ratePerc
 }
 
 /** A range for rates half a point either side, so the answer is never a single number. */
-export function affordabilityRange(input: AffordabilityInput) {
+export function affordabilityRange(input: AffordabilityInput, rules: FinanceRules = market.finance) {
   return {
-    low: maxPrice(input, input.ratePercent + 0.5),
-    mid: maxPrice(input),
-    high: maxPrice(input, Math.max(0, input.ratePercent - 0.5)),
+    low: maxPrice(input, input.ratePercent + 0.5, rules),
+    mid: maxPrice(input, input.ratePercent, rules),
+    high: maxPrice(input, Math.max(0, input.ratePercent - 0.5), rules),
   };
 }

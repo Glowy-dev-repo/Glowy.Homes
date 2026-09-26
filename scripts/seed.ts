@@ -2,7 +2,10 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import postgres from "postgres";
+import { brand } from "../src/config/brand";
+import { market as MARKET } from "../src/config/market";
 import { runIngest } from "../src/lib/ingestion/ingest";
+import { slugify } from "../src/lib/slug";
 import { SYNTHETIC_FEED_PATH, syntheticAdapter } from "../src/lib/ingestion/adapters/synthetic";
 import { generateMarket, type GeneratedMarket } from "../src/lib/ingestion/synthetic/generate";
 import { refreshRegionStats } from "../src/lib/regions/stats";
@@ -41,9 +44,9 @@ async function wipe() {
 
 async function insertRegions(market: GeneratedMarket) {
   const [country] = await sql<{ id: string }[]>`
-    insert into regions (type, name, slug) values ('country', 'Canada', 'canada') returning id`;
+    insert into regions (type, name, slug) values ('country', ${MARKET.countryName}, ${slugify(MARKET.countryName)}) returning id`;
   const [province] = await sql<{ id: string }[]>`
-    insert into regions (type, name, slug, parent_id) values ('province', 'Ontario', 'ontario', ${country.id}) returning id`;
+    insert into regions (type, name, slug, parent_id) values ('province', ${brand.market.region}, ${slugify(brand.market.region)}, ${country.id}) returning id`;
 
   for (const city of market.cities) {
     const ring = city.boundary.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
@@ -56,11 +59,11 @@ async function insertRegions(market: GeneratedMarket) {
       returning id`;
 
     // Neighborhood boundaries: Voronoi cells of the seed points, clipped to the city.
-    const seeds = city.hoods.map((h) => ({ name: h.name, slug: h.slug, lng: h.point[0], lat: h.point[1], fsa: h.fsa }));
+    const seeds = city.hoods.map((h) => ({ name: h.name, slug: h.slug, lng: h.point[0], lat: h.point[1], postal: h.postalArea }));
     await sql.unsafe(
       `with pts as (
          select x.*, ST_SetSRID(ST_MakePoint(x.lng, x.lat), 4326) as geom
-         from jsonb_to_recordset($1::jsonb) as x(name text, slug text, lng float8, lat float8, fsa text)
+         from jsonb_to_recordset($1::jsonb) as x(name text, slug text, lng float8, lat float8, postal text)
        ),
        city as (select boundary::geometry as g from regions where id = $2),
        cells as (
@@ -70,7 +73,7 @@ async function insertRegions(market: GeneratedMarket) {
        insert into regions (type, name, slug, parent_id, boundary, centroid, stats)
        select 'neighborhood', p.name, p.slug, $2,
          ST_Multi(ST_CollectionExtract(ST_Intersection(c.cell, (select g from city)), 3))::geography,
-         p.geom::geography, jsonb_build_object('fsa', p.fsa)
+         p.geom::geography, jsonb_build_object('postal_area', p.postal)
        from pts p join cells c on ST_Contains(c.cell, p.geom)`,
       [sql.json(seeds), row.id],
     );
@@ -104,7 +107,7 @@ async function insertPeople(market: GeneratedMarket) {
       insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region,
         license_verified_at, phone, bio, languages, years_experience, rating, review_count, response_time_minutes, status)
       values (${user.id}, ${pro.proType}, ${`${pro.displayName.toLowerCase().replace(/[^a-z]+/g, "-")}-${pro.key}`},
-        ${pro.displayName}, ${pro.brokerageName}, ${pro.licenseNumber}, ${pro.licenseNumber ? "ON" : null},
+        ${pro.displayName}, ${pro.brokerageName}, ${pro.licenseNumber}, ${pro.licenseNumber ? MARKET.regionCode : null},
         ${pro.licenseNumber ? new Date() : null}, ${pro.phone}, ${pro.bio}, ${sql.array(pro.languages)},
         ${pro.yearsExperience}, ${pro.rating}, ${pro.reviewCount}, ${pro.responseTimeMinutes}, 'active')
       returning id`;

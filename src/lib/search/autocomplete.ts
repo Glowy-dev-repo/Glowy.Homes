@@ -27,7 +27,7 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
       group: "places",
       type: r.type,
       label: r.name,
-      sublabel: r.type === "city" ? "City" : `Neighbourhood in ${r.parentName}`,
+      sublabel: r.type === "city" ? "City" : `Neighborhood in ${r.parentName}`,
       href: r.type === "city" ? `/${browse}/${r.slug}` : `/homes/${r.parentSlug}/${r.slug}`,
       point: r.bbox ? ([(r.bbox[0] + r.bbox[2]) / 2, (r.bbox[1] + r.bbox[3]) / 2] as [number, number]) : undefined,
     }));

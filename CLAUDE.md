@@ -20,11 +20,11 @@ brand_name: "Glowy Homes"           # replace with your brand
 brand_short: "GH"                   # 2 to 3 letters for favicons and logos
 domain: "glowy.homes"               # production domain
 tagline: "Find your place."
-primary_market_country: "CA"        # CA or US
-primary_market_region: "Ontario"    # province or state to seed first
-primary_market_cities: ["Toronto", "Mississauga", "Ottawa", "Hamilton", "London"]
-currency: "CAD"
-units: "metric"                     # metric or imperial
+primary_market_country: "US"        # CA or US
+primary_market_region: "California" # province or state to seed first
+primary_market_cities: ["Los Angeles", "San Diego", "San Jose", "San Francisco", "Sacramento"]
+currency: "USD"
+units: "imperial"                   # metric or imperial
 listing_feed: "synthetic"           # synthetic | reso_web_api | crea_ddf | csv
 brand_color: "#1D4ED8"              # one accent color only (royal blue, 6.7:1 on white)
 neutral_scale: "slate"              # tailwind neutral family

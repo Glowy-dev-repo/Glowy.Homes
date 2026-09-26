@@ -1,6 +1,7 @@
 import "server-only";
 import { sqlClient } from "@/db";
 import { LEAD_STATUSES, type LeadStatus } from "@/db/schema/leads";
+import { market } from "@/config/market";
 
 // Pro inbox and lead detail (docs/01 P3, P5, P6). Every read is scoped: a pro only sees leads
 // assigned to them; a consumer only sees their own leads (docs/02 section 8.6).
@@ -52,11 +53,11 @@ export async function inbox(proId: string, filter: { status?: string; type?: str
 export async function inboxStats(proId: string, capPerDay: number) {
   const [s] = await sql<{ newToday: number; thisMonth: number; medianResponse: number | null; today: number }[]>`
     select
-      count(*) filter (where status = 'new' and assigned_at >= date_trunc('day', now() at time zone 'America/Toronto') at time zone 'America/Toronto')::int as "newToday",
+      count(*) filter (where status = 'new' and assigned_at >= date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})::int as "newToday",
       count(*) filter (where assigned_at >= date_trunc('month', now()))::int as "thisMonth",
       round(percentile_cont(0.5) within group (order by extract(epoch from first_response_at - assigned_at) / 60)
         filter (where first_response_at is not null and assigned_at >= now() - interval '30 days'))::int as "medianResponse",
-      count(*) filter (where assigned_at >= date_trunc('day', now() at time zone 'America/Toronto') at time zone 'America/Toronto')::int as today
+      count(*) filter (where assigned_at >= date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})::int as today
     from leads where assigned_pro_id = ${proId}`;
   return { ...s, capRemaining: Math.max(0, capPerDay - s.today) };
 }

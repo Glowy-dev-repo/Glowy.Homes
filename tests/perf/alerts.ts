@@ -14,8 +14,8 @@ async function main() {
   const mk = (name: string, filters: object) => sql<{ id: string }[]>`
     insert into saved_searches (user_id, name, filters, alert_frequency, last_seen_listing_at)
     values (${user.id}, ${name}, ${sql.json(filters as never)}, 'daily', '2000-01-01') returning id`;
-  const [withMatches] = await mk("Condos in Toronto", { type: "sale", city: "toronto", propertyTypes: ["condo"] });
-  const [empty] = await mk("Nothing matches", { type: "sale", city: "toronto", priceMax: 1 });
+  const [withMatches] = await mk("Condos in Los Angeles", { type: "sale", city: "los-angeles", propertyTypes: ["condo"] });
+  const [empty] = await mk("Nothing matches", { type: "sale", city: "los-angeles", priceMax: 1 });
   const ids = [withMatches.id, empty.id];
   const file = devMailFile(email);
   rmSync(file, { force: true });
@@ -34,7 +34,7 @@ async function main() {
     const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from alert_sends where saved_search_id = any(${ids}::uuid[])`;
     check(n === 1, `alert_sends has exactly one row (${n})`);
     const mail = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { subject: string; html: string; text: string }) : null;
-    check(!!mail && /^\d+ new homes? in Condos in Toronto$/.test(mail.subject), `email subject "${mail?.subject}"`);
+    check(!!mail && /^\d+ new homes? in Condos in Los Angeles$/.test(mail.subject), `email subject "${mail?.subject}"`);
     check(!!mail && (mail.html.match(/utm_source=alert/g)?.length ?? 0) >= 2 && mail.html.includes("/alerts/unsubscribe?id="), "email has listing links with utm and an unsubscribe link");
     // Next day, nothing new since the last send: skipped.
     const nextDay = await sendDueAlerts("daily", new Date(t0.getTime() + 24 * 60 * 60_000), { savedSearchIds: ids });

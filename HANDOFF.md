@@ -30,7 +30,7 @@ To make another existing account an admin, add `admin` to its `roles` column in 
 
 Only switch once a data agreement is signed. Never scrape (CLAUDE.md rule 1).
 
-1. Get credentials: CREA DDF for Canadian listings (`CREA_DDF_CLIENT_ID`, `CREA_DDF_CLIENT_SECRET`) or a RESO Web API feed from an MLS (`RESO_BASE_URL`, `RESO_ACCESS_TOKEN`).
+1. Get credentials: for California, a RESO Web API feed from an MLS such as CRMLS (`RESO_BASE_URL`, `RESO_ACCESS_TOKEN`), usually through a participating brokerage. For Canada it would be CREA DDF (`CREA_DDF_CLIENT_ID`, `CREA_DDF_CLIENT_SECRET`).
 2. Write the adapter in `src/lib/ingestion/adapters/` by implementing `ListingFeedAdapter` from `src/lib/ingestion/types.ts`:
    `fetchChanged(cursor, pageSize)` pages through listings changed since the cursor, and `normalize(raw)` maps one record to `NormalizedListing`. `synthetic.ts` is the reference implementation.
 3. Return the new adapter from `getAdapter()` in `src/lib/ingestion/adapters/index.ts`, where the `reso` and `crea_ddf` cases currently throw a clear error.
@@ -156,11 +156,14 @@ Every choice made where the spec was silent, copied from PROGRESS.md.
 110. Brand: the name is Glowy Homes (domain unchanged, glowy.homes). The logo folder provided contained a different brand (TidyUp), so at the owner's choice an original mark was designed: a house with a lit window and a soft blue glow on a navy tile (public/brand/glowy-homes-mark.svg, also the favicon and app icon). Replace it when a final logo exists.
 111. Brand: premium restyle with Bodoni Moda for headlines, Jost for text, and a blue and white theme (owner's choice): royal blue accent (#1D4ED8, 6.7:1 on white), white pages with cool slate greys, a deep navy (#0B1B3F) hero, feature band and footer with a soft CSS blue glow, and muted blue grey synthetic photos. The skill's "liquid glass" style was not used because its blur effects cost performance and contrast.
 112. Fix: tailwind-merge now knows the custom type scale, so primary buttons with a size class keep white text (it had been dropping text-white next to text-body).
+113. Market: the example market is California, not Ontario (owner's decision): Los Angeles, San Diego, San Jose, San Francisco and Sacramento, USD, square feet, ZIP codes, Pacific time and US English. Market specifics now come from the brand config through src/config/market.ts (locale, state code, timezone, example addresses, and mortgage rules), so switching back or to another state is a config change plus a reseed. Earlier Ontario specific assumptions (47, 70, 81, 92) now apply through that config.
+114. Market: US mortgage rules for the calculators: monthly compounding, a typical 6.25% 30 year rate, private mortgage insurance of about 0.6% a year below 20% down, a 3% minimum down payment, and the 28/36 debt to income guideline at the note rate. Canadian rules stay available and tested for a Canadian market.
+115. Market: fair housing wording and moderation follow the federal Fair Housing Act and California law (including source of income, so "no Section 8" is flagged), the privacy page adds California privacy rights and says Social Security number, and lead consent is noted as CAN-SPAM and TCPA. These still need a lawyer's review before launch (assumption 105).
 
 ## 5. Top ten things to build next
 
 1. **Go live.** Push, deploy the Render blueprint, set the secrets, verify the domain with Resend, point glowy.homes at Render, and recheck Lighthouse on the live URL.
-2. **Licensed listing feed.** Sign CREA DDF (or an Ontario MLS RESO feed) and write the adapter (section 3). The product is demo only until then.
+2. **Licensed listing feed.** Get a California MLS feed (for example CRMLS through a brokerage) and write the RESO adapter (section 3). The product is demo only until then.
 3. **Legal review.** Have a lawyer review the terms, the privacy page, the fair housing rules in moderation and CASL consent for emails before real users arrive.
 4. **Email deliverability.** Add Resend webhooks for bounces and complaints, stop alerts to addresses that bounce, and monitor the failure signals in docs/03 section 6.
 5. **Stripe.** Featured listing checkout and pro area subscriptions, with the webhook setting `featured_until` (BLOCKED 3; the cap of 4 featured slots is already in search).

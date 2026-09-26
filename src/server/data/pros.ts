@@ -1,5 +1,6 @@
 import "server-only";
 import type { z } from "zod";
+import { market } from "@/config/market";
 import { sqlClient } from "@/db";
 import type { ProProfileUpdate, ProSignup, ReviewInput } from "@/lib/pros/schema";
 import { slugify } from "@/lib/slug";
@@ -7,7 +8,7 @@ import { slugify } from "@/lib/slug";
 const sql = sqlClient;
 
 /**
- * Pro signup (docs/01 P1). Agents and lenders start pending until an admin verifies the licence
+ * Pro signup (docs/01 P1). Agents and lenders start pending until an admin verifies the license
  * (docs/06 SOP 2); landlords are active at once. The user gains the matching role.
  */
 export async function createPro(userId: string, input: z.infer<typeof ProSignup>) {
@@ -19,7 +20,7 @@ export async function createPro(userId: string, input: z.infer<typeof ProSignup>
     const [pro] = await tx<{ id: string; slug: string }[]>`
       insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region, phone, bio, languages, years_experience, status)
       values (${userId}, ${input.proType}, ${`${slugify(input.displayName)}-${Math.random().toString(36).slice(2, 7)}`}, ${input.displayName},
-        ${input.brokerageName}, ${input.licenseNumber}, ${input.licenseNumber ? "ON" : null}, ${input.phone}, ${input.bio},
+        ${input.brokerageName}, ${input.licenseNumber}, ${input.licenseNumber ? market.regionCode : null}, ${input.phone}, ${input.bio},
         ${tx.array(input.languages)}, ${input.yearsExperience ?? null}, ${status})
       returning id, slug`;
     await tx`
@@ -119,7 +120,7 @@ export async function submitReview(userId: string, input: z.infer<typeof ReviewI
   return { status: "created" as const, reviewId: review.id };
 }
 
-/** docs/01 route /agents/[city]: active agents covering the city or its neighbourhoods. */
+/** docs/01 route /agents/[city]: active agents covering the city or its neighborhoods. */
 export async function agentsInCity(citySlug: string, proType: "agent" | "lender" = "agent") {
   return sql<{ id: string; slug: string; displayName: string; brokerageName: string | null; photoUrl: string | null; rating: number | null; reviewCount: number; yearsExperience: number | null; responseTimeMinutes: number | null; languages: string[] }[]>`
     select distinct on (p.id) p.id, p.slug, p.display_name as "displayName", p.brokerage_name as "brokerageName", p.photo_url as "photoUrl",

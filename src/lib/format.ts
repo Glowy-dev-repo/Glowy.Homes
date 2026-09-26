@@ -1,15 +1,18 @@
 import { brand } from "@/config/brand";
+import { market } from "@/config/market";
 
 const SQFT_PER_M2 = 10.7639;
+// Widened so both unit systems stay type checked whichever one the brand config picks.
+const units = brand.units as "metric" | "imperial";
 
-const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: brand.currency, maximumFractionDigits: 0 });
-const compactCurrency = new Intl.NumberFormat("en-CA", {
+const currency = new Intl.NumberFormat(market.locale, { style: "currency", currency: brand.currency, maximumFractionDigits: 0 });
+const compactCurrency = new Intl.NumberFormat(market.locale, {
   style: "currency",
   currency: brand.currency,
   notation: "compact",
   maximumFractionDigits: 1,
 });
-const number = new Intl.NumberFormat("en-CA");
+const number = new Intl.NumberFormat(market.locale);
 
 export function formatPrice(amount: number, opts: { listingType?: "sale" | "rent"; compact?: boolean } = {}): string {
   const base = opts.compact ? compactCurrency.format(amount) : currency.format(amount);
@@ -23,19 +26,19 @@ export function formatNumber(n: number): string {
 /** Area from stored sqft, shown in the configured unit system. */
 export function formatArea(sqft: number | null | undefined): string | null {
   if (!sqft) return null;
-  if (brand.units === "metric") return `${number.format(Math.round(sqft / SQFT_PER_M2))} m²`;
-  return `${number.format(sqft)} sqft`;
+  if (units === "metric") return `${number.format(Math.round(sqft / SQFT_PER_M2))} m²`;
+  return `${number.format(sqft)} sq ft`;
 }
 
-export const areaUnitLabel = brand.units === "metric" ? "m²" : "sqft";
+export const areaUnitLabel = units === "metric" ? "m²" : "sq ft";
 
 /** Converts a value typed in the display unit to stored sqft. */
 export function toSqft(displayValue: number): number {
-  return brand.units === "metric" ? Math.round(displayValue * SQFT_PER_M2) : Math.round(displayValue);
+  return units === "metric" ? Math.round(displayValue * SQFT_PER_M2) : Math.round(displayValue);
 }
 
 export function fromSqft(sqft: number): number {
-  return brand.units === "metric" ? Math.round(sqft / SQFT_PER_M2) : sqft;
+  return units === "metric" ? Math.round(sqft / SQFT_PER_M2) : sqft;
 }
 
 export function formatBeds(beds: number | null | undefined): string | null {
@@ -77,7 +80,7 @@ export function propertyTypeLabel(type: string): string {
 }
 
 export function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-CA", {
+  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(market.locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

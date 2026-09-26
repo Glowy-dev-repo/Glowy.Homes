@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { financeRulesFor } from "@/config/market";
 import { affordabilityRange, maxPrice, qualifyingRate } from "@/lib/affordability";
 import { LeadInput } from "@/lib/leads/schema";
 import { leadViewToken, verifyLeadViewToken } from "@/lib/leads/token";
@@ -22,7 +23,7 @@ describe("lead input", () => {
     expect(LeadInput.safeParse({ ...base, leadType: "contact", proId: listingId }).success).toBe(true);
     expect(LeadInput.safeParse({ ...base, leadType: "contact" }).success).toBe(false);
     expect(LeadInput.safeParse({ ...base, leadType: "preapproval" }).success).toBe(false);
-    expect(LeadInput.safeParse({ ...base, leadType: "preapproval", citySlug: "toronto" }).success).toBe(true);
+    expect(LeadInput.safeParse({ ...base, leadType: "preapproval", citySlug: "los-angeles" }).success).toBe(true);
   });
 
   it("normalizes phone numbers and rejects bad ones", () => {
@@ -41,7 +42,7 @@ describe("lead status token", () => {
 });
 
 describe("pro signup", () => {
-  it("requires a licence for agents but not landlords", () => {
+  it("requires a license for agents but not landlords", () => {
     const common = { displayName: "Jo", phone: "4165550100", serviceAreaIds: [listingId] };
     expect(ProSignup.safeParse({ ...common, proType: "agent" }).success).toBe(false);
     expect(ProSignup.safeParse({ ...common, proType: "agent", licenseNumber: "123" }).success).toBe(true);
@@ -51,9 +52,10 @@ describe("pro signup", () => {
 });
 
 describe("affordability", () => {
-  it("qualifies at the stress test rate", () => {
-    expect(qualifyingRate(4)).toBe(6);
-    expect(qualifyingRate(2)).toBe(5.25);
+  it("qualifies at the note rate in the US and at the stress test rate in Canada", () => {
+    expect(qualifyingRate(4, financeRulesFor("US"))).toBe(4);
+    expect(qualifyingRate(4, financeRulesFor("CA"))).toBe(6);
+    expect(qualifyingRate(2, financeRulesFor("CA"))).toBe(5.25);
   });
 
   it("grows with income and down payment and gives a range", () => {
@@ -68,7 +70,9 @@ describe("affordability", () => {
   });
 
   it("respects the minimum down payment", () => {
-    // $30,000 down supports at most $550,000 (5% of 500K plus 10% of the rest).
-    expect(maxPrice({ annualIncome: 1_000_000, monthlyDebts: 0, downPayment: 30_000, ratePercent: 4 })).toBeLessThanOrEqual(550_000);
+    // US: $30,000 down supports at most $1,000,000 (3% down).
+    expect(maxPrice({ annualIncome: 1_000_000, monthlyDebts: 0, downPayment: 30_000, ratePercent: 4 }, 4, financeRulesFor("US"))).toBeLessThanOrEqual(1_000_000);
+    // Canada: at most $550,000 (5% of 500K plus 10% of the rest).
+    expect(maxPrice({ annualIncome: 1_000_000, monthlyDebts: 0, downPayment: 30_000, ratePercent: 4 }, 4, financeRulesFor("CA"))).toBeLessThanOrEqual(550_000);
   });
 });

@@ -3,7 +3,11 @@ import { describeFilters } from "@/components/account/SavedSearchList";
 import { estimateCommute, haversineKm } from "@/lib/commute";
 import type { ListingDetail } from "@/lib/listings/detail";
 import { factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription } from "@/lib/listings/ldp";
+import { financeRulesFor } from "@/config/market";
 import { minimumDownPayment, monthlyCost, monthlyCostRange, monthlyPrincipalAndInterest } from "@/lib/mortgage";
+
+const CANADA = financeRulesFor("CA");
+const US = financeRulesFor("US");
 import { CreateSavedSearch, UpdateSavedSearch } from "@/lib/saved-search-schema";
 import { SearchParams } from "@/types/search";
 
@@ -31,9 +35,9 @@ const listing: ListingDetail = {
   isFeatured: false,
   saveCount: 3,
   updatedAt: "2026-09-10",
-  address: { line1: "12 Maple Ave", line2: null, city: "Oakville", regionCode: "ON", postalCode: "L6J 1A1", country: "CA" },
-  lat: 43.45,
-  lng: -79.68,
+  address: { line1: "12 Maple Ave", line2: null, city: "Pasadena", regionCode: "CA", postalCode: "91101", country: "US" },
+  lat: 34.15,
+  lng: -118.14,
   propertyType: "detached",
   beds: 4,
   baths: 3,
@@ -51,19 +55,36 @@ const listing: ListingDetail = {
   contactPrefs: null,
 };
 
-describe("mortgage math (Canadian semi annual compounding)", () => {
+describe("mortgage math, US rules (monthly compounding, PMI)", () => {
+  it("matches a known payment", () => {
+    // $500,000 at 6% over 30 years, compounded monthly: about $2,997.75 a month.
+    expect(monthlyPrincipalAndInterest(500_000, 6, 30, US)).toBeCloseTo(2997.75, 1);
+    expect(monthlyPrincipalAndInterest(360_000, 0, 30, US)).toBeCloseTo(1000, 5);
+  });
+
+  it("adds monthly PMI below 20% down and flags too little down", () => {
+    const base = { price: 800_000, ratePercent: 6, amortizationYears: 30, propertyTaxAnnual: 9200, insuranceMonthly: 125, hoaMonthly: 0 };
+    expect(monthlyCost({ ...base, downPaymentPercent: 20 }, 6, US).mortgageInsuranceMonthly).toBe(0);
+    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 6, US).mortgageInsuranceMonthly).toBeCloseTo((720_000 * 0.006) / 12);
+    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 6, US).insurancePremium).toBe(0);
+    expect(minimumDownPayment(800_000, US)).toBe(24_000);
+    expect(monthlyCost({ ...base, downPaymentPercent: 2 }, 6, US).belowMinimumDown).toBe(true);
+  });
+});
+
+describe("mortgage math, Canadian rules (semi annual compounding)", () => {
   it("matches a known payment", () => {
     // $500,000 at 5% over 25 years, compounded semi annually: about $2,908.02 a month.
-    expect(monthlyPrincipalAndInterest(500_000, 5, 25)).toBeCloseTo(2908.02, 1);
-    expect(monthlyPrincipalAndInterest(300_000, 0, 25)).toBeCloseTo(1000, 5);
+    expect(monthlyPrincipalAndInterest(500_000, 5, 25, CANADA)).toBeCloseTo(2908.02, 1);
+    expect(monthlyPrincipalAndInterest(300_000, 0, 25, CANADA)).toBeCloseTo(1000, 5);
   });
 
   it("adds default insurance below 20% down and flags too little down", () => {
     const base = { price: 800_000, ratePercent: 5, amortizationYears: 25, propertyTaxAnnual: 6000, insuranceMonthly: 100, hoaMonthly: 0 };
-    expect(monthlyCost({ ...base, downPaymentPercent: 20 }).insurancePremium).toBe(0);
-    expect(monthlyCost({ ...base, downPaymentPercent: 10 }).insurancePremium).toBeCloseTo(720_000 * 0.031);
-    expect(minimumDownPayment(800_000)).toBe(55_000);
-    expect(monthlyCost({ ...base, downPaymentPercent: 5 }).belowMinimumDown).toBe(true);
+    expect(monthlyCost({ ...base, downPaymentPercent: 20 }, 5, CANADA).insurancePremium).toBe(0);
+    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 5, CANADA).insurancePremium).toBeCloseTo(720_000 * 0.031);
+    expect(minimumDownPayment(800_000, CANADA)).toBe(55_000);
+    expect(monthlyCost({ ...base, downPaymentPercent: 5 }, 5, CANADA).belowMinimumDown).toBe(true);
   });
 
   it("shows a range around the chosen rate", () => {
@@ -84,8 +105,8 @@ describe("commute estimate", () => {
 
 describe("LDP helpers", () => {
   it("formats address, path and key facts", () => {
-    expect(fullAddress(listing)).toBe("12 Maple Ave, Oakville, ON L6J 1A1");
-    expect(listingPath(listing)).toBe(`/listing/${listing.id}/12-maple-ave-oakville`);
+    expect(fullAddress(listing)).toBe("12 Maple Ave, Pasadena, CA 91101");
+    expect(listingPath(listing)).toBe(`/listing/${listing.id}/12-maple-ave-pasadena`);
     const labels = keyFacts(listing).map((f) => f.label);
     expect(labels).toEqual(["Home type", "Year built", "Lot", "Parking", "Heating", "Cooling", "MLS ID"]);
   });
@@ -100,14 +121,14 @@ describe("LDP helpers", () => {
     const ld = listingJsonLd(listing, "https://glowy.homes", ["https://glowy.homes/a.webp"]);
     expect(ld["@type"]).toBe("RealEstateListing");
     expect(ld.offers.price).toBe(1_249_000);
-    expect(ld.offers.priceCurrency).toBe("CAD");
-    expect(ld.about.address.postalCode).toBe("L6J 1A1");
+    expect(ld.offers.priceCurrency).toBe("USD");
+    expect(ld.about.address.postalCode).toBe("91101");
     expect(ld.about.numberOfBedrooms).toBe(4);
   });
 
   it("writes a meta description without dashes", () => {
     const d = metaDescription(listing);
-    expect(d).toMatch(/^4 bed, 3 bath, 200 m², detached for sale at \$1,249,000 in Oakville\./);
+    expect(d).toMatch(/^4 bed, 3 bath, 2,150 sq ft, detached for sale at \$1,249,000 in Pasadena\./);
     expect(d.length).toBeLessThanOrEqual(160);
     expect(d).not.toMatch(/[–—]| - /);
   });
@@ -116,13 +137,13 @@ describe("LDP helpers", () => {
 describe("saved search schemas", () => {
   it("validates create and update payloads", () => {
     expect(CreateSavedSearch.safeParse({ name: "", filters: {} }).success).toBe(false);
-    expect(CreateSavedSearch.parse({ name: "Homes", filters: { city: "toronto" } }).alertFrequency).toBe("daily");
+    expect(CreateSavedSearch.parse({ name: "Homes", filters: { city: "los-angeles" } }).alertFrequency).toBe("daily");
     expect(UpdateSavedSearch.safeParse({}).success).toBe(false);
     expect(UpdateSavedSearch.safeParse({ alertFrequency: "weekly" }).success).toBe(true);
   });
 
   it("describes filters in plain words", () => {
-    const text = describeFilters(SearchParams.parse({ city: "toronto", priceMax: 900000, bedsMin: 3, propertyTypes: ["condo"] }));
-    expect(text).toBe("For sale, Toronto, up to $900K, 3+ beds, Condo");
+    const text = describeFilters(SearchParams.parse({ city: "los-angeles", priceMax: 900000, bedsMin: 3, propertyTypes: ["condo"] }));
+    expect(text).toBe("For sale, Los Angeles, up to $900K, 3+ beds, Condo");
   });
 });

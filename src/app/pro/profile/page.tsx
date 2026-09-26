@@ -28,7 +28,7 @@ export default async function ProProfilePage() {
       </div>
       {pro.status === "pending" && (
         <p role="status" className="mb-6 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-body text-neutral-900" data-testid="pro-pending">
-          We are verifying your licence. You will start receiving leads once it is approved, typically within one business day.
+          We are verifying your license. You will start receiving leads once it is approved, typically within one business day.
         </p>
       )}
       {pro.status === "suspended" && (
