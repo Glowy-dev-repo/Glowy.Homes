@@ -26,8 +26,8 @@ primary_market_cities: ["Toronto", "Mississauga", "Ottawa", "Hamilton", "London"
 currency: "CAD"
 units: "metric"                     # metric or imperial
 listing_feed: "synthetic"           # synthetic | reso_web_api | crea_ddf | csv
-brand_color: "#A16207"              # one accent color only (warm glow gold, 4.9:1 on white)
-neutral_scale: "stone"              # tailwind neutral family
+brand_color: "#1D4ED8"              # one accent color only (royal blue, 6.7:1 on white)
+neutral_scale: "slate"              # tailwind neutral family
 font_sans: "Jost"
 font_display: "Bodoni Moda"         # headings
 support_email: "support@glowy.homes"

@@ -47,23 +47,23 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-neutral-950 text-white">
+      <section className="relative isolate overflow-hidden bg-navy text-white">
         {/* The glow: two soft radial lights, pure CSS so the hero costs no image download. */}
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 bg-[radial-gradient(60%_70%_at_80%_20%,rgba(245,158,11,0.22),transparent_70%),radial-gradient(45%_55%_at_10%_90%,rgba(161,98,7,0.20),transparent_70%)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(60%_70%_at_80%_20%,rgba(59,130,246,0.35),transparent_70%),radial-gradient(45%_55%_at_10%_90%,rgba(96,165,250,0.18),transparent_70%)]"
         />
         <div className="container-page flex flex-col items-start gap-6 pb-16 pt-14 md:pb-24 md:pt-24">
-          <p className="text-label uppercase tracking-[0.18em] text-neutral-300">{brand.market.region} real estate</p>
+          <p className="text-label uppercase tracking-[0.18em] text-blue-100">{brand.market.region} real estate</p>
           <h1 className="max-w-3xl text-[40px] leading-[1.05] md:text-display lg:text-[64px]">{brand.tagline}</h1>
-          <p className="max-w-xl text-[17px] leading-relaxed text-neutral-300">
+          <p className="max-w-xl text-[17px] leading-relaxed text-blue-100">
             Homes for sale and for rent across {brand.market.region}, with a value estimate for every address.
           </p>
           <div className="w-full max-w-2xl rounded-lg bg-white p-3 text-neutral-900 shadow-raised md:p-4">
             <HeroSearch />
           </div>
           {forSale > 0 && (
-            <ul className="flex flex-wrap gap-x-8 gap-y-2 pt-2 text-small text-neutral-300" aria-label="At a glance">
+            <ul className="flex flex-wrap gap-x-8 gap-y-2 pt-2 text-small text-blue-100" aria-label="At a glance">
               <li>
                 <span className="tabular font-semibold text-white">{formatNumber(forSale)}</span> homes for sale
               </li>
@@ -135,17 +135,17 @@ export default async function HomePage() {
       </section>
 
       <section aria-labelledby="value-heading" className="container-page py-14 md:py-20">
-        <div className="relative isolate overflow-hidden rounded-lg bg-neutral-950 px-6 py-10 text-white md:px-12 md:py-14">
-          <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(50%_80%_at_90%_50%,rgba(245,158,11,0.20),transparent_70%)]" />
+        <div className="relative isolate overflow-hidden rounded-lg bg-navy px-6 py-10 text-white md:px-12 md:py-14">
+          <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(50%_80%_at_90%_50%,rgba(59,130,246,0.30),transparent_70%)]" />
           <h2 id="value-heading" className="max-w-xl text-h2 md:text-[32px]">
             What is your home worth?
           </h2>
-          <p className="mt-3 max-w-xl text-body text-neutral-300">
+          <p className="mt-3 max-w-xl text-body text-blue-100">
             Get an estimate with a price range and a confidence level, built from recent sales nearby. It is an estimate, not an appraisal.
           </p>
           <Link
             href="/home-value"
-            className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 font-semibold text-neutral-950 transition-colors duration-150 hover:bg-neutral-100"
+            className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 font-semibold text-navy transition-colors duration-150 hover:bg-neutral-100"
           >
             Check a home value
             <ArrowRight className="size-4" aria-hidden />

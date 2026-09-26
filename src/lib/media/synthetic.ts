@@ -7,9 +7,9 @@ export const SYNTHETIC_PREFIX = "synthetic/";
 export const SYNTHETIC_WIDTHS = [400, 800, 1600] as const;
 export const SYNTHETIC_ASPECT = 2 / 3;
 
-// Muted architectural tones (sand, clay, sage, eucalyptus, slate, wheat) that sit quietly next to
-// the ink and gold brand, instead of the full colour wheel.
-const HUES = [32, 18, 95, 150, 205, 42] as const;
+// Cool, muted tones (slate, steel blue, mist, sky grey, eucalyptus) that sit quietly next to the
+// blue and white brand, instead of the full colour wheel.
+const HUES = [210, 220, 200, 228, 190, 215] as const;
 
 /** Deterministic muted pair for a media source URL. */
 export function syntheticPalette(sourceUrl: string): { from: string; to: string } {
@@ -58,8 +58,8 @@ export function syntheticPhotoSvg(opts: { sourceUrl: string; width: number; addr
   <rect width="${w}" height="${h}" fill="url(#g)"/>
   <rect x="${w * 0.3}" y="${h * 0.38}" width="${w * 0.4}" height="${h * 0.34}" fill="#ffffff" fill-opacity="0.35"/>
   <polygon points="${w * 0.26},${h * 0.4} ${w * 0.5},${h * 0.2} ${w * 0.74},${h * 0.4}" fill="#ffffff" fill-opacity="0.45"/>
-  <rect x="${w * 0.455}" y="${h * 0.47}" width="${w * 0.09}" height="${h * 0.12}" rx="${w * 0.006}" fill="#FCD34D" fill-opacity="0.85"/>
-  <text x="${size}" y="${h - size * 2.2}" font-family="Arial, sans-serif" font-size="${size}" font-weight="600" fill="#1C1917">${escapeXml(opts.address)}</text>
-  <text x="${size}" y="${h - size * 0.9}" font-family="Arial, sans-serif" font-size="${Math.round(size * 0.8)}" fill="#292524">${escapeXml(opts.caption ?? "Photo")} · Synthetic image</text>
+  <rect x="${w * 0.455}" y="${h * 0.47}" width="${w * 0.09}" height="${h * 0.12}" rx="${w * 0.006}" fill="#EFF6FF" fill-opacity="0.9"/>
+  <text x="${size}" y="${h - size * 2.2}" font-family="Arial, sans-serif" font-size="${size}" font-weight="600" fill="#0F172A">${escapeXml(opts.address)}</text>
+  <text x="${size}" y="${h - size * 0.9}" font-family="Arial, sans-serif" font-size="${Math.round(size * 0.8)}" fill="#1E293B">${escapeXml(opts.caption ?? "Photo")} · Synthetic image</text>
 </svg>`;
 }

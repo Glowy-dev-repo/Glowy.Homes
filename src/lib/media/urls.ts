@@ -2,7 +2,7 @@
 // own /media route; everything else comes from the R2 public bucket (NEXT_PUBLIC_MEDIA_BASE_URL).
 
 /** Bump when the synthetic photo design changes (src/lib/media/synthetic.ts). */
-export const SYNTHETIC_STYLE_VERSION = 2;
+export const SYNTHETIC_STYLE_VERSION = 3;
 
 export const MEDIA_WIDTHS = [400, 800, 1600] as const;
 

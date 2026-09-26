@@ -7,7 +7,7 @@ export const alt = `${brand.name}: ${brand.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Default Open Graph image for every page that does not define its own: the mark on ink with the glow.
+// Default Open Graph image for every page that does not define its own: the mark on navy with the glow.
 export default function OpengraphImage() {
   const mark = `data:image/svg+xml;base64,${readFileSync(join(process.cwd(), "public/brand/glowy-homes-mark.svg")).toString("base64")}`;
   return new ImageResponse(
@@ -20,9 +20,9 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 72,
-          backgroundColor: "#0C0A09",
-          backgroundImage: "radial-gradient(60% 70% at 80% 20%, rgba(245,158,11,0.28), transparent 70%)",
-          color: "#FAFAF9",
+          backgroundColor: "#0B1B3F",
+          backgroundImage: "radial-gradient(60% 70% at 80% 20%, rgba(59,130,246,0.40), transparent 70%)",
+          color: "#FFFFFF",
           fontFamily: "serif",
         }}
       >
@@ -32,7 +32,7 @@ export default function OpengraphImage() {
           <div style={{ fontSize: 44, fontWeight: 600 }}>{brand.name}</div>
         </div>
         <div style={{ fontSize: 96, fontWeight: 600, letterSpacing: -2 }}>{brand.tagline}</div>
-        <div style={{ fontSize: 30, color: "#D6D3D1", fontFamily: "sans-serif" }}>
+        <div style={{ fontSize: 30, color: "#BFDBFE", fontFamily: "sans-serif" }}>
           {`Homes for sale and rent in ${brand.market.region}, with an estimate for every address.`}
         </div>
       </div>

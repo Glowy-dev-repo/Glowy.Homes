@@ -8,7 +8,7 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-neutral-50 font-sans text-body text-neutral-900 antialiased;
+    @apply bg-white font-sans text-body text-neutral-900 antialiased;
   }
   /* Headline sizes use the display serif, whatever the element; smaller text stays in Jost. */
   [class~="text-display"],
@@ -44,7 +44,7 @@
     @apply z-10 scale-110 bg-neutral-900;
   }
   .map-cluster {
-    @apply grid place-items-center rounded-full border-2 border-white bg-neutral-700/90 text-[12px] font-semibold text-white shadow-card transition-transform duration-150 hover:scale-105;
+    @apply grid place-items-center rounded-full border-2 border-white bg-navy/90 text-[12px] font-semibold text-white shadow-card transition-transform duration-150 hover:scale-105;
   }
 }
 

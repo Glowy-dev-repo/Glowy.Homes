@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Glowy Homes">
   <defs>
     <radialGradient id="gh-glow" cx="24" cy="28" r="17" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FCD34D" stop-opacity="0.55"/>
-      <stop offset="0.5" stop-color="#F59E0B" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#F59E0B" stop-opacity="0"/>
+      <stop offset="0" stop-color="#93C5FD" stop-opacity="0.6"/>
+      <stop offset="0.5" stop-color="#3B82F6" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#3B82F6" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="48" height="48" rx="12" fill="#1C1917"/>
+  <rect width="48" height="48" rx="12" fill="#0B1B3F"/>
   <circle cx="24" cy="28" r="17" fill="url(#gh-glow)"/>
-  <path d="M12.5 23 24 13.5 35.5 23" fill="none" stroke="#FAFAF9" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16 21v13.5h16V21" fill="none" stroke="#FAFAF9" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="21" y="24.5" width="6" height="6" rx="1.25" fill="#FCD34D"/>
+  <path d="M12.5 23 24 13.5 35.5 23" fill="none" stroke="#FFFFFF" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 21v13.5h16V21" fill="none" stroke="#FFFFFF" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="21" y="24.5" width="6" height="6" rx="1.25" fill="#DBEAFE"/>
 </svg>

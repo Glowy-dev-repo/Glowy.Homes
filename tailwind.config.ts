@@ -26,12 +26,14 @@ export default {
         pill: "999px",
       },
       boxShadow: {
-        // Warm, soft elevation (stone tinted) instead of flat grey drop shadows.
-        card: "0 1px 2px rgba(28,25,23,0.04), 0 2px 8px rgba(28,25,23,0.05)",
-        raised: "0 12px 32px rgba(28,25,23,0.10), 0 2px 6px rgba(28,25,23,0.04)",
-        glow: "0 0 0 1px rgba(161,98,7,0.18), 0 10px 30px rgba(245,158,11,0.18)",
+        // Soft, slightly blue tinted elevation instead of flat grey drop shadows.
+        card: "0 1px 2px rgba(15,23,42,0.04), 0 2px 8px rgba(15,23,42,0.05)",
+        raised: "0 12px 32px rgba(15,23,42,0.10), 0 2px 6px rgba(15,23,42,0.04)",
+        glow: "0 0 0 1px rgba(29,78,216,0.18), 0 10px 30px rgba(59,130,246,0.18)",
       },
       colors: {
+        // Deep navy for the hero, feature bands and footer.
+        navy: "#0B1B3F",
         success: "#16A34A",
         warning: "#D97706",
         danger: "#DC2626",
