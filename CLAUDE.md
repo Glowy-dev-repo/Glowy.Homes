@@ -16,7 +16,7 @@ You are the lead full stack engineer for this repository. Your job is to build t
 ## 2. BRAND CONFIG (the human fills this in before Phase 0)
 
 ```yaml
-brand_name: "Glowy.Homes"           # replace with your brand
+brand_name: "Glowy Homes"           # replace with your brand
 brand_short: "GH"                   # 2 to 3 letters for favicons and logos
 domain: "glowy.homes"               # production domain
 tagline: "Find your place."
@@ -26,9 +26,10 @@ primary_market_cities: ["Toronto", "Mississauga", "Ottawa", "Hamilton", "London"
 currency: "CAD"
 units: "metric"                     # metric or imperial
 listing_feed: "synthetic"           # synthetic | reso_web_api | crea_ddf | csv
-brand_color: "#0B5FFF"              # one accent color only
-neutral_scale: "zinc"               # tailwind neutral family
-font_sans: "Inter"
+brand_color: "#A16207"              # one accent color only (warm glow gold, 4.9:1 on white)
+neutral_scale: "stone"              # tailwind neutral family
+font_sans: "Jost"
+font_display: "Bodoni Moda"         # headings
 support_email: "support@glowy.homes"
 ```
 

@@ -7,11 +7,20 @@ import { brand } from "@/config/brand";
 import "./globals.css";
 
 // Self hosted so builds never depend on a font CDN.
+// Jost for text and interface, Bodoni Moda for headings (CLAUDE.md brand config).
 const sans = localFont({
-  src: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+  src: "../../node_modules/@fontsource-variable/jost/files/jost-latin-wght-normal.woff2",
   variable: "--font-sans",
   weight: "100 900",
   display: "swap",
+});
+const display = localFont({
+  src: "../../node_modules/@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-wght-normal.woff2",
+  variable: "--font-display",
+  weight: "400 900",
+  display: "swap",
+  // Only headings use it; the body font is the one to preload.
+  preload: false,
 });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${brand.domain}`;
@@ -28,12 +37,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#ffffff",
+  themeColor: "#1C1917",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-CA" className={sans.variable}>
+    <html lang="en-CA" className={`${sans.variable} ${display.variable}`}>
       <body className="flex min-h-dvh flex-col">
         <a
           href="#main"

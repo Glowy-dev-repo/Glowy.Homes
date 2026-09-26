@@ -31,7 +31,7 @@ services:
       - key: AUTH_SECRET
         generateValue: true
       - key: EMAIL_FROM
-        value: Glowy.Homes <no-reply@glowy.homes>
+        value: Glowy Homes <no-reply@glowy.homes>
       - key: LISTING_FEED
         value: synthetic
       - key: RESEND_API_KEY

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatArea, formatPrice, listedAgo, toSqft } from "@/lib/format";
 import { syntheticBlurDataUrl, syntheticPalette, syntheticStorageKey } from "@/lib/media/synthetic";
-import { mediaUrl, snapWidth } from "@/lib/media/urls";
+import { mediaUrl, snapWidth, SYNTHETIC_STYLE_VERSION } from "@/lib/media/urls";
 import { browseSummary, quickLinks } from "@/lib/search/browse-copy";
 import { clusterCellSize, polygonWkt } from "@/lib/search/postgres";
 import { createRateLimiter } from "@/server/api/rate-limit";
@@ -54,7 +54,7 @@ describe("media URLs", () => {
   it("snaps widths and routes synthetic and local keys to the app", () => {
     expect(snapWidth(300)).toBe(400);
     expect(snapWidth(3000)).toBe(1600);
-    expect(mediaUrl("synthetic/GH0000001/0", 640)).toBe("/media/synthetic/GH0000001/0/800.webp");
+    expect(mediaUrl("synthetic/GH0000001/0", 640)).toBe(`/media/synthetic/GH0000001/0/800.webp?v=${SYNTHETIC_STYLE_VERSION}`);
     expect(mediaUrl("local/listings/a/b", 400)).toBe("/media/local/listings/a/b/400.webp");
   });
 

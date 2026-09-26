@@ -120,7 +120,7 @@ export default async function ListingPage({ params }: Props) {
                 {closed && <span className="mr-2 text-h3 font-medium text-neutral-600">{l.status === "sold" ? "Sold for" : "Leased for"}</span>}
                 {formatPrice(headlinePrice, { listingType: l.listingType })}
               </p>
-              <h1 className="mt-2 text-h3 font-medium text-neutral-900" data-testid="ldp-address">
+              <h1 className="mt-2 font-sans text-h3 font-medium text-neutral-900" data-testid="ldp-address">
                 {address}
               </h1>
               <p className="mt-1 text-body text-neutral-700" data-testid="ldp-facts">

@@ -8,7 +8,7 @@ const claudeMd = readFileSync("CLAUDE.md", "utf8");
 describe("brand config", () => {
   it("parses the BRAND CONFIG block, including quoted values that contain #", () => {
     const cfg = parseBrandBlock(claudeMd);
-    expect(cfg.brand_name).toBe("Glowy.Homes");
+    expect(cfg.brand_name).toBe("Glowy Homes");
     expect(cfg.brand_color).toMatch(/^#[0-9A-F]{6}$/i);
     expect(cfg.primary_market_cities.length).toBeGreaterThan(0);
   });

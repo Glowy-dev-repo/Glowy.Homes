@@ -8,7 +8,15 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-white font-sans text-body text-neutral-900 antialiased;
+    @apply bg-neutral-50 font-sans text-body text-neutral-900 antialiased;
+  }
+  /* Headline sizes use the display serif, whatever the element; smaller text stays in Jost. */
+  [class~="text-display"],
+  [class~="md:text-display"],
+  [class~="text-h1"],
+  [class~="md:text-h1"],
+  [class~="text-h2"] {
+    font-family: var(--font-display), Georgia, serif;
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);

@@ -1,4 +1,4 @@
-# Glowy.Homes handoff
+# Glowy Homes handoff
 
 The MVP described in `docs/` is built through Phase 6. Every phase gate passes locally against the production build and a seeded database of 50,000 synthetic listings. `PROGRESS.md` has the phase table, the gate results and the session log.
 
@@ -13,7 +13,7 @@ Hosting is set up for Render. `render.yaml` defines the web service, a Render Po
 3. Load the demo data once from the Render shell: `ALLOW_REMOTE_SEED=1 npm run db:seed`.
 4. Verify glowy.homes in Resend and add the DNS records it gives you in Squarespace, keeping the existing email security records.
 5. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
-6. Run Lighthouse on the preview URL for `/search?city=toronto` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 86 and 90, right at the targets, so check them on the preview first.
+6. Run Lighthouse on the preview URL for `/search?city=toronto` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
 
 The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowy.homes.
 
@@ -153,6 +153,9 @@ Every choice made where the spec was silent, copied from PROGRESS.md.
 107. Phase 6: Search renders its first 12 cards on the server and the rest of the 40 right after hydration; cards below the fold use content-visibility, listing links do not prefetch, and the page and /api/search share one 60 second cache.
 108. Phase 6: The search filter schema uses zod/mini, the smaller Zod build, because it ships to the browser. Server only schemas keep the classic API.
 109. Phase 6: /api/events never reads the session (Auth.js can refresh the session cookie there, which signed users back in during sign out). Browser events carry the visitor id; server events such as login and lead_submit carry both ids.
+110. Brand: the name is Glowy Homes (domain unchanged, glowy.homes). The logo folder provided contained a different brand (TidyUp), so at the owner's choice an original mark was designed: a house with a lit gold window and a warm glow on an ink tile (public/brand/glowy-homes-mark.svg, also the favicon and app icon). Replace it when a final logo exists.
+111. Brand: premium restyle with Bodoni Moda for headlines, Jost for text, a warm gold accent (#A16207, 4.9:1 on white) on ink and stone neutrals, a dark hero and footer with a soft CSS glow, and muted synthetic photos. The skill's "liquid glass" style was not used because its blur effects cost performance and contrast.
+112. Fix: tailwind-merge now knows the custom type scale, so primary buttons with a size class keep white text (it had been dropping text-white next to text-body).
 
 ## 5. Top ten things to build next
 

@@ -1,4 +1,4 @@
-# Glowy.Homes
+# Glowy Homes
 
 A real estate marketplace for Ontario: search homes for sale and for rent on a map, see an estimate for any address, and connect with local agents, lenders and landlords. Build status lives in `PROGRESS.md`.
 

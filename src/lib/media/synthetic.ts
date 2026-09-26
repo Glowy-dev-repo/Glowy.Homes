@@ -7,12 +7,16 @@ export const SYNTHETIC_PREFIX = "synthetic/";
 export const SYNTHETIC_WIDTHS = [400, 800, 1600] as const;
 export const SYNTHETIC_ASPECT = 2 / 3;
 
-/** Deterministic pastel pair for a media source URL. */
+// Muted architectural tones (sand, clay, sage, eucalyptus, slate, wheat) that sit quietly next to
+// the ink and gold brand, instead of the full colour wheel.
+const HUES = [32, 18, 95, 150, 205, 42] as const;
+
+/** Deterministic muted pair for a media source URL. */
 export function syntheticPalette(sourceUrl: string): { from: string; to: string } {
   const hash = createHash("md5").update(sourceUrl).digest();
-  const hue = (hash[0] * 256 + hash[1]) % 360;
-  const shift = 20 + (hash[2] % 40);
-  return { from: hsl(hue, 45, 78), to: hsl((hue + shift) % 360, 50, 62) };
+  const hue = HUES[hash[0] % HUES.length] + (hash[1] % 10) - 5;
+  const shift = 8 + (hash[2] % 14);
+  return { from: hsl(hue, 20, 84), to: hsl((hue + shift) % 360, 18, 64) };
 }
 
 function hsl(h: number, s: number, l: number): string {
@@ -54,7 +58,8 @@ export function syntheticPhotoSvg(opts: { sourceUrl: string; width: number; addr
   <rect width="${w}" height="${h}" fill="url(#g)"/>
   <rect x="${w * 0.3}" y="${h * 0.38}" width="${w * 0.4}" height="${h * 0.34}" fill="#ffffff" fill-opacity="0.35"/>
   <polygon points="${w * 0.26},${h * 0.4} ${w * 0.5},${h * 0.2} ${w * 0.74},${h * 0.4}" fill="#ffffff" fill-opacity="0.45"/>
-  <text x="${size}" y="${h - size * 2.2}" font-family="Arial, sans-serif" font-size="${size}" font-weight="600" fill="#18181b">${escapeXml(opts.address)}</text>
-  <text x="${size}" y="${h - size * 0.9}" font-family="Arial, sans-serif" font-size="${Math.round(size * 0.8)}" fill="#27272a">${escapeXml(opts.caption ?? "Photo")} · Synthetic image</text>
+  <rect x="${w * 0.455}" y="${h * 0.47}" width="${w * 0.09}" height="${h * 0.12}" rx="${w * 0.006}" fill="#FCD34D" fill-opacity="0.85"/>
+  <text x="${size}" y="${h - size * 2.2}" font-family="Arial, sans-serif" font-size="${size}" font-weight="600" fill="#1C1917">${escapeXml(opts.address)}</text>
+  <text x="${size}" y="${h - size * 0.9}" font-family="Arial, sans-serif" font-size="${Math.round(size * 0.8)}" fill="#292524">${escapeXml(opts.caption ?? "Photo")} · Synthetic image</text>
 </svg>`;
 }

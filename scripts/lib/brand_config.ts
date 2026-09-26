@@ -15,6 +15,7 @@ export const BrandConfig = z.object({
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   neutral_scale: z.enum(["zinc", "slate", "gray", "neutral", "stone"]),
   font_sans: z.string().min(1),
+  font_display: z.string().min(1),
   support_email: z.string().email(),
 });
 export type BrandConfig = z.infer<typeof BrandConfig>;
@@ -71,6 +72,7 @@ export const brand = {
   colorHover: ${JSON.stringify(shade(cfg.brand_color, 0.1))},
   neutralScale: ${JSON.stringify(cfg.neutral_scale)},
   fontSans: ${JSON.stringify(cfg.font_sans)},
+  fontDisplay: ${JSON.stringify(cfg.font_display)},
   supportEmail: ${JSON.stringify(cfg.support_email)},
 } as const;
 

@@ -2,7 +2,7 @@
 // Do not edit by hand. Run: npm run brand:sync
 
 export const brand = {
-  name: "Glowy.Homes",
+  name: "Glowy Homes",
   short: "GH",
   domain: "glowy.homes",
   tagline: "Find your place.",
@@ -14,10 +14,11 @@ export const brand = {
   currency: "CAD",
   units: "metric",
   listingFeed: "synthetic",
-  color: "#0B5FFF",
-  colorHover: "#0A56E6",
-  neutralScale: "zinc",
-  fontSans: "Inter",
+  color: "#A16207",
+  colorHover: "#915806",
+  neutralScale: "stone",
+  fontSans: "Jost",
+  fontDisplay: "Bodoni Moda",
   supportEmail: "support@glowy.homes",
 } as const;
 
