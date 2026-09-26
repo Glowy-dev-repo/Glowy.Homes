@@ -92,9 +92,71 @@ async function migrationsOnEmptyDatabase() {
   }
 }
 
-const PHASE_CHECKS: Record<number, { name: string; fn: () => Promise<boolean | { ok: boolean; note?: string }> }[]> = {
+async function dbCount(query: string): Promise<number> {
+  const sql = postgres(process.env.DATABASE_URL ?? "", { max: 1, onnotice: () => {} });
+  try {
+    const [{ n }] = await sql.unsafe<{ n: number }[]>(`select (${query})::int as n`);
+    return n;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Phase 1 criterion 1: the seed produced 50,000 listings. */
+async function seedCount() {
+  const listings = await dbCount("select count(*) from listings");
+  const properties = await dbCount("select count(*) from properties");
+  return { ok: listings === 50_000 && properties === 50_000, note: `${listings} listings, ${properties} properties (run npm run db:seed if not 50000)` };
+}
+
+/** Phase 1 criterion 2: replaying the whole feed creates and updates nothing. */
+async function ingestIdempotent() {
+  const before = await dbCount("select (select count(*) from listings) + (select count(*) from listing_price_events) + (select count(*) from listing_media) + (select count(*) from properties)");
+  const { ok, output } = await run("npx tsx scripts/ingest.ts --full");
+  const line = output.split("\n").find((l) => l.startsWith("{"));
+  const stats = line ? (JSON.parse(line) as { stats: { created: number; updated: number; unchanged: number } }).stats : null;
+  const after = await dbCount("select (select count(*) from listings) + (select count(*) from listing_price_events) + (select count(*) from listing_media) + (select count(*) from properties)");
+  return {
+    ok: ok && !!stats && stats.created === 0 && stats.updated === 0 && before === after,
+    note: stats ? `created ${stats.created}, updated ${stats.updated}, unchanged ${stats.unchanged}, rows ${before} -> ${after}` : "no stats",
+  };
+}
+
+/** Phase 1 criterion 3: p95 under 300ms over HTTP against the running production build. */
+async function searchPerf(ctx: Ctx) {
+  const { ok, output } = await run("npx tsx tests/perf/search.ts", { PERF_BASE_URL: ctx.baseUrl });
+  return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("search")).at(-1) };
+}
+
+/** Phase 1 criterion 6: the city browse page scores 100 on Lighthouse SEO. */
+async function citySeo(ctx: Ctx) {
+  const { runLighthouse } = await import("./lib/lighthouse");
+  const { scores, failing } = await runLighthouse(`${ctx.baseUrl}/homes/toronto`, ["seo"]);
+  return { ok: scores.seo === 100, note: `SEO ${scores.seo}${failing.length ? `, failing: ${failing.join(", ")}` : ""}` };
+}
+
+type Ctx = { baseUrl: string };
+type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
+
+const PHASE_CHECKS: Record<number, Check[]> = {
   0: [{ name: "migrations apply to empty database", fn: migrationsOnEmptyDatabase }],
+  1: [
+    { name: "seed count is 50,000", fn: seedCount },
+    { name: "ingest replay is idempotent", fn: ingestIdempotent },
+    { name: "search p95 under 300ms", fn: searchPerf },
+    { name: "Lighthouse SEO 100 on /homes/toronto", fn: citySeo },
+  ],
 };
+
+async function runPhaseChecks(ctx: Ctx) {
+  if (phase === null) return;
+  const checks = PHASE_CHECKS[phase];
+  if (!checks) {
+    results.push({ check: `phase ${phase} checks`, ok: false, ms: 0, note: "no checks defined for this phase yet" });
+    return;
+  }
+  for (const c of checks) await step(`phase ${phase}: ${c.name}`, () => c.fn(ctx));
+}
 
 // ---------- main ----------
 
@@ -114,30 +176,26 @@ async function main() {
     const server = spawn(`npx next start -p ${PORT}`, {
       shell: true,
       detached: !isWin,
-      env: { ...process.env, EMAIL_TRANSPORT: "log", NODE_ENV: "production" },
+      // Tests and the perf script send far more than 60 requests a minute from one IP.
+      env: { ...process.env, EMAIL_TRANSPORT: "log", NODE_ENV: "production", RATE_LIMIT_PER_MINUTE: "100000" },
       stdio: ["ignore", "pipe", "pipe"],
     });
     server.stdout?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
     server.stderr?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
     try {
+      const up = await waitForServer(BASE_URL, 60_000);
       await step("e2e", async () => {
-        if (!(await waitForServer(BASE_URL, 60_000))) return { ok: false, note: "server did not start" };
+        if (!up) return { ok: false, note: "server did not start" };
         return (await run("npx playwright test", { E2E_BASE_URL: BASE_URL, CI: "1" })).ok;
       });
+      // Phase checks run while the production server is up, so they measure the real app.
+      await runPhaseChecks({ baseUrl: BASE_URL });
     } finally {
       killTree(server);
     }
   } else {
     results.push({ check: "e2e", ok: false, ms: 0, note: "skipped: build failed" });
-  }
-
-  if (phase !== null) {
-    const checks = PHASE_CHECKS[phase];
-    if (!checks) {
-      results.push({ check: `phase ${phase} checks`, ok: false, ms: 0, note: "no checks defined for this phase yet" });
-    } else {
-      for (const c of checks) await step(`phase ${phase}: ${c.name}`, c.fn);
-    }
+    await runPhaseChecks({ baseUrl: BASE_URL });
   }
 
   const pass = results.every((r) => r.ok);

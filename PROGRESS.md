@@ -3,7 +3,7 @@
 | Phase | Status | Gate passed at | Notes |
 |---|---|---|---|
 | 0 Foundation | BLOCKED | 2026-09-26 | Gate green. Criteria 1 to 4 pass. Criterion 5 (preview URL) waits on the deploy decision, see BLOCKED. |
-| 1 Data and search | NOT STARTED | | |
+| 1 Data and search | DONE | 2026-09-26 | All 7 criteria pass: 50,000 listings, idempotent ingest, search p95 75ms, map drag under 500ms, filters survive reload, city page SEO 100, clusters above 200. |
 | 2 LDP and accounts | NOT STARTED | | |
 | 3 Valuation | NOT STARTED | | |
 | 4 Leads and pros | NOT STARTED | | |
@@ -34,19 +34,37 @@
 20. Phase 0: The phase gate fails any phase that has no phase specific checks defined yet, so a gate can never pass by accident. It also refuses to run e2e when its port is already in use.
 21. Phase 0: `npm run lint` keeps `next lint` as CLAUDE.md section 10 specifies. Next 15.5 prints a deprecation notice; move to the ESLint CLI when upgrading to Next 16.
 22. Phase 0: Playwright runs every e2e test twice, on a 390px mobile viewport and a 1280px desktop viewport. Tests wait for a hydration marker before interacting.
+23. Phase 1: Hosting is Render instead of Vercel and Neon, by owner decision: one Render web service running `next start` plus Render Postgres 16 with PostGIS (`render.yaml`). Inngest Cloud, R2, Resend and Sentry are unchanged. Migrations run in the Render build because home and city pages are prerendered from the database.
+24. Phase 1: City boundaries are simplified polygons drawn for this project and bundled in code, so nothing is downloaded or scraped. Neighbourhoods are PostGIS Voronoi cells of generated seed points, clipped to the city, with invented generic names so they never imply real boundaries.
+25. Phase 1: Synthetic photos are rendered by sharp on first request through the `/media` route and cached on disk, instead of rendering about 625,000 images during the seed. `process_media` handles real feeds: download, sharp, then R2 (or local disk when R2 is not configured).
+26. Phase 1: `NormalizedListing` gained an optional `history` array (RESO feeds expose history resources). It is used only when a listing is first created; later changes are diffed.
+27. Phase 1: The hidden pricing formula lives in `src/lib/ingestion/synthetic/model.ts`, and the seed writes true values to `scripts/data/generated/truth.jsonl` for the Phase 3 accuracy check.
+28. Phase 1: The seed is deterministic for a given `SEED` and `SEED_AS_OF` date (default today in UTC). It refuses to run against a non local database unless `ALLOW_REMOTE_SEED=1`.
+29. Phase 1: Search returns clusters whenever a search matches more than 200 listings (with or without bounds), using a grid sized from the viewport or the searched region. At 200 or fewer it returns light pins so the map shows every match while the list pages at 40. Under 60 results pins show price labels.
+30. Phase 1: Without a MapTiler key the map uses a neutral base drawn from our own region outlines (`/api/regions/geo`). The MapLibre worker is served from `public/maplibre` (copied on install and before dev and build) because bundlers break its default path.
+31. Phase 1: On mobile the search page opens on the list with a Map toggle (docs/04 allows this) so MapLibre stays out of the first load. The map is loaded lazily everywhere.
+32. Phase 1: `units: metric`, so areas display in square metres. Storage and the `sqftMin`/`sqftMax` filters stay in sqft as the schema defines, converted at the UI.
+33. Phase 1: Moving the map replaces the city, neighbourhood and text query with the visible bounds and uses `replaceState`, so panning does not flood browser history. Filter changes use `pushState` so Back undoes them.
+34. Phase 1: The rate limit is configurable with `RATE_LIMIT_PER_MINUTE` (default 60 per docs/02). The phase gate raises it for its own test server.
+35. Phase 1: City browse pages are prerendered at build and revalidated daily; neighbourhood and rental pages render on first request and are then cached. Rentals have no neighbourhood pages in the route map, so rental neighbourhood links open the map search.
+36. Phase 1: Status badges show a coloured dot with dark text, because white text on the status green is below 4.5:1 contrast.
+37. Phase 1: Recently viewed is recorded when a listing card is opened; the listing page records it too once it exists in Phase 2.
+38. Phase 1: docs/04 does not place a search box on the search page; a SearchBar sits above the filter chips.
+39. Phase 1: Feed listings link to a pro when the feed agent's licence number matches a pro's licence number.
+40. Phase 1: The ui-ux-pro-max review items applied to search: 44px targets, visible focus, labelled controls, skeletons while loading, empty state with recovery actions, reduced motion respected.
 
 ## BLOCKED
 
 1. Phase 0, criterion 5 (preview URL is live, Sentry wired to a real project).
-   What I tried: everything else in Phase 0 runs locally and the gate is green; Sentry is wired and only needs a DSN. I did not deploy because CLAUDE.local.md says nothing leaves this PC, and deploying needs accounts only you can create.
+   What I tried: everything else in Phase 0 runs locally and the gate is green; Sentry is wired and only needs a DSN. Hosting is now Render (your decision): `render.yaml` defines the web service and a Render Postgres 16 database, and `/api/health` is the health check. I have not pushed or deployed, because that sends the code off this PC and needs your go ahead.
    What I need from you, when you decide to go live:
-   a. A Vercel project imported from the GitHub repo.
-   b. A hosted Postgres with PostGIS (Neon or Supabase) and its `DATABASE_URL` set in Vercel.
-   c. `AUTH_SECRET`, and optionally Google OAuth keys, set in Vercel.
+   a. Say "push" so I run `git push`, then in Render choose New, Blueprint, and pick the Glowy.Homes repo.
+   b. In the Render dashboard, fill the secrets marked `sync: false` (Resend key, and optionally Google OAuth, MapTiler, Inngest, R2, Sentry).
+   c. Load demo data once from the Render shell: `ALLOW_REMOTE_SEED=1 npm run db:seed`.
    d. A Resend account with glowy.homes verified (add the records Resend gives you in Squarespace DNS; keep the existing Email Security records).
-   e. Inngest Cloud keys and a Sentry DSN (optional until launch).
-   f. Point glowy.homes at Vercel in Squarespace DNS, replacing the Squarespace Defaults preset.
+   e. Point glowy.homes at Render in Squarespace DNS, replacing the Squarespace Defaults preset with the records Render shows when you add the custom domain.
 
 ## Session log
 
 - 2026-09-26, Phase 0: Scaffolded Next.js 15.5 (TypeScript strict, Tailwind v4, shadcn style primitives, ESLint, Prettier). Brand sync script and generated brand files. Drizzle schema for 23 tables with PostGIS and pg_trgm, migrations verified on an empty database. Auth.js with magic link (log transport in dev) and Google, roles, protected routes. Inngest client and hello job, verified against the Inngest dev server. R2 client and presigned upload route. Header, Footer, MobileNav and home page shell. Sentry wiring and security headers. Phase gate script. Gate result: PASS (lint, typecheck, 22 unit tests, build, 14 e2e tests, migrations on empty database). Next: Phase 1, data and search.
+- 2026-09-26, Phase 1: Deterministic synthetic market (5 cities, 80 neighbourhoods, 50,000 properties and listings, 200 pros, 20 consumers, 1 admin) seeded in about 80 seconds through the real ingestion path. Ingestion with address normalization, owner override rules, price history diffing, media diffing and feed run stats; Inngest functions for ingest_feed, process_media and refresh_region_stats. Search API with clusters and pins, autocomplete, rate limiting and caching. Search page with SearchBar, FilterBar (chips and mobile sheet), MapLibre map with hover sync, results list with sort, pagination and empty state. City, neighbourhood and rental browse pages with stats, internal links, map preview and breadcrumb JSON LD. Recently viewed. Render blueprint and health check. Gate result: PASS (47 unit tests, 50 e2e tests, seed count, idempotent replay, search p95 75ms, SEO 100). Next: Phase 2, listing detail and accounts.

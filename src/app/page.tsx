@@ -1,12 +1,18 @@
 import { ArrowRight, Building2, House, KeyRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RecentlyViewed } from "@/components/listing/RecentlyViewed";
 import { HeroSearch } from "@/components/search/HeroSearch";
 import { brand } from "@/config/brand";
+import { formatNumber, formatPrice } from "@/lib/format";
+import { allRegions } from "@/lib/search/regions";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
+
+// Static, refreshed hourly so city counts track region stats.
+export const revalidate = 3600;
 
 const ENTRY_POINTS = [
   {
@@ -32,7 +38,10 @@ const ENTRY_POINTS = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const regions = await allRegions();
+  const statsFor = (slug: string) => regions.find((r) => r.type === "city" && r.slug === slug)?.stats ?? {};
+
   return (
     <>
       <section className="border-b border-neutral-200 bg-neutral-50">
@@ -74,19 +83,29 @@ export default function HomePage() {
           Explore {brand.market.region}
         </h2>
         <ul className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          {brand.market.cities.map((city) => (
-            <li key={city.slug}>
-              <Link
-                href={`/homes/${city.slug}`}
-                className="flex min-h-20 flex-col justify-center rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-card transition-shadow duration-200 hover:shadow-raised"
-              >
-                <span className="text-h3">{city.name}</span>
-                <span className="text-small text-neutral-600">Homes for sale</span>
-              </Link>
-            </li>
-          ))}
+          {brand.market.cities.map((city) => {
+            const stats = statsFor(city.slug);
+            return (
+              <li key={city.slug}>
+                <Link
+                  href={`/homes/${city.slug}`}
+                  className="flex min-h-20 flex-col justify-center rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-card transition-shadow duration-200 hover:shadow-raised"
+                >
+                  <span className="text-h3">{city.name}</span>
+                  <span className="text-small text-neutral-600">
+                    {stats.listing_count ? `${formatNumber(Number(stats.listing_count))} homes for sale` : "Homes for sale"}
+                  </span>
+                  {stats.median_price ? (
+                    <span className="tabular text-small text-neutral-600">Median {formatPrice(Number(stats.median_price), { compact: true })}</span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
+
+      <RecentlyViewed />
     </>
   );
 }

@@ -27,13 +27,25 @@
   }
 }
 
-@layer utilities {
-  .container-page {
-    @apply mx-auto w-full max-w-container px-4 lg:px-8;
+@layer components {
+  .map-price-pin {
+    @apply tabular rounded-pill border border-white bg-accent px-2 py-0.5 text-[12px] font-semibold text-white shadow-card transition-transform duration-150;
   }
-  .tabular {
-    font-variant-numeric: tabular-nums;
+  .map-price-pin.is-hovered,
+  .map-price-pin:hover {
+    @apply z-10 scale-110 bg-neutral-900;
   }
+  .map-cluster {
+    @apply grid place-items-center rounded-full border-2 border-white bg-neutral-700/90 text-[12px] font-semibold text-white shadow-card transition-transform duration-150 hover:scale-105;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-container px-4 lg:px-8;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {

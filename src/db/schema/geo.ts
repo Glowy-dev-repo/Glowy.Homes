@@ -28,5 +28,6 @@ export const regions = pgTable(
     unique("regions_type_slug_parent_key").on(t.type, t.slug, t.parentId),
     index("regions_boundary_gix").using("gist", t.boundary),
     index("regions_slug_idx").on(t.slug),
+    index("regions_type_idx").on(t.type, t.parentId),
   ],
 );

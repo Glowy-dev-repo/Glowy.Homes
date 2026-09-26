@@ -145,6 +145,9 @@ export const listings = pgTable(
     index("listings_city_idx").on(t.cityRegionId, t.listingType, t.status),
     index("listings_fts").using("gin", t.searchVector),
     index("listings_list_date_idx").on(sql`${t.listDate} desc`),
+    // Beyond docs/02: neighborhood browse pages, incremental ingest lookups, property history.
+    index("listings_neighborhood_idx").on(t.neighborhoodRegionId, t.listingType, t.status),
+    index("listings_property_idx").on(t.propertyId),
   ],
 );
 

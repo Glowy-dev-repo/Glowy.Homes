@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { slugify } from "../../src/lib/slug";
 
 export const BrandConfig = z.object({
   brand_name: z.string().min(1),
@@ -46,14 +47,7 @@ export function shade(hex: string, amount: number): string {
   return `#${channel(16)}${channel(8)}${channel(0)}`.toUpperCase();
 }
 
-export function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+export { slugify };
 
 export function renderBrandTs(cfg: BrandConfig): string {
   const cities = cfg.primary_market_cities.map((name) => ({ name, slug: slugify(name) }));

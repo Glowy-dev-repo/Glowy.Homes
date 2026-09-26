@@ -34,8 +34,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
-    formats: ["image/avif", "image/webp"],
-    remotePatterns: [new URL(`${mediaOrigin}/**`)],
+    // Variants are produced once by process_media (docs/03 section 2), so next/image only picks a URL.
+    loader: "custom",
+    loaderFile: "./src/lib/media/image-loader.ts",
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

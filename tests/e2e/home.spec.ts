@@ -10,7 +10,7 @@ test.describe("home page shell", () => {
 
     const tabs = page.getByRole("tablist", { name: "Search type" });
     await expect(tabs.getByRole("tab", { name: "Buy" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("searchbox")).toBeVisible();
+    await expect(page.getByRole("combobox")).toBeVisible();
 
     if (isMobile) {
       await page.getByRole("button", { name: "Open menu" }).click();
@@ -27,13 +27,13 @@ test.describe("home page shell", () => {
 
   test("hero search submits the selected mode", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("searchbox").fill("Toronto");
+    await page.getByRole("combobox").fill("Toronto");
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page).toHaveURL(/\/search\?type=sale&q=Toronto/);
 
     await page.goto("/");
     await page.getByRole("tab", { name: "Home value" }).click();
-    await page.getByRole("searchbox").fill("12 Maple Ave");
+    await page.getByRole("combobox").fill("12 Maple Ave");
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page).toHaveURL(/\/home-value\?address=12\+Maple\+Ave/);
   });

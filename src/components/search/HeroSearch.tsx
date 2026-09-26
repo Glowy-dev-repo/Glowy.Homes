@@ -1,26 +1,34 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SearchBar } from "./SearchBar";
 
-type Tab = { id: "buy" | "rent" | "value"; label: string; action: string; name: string; hidden?: Record<string, string>; placeholder: string };
+type TabId = "buy" | "rent" | "value";
 
-const TABS: Tab[] = [
-  { id: "buy", label: "Buy", action: "/search", name: "q", hidden: { type: "sale" }, placeholder: "City, neighbourhood, address or postal code" },
-  { id: "rent", label: "Rent", action: "/search", name: "q", hidden: { type: "rent" }, placeholder: "City, neighbourhood, address or postal code" },
-  { id: "value", label: "Home value", action: "/home-value", name: "address", placeholder: "Enter your home address" },
+const TABS: { id: TabId; label: string; placeholder: string }[] = [
+  { id: "buy", label: "Buy", placeholder: "City, neighbourhood, address or postal code" },
+  { id: "rent", label: "Rent", placeholder: "City, neighbourhood, address or postal code" },
+  { id: "value", label: "Home value", placeholder: "Enter your home address" },
 ];
 
-/**
- * Hero search shell: three tabs above one large input (docs/04 Home template).
- * Autocomplete arrives with the SearchBar in Phase 1; until then it submits a plain GET.
- */
+/** Home hero: three tabs above one large SearchBar (docs/04 Home template). */
 export function HeroSearch() {
-  const [active, setActive] = useState<Tab["id"]>("buy");
+  const router = useRouter();
+  const [active, setActive] = useState<TabId>("buy");
   const tab = TABS.find((t) => t.id === active)!;
   const baseId = useId();
+
+  const submitText = (text: string) => {
+    if (active === "value") {
+      router.push(`/home-value?${new URLSearchParams(text ? { address: text } : {})}`);
+      return;
+    }
+    const qs = new URLSearchParams({ type: active === "rent" ? "rent" : "sale" });
+    if (text) qs.set("q", text);
+    router.push(`/search?${qs}`);
+  };
 
   return (
     <div className="w-full max-w-2xl">
@@ -43,33 +51,16 @@ export function HeroSearch() {
           </button>
         ))}
       </div>
-      <form
-        id={`${baseId}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${baseId}-${tab.id}`}
-        action={tab.action}
-        method="get"
-        className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white p-2 shadow-raised focus-within:border-accent"
-      >
-        {Object.entries(tab.hidden ?? {}).map(([k, v]) => (
-          <input key={k} type="hidden" name={k} value={v} />
-        ))}
-        <label htmlFor={`${baseId}-input`} className="sr-only">
-          {tab.placeholder}
-        </label>
-        <Search className="ml-2 size-5 shrink-0 text-neutral-500" aria-hidden />
-        <input
-          id={`${baseId}-input`}
-          name={tab.name}
-          type="search"
-          autoComplete={tab.id === "value" ? "street-address" : "off"}
+      <div id={`${baseId}-panel`} role="tabpanel" aria-labelledby={`${baseId}-${tab.id}`}>
+        <SearchBar
+          key={tab.id}
+          size="lg"
+          listingType={active === "rent" ? "rent" : "sale"}
           placeholder={tab.placeholder}
-          className="h-12 min-w-0 flex-1 bg-transparent text-base text-neutral-900 placeholder:text-neutral-500 focus:outline-none"
+          label={tab.placeholder}
+          onSubmitText={submitText}
         />
-        <Button type="submit" size="lg">
-          Search
-        </Button>
-      </form>
+      </div>
     </div>
   );
 }

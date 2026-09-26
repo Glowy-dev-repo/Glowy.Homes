@@ -1,0 +1,63 @@
+# Render Blueprint: one Next.js web service (pages, API, server actions) plus Postgres 16.
+# In Render: New > Blueprint, pick this repo. Secrets marked sync: false are entered in the dashboard.
+databases:
+  - name: glowy-homes-db
+    databaseName: glowy
+    user: glowy
+    postgresMajorVersion: "16"
+    region: ohio
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: glowy-homes
+    runtime: node
+    region: ohio
+    plan: starter
+    # Migrations run during the build because the home and city pages are prerendered from the database.
+    buildCommand: npm ci && npm run db:migrate && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: glowy-homes-db
+          property: connectionString
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://glowy.homes
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: EMAIL_FROM
+        value: Glowy.Homes <no-reply@glowy.homes>
+      - key: LISTING_FEED
+        value: synthetic
+      - key: RESEND_API_KEY
+        sync: false
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_MAPTILER_KEY
+        sync: false
+      - key: MAPTILER_GEOCODING_KEY
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: glowy-homes-media
+      - key: NEXT_PUBLIC_MEDIA_BASE_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        sync: false
