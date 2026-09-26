@@ -1,0 +1,7 @@
+node_modules
+.next
+src/db/migrations
+playwright-report
+test-results
+docs
+*.md
