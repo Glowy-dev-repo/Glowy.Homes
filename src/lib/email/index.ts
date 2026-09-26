@@ -11,6 +11,8 @@ export type OutgoingEmail = {
   text: string;
   /** Primary link in the email; recorded by the log transport so tests can follow it. */
   link?: string;
+  /** Extra headers, for example List-Unsubscribe on alert emails. */
+  headers?: Record<string, string>;
 };
 
 export const DEV_MAIL_DIR = resolve(process.cwd(), ".dev-mail");
@@ -36,6 +38,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     subject: email.subject,
     html: email.html,
     text: email.text,
+    headers: email.headers,
   });
   if (error) throw new Error(`Resend failed: ${error.message}`);
 }

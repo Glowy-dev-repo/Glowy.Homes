@@ -4,6 +4,8 @@ import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok } from "@/server/api/respond";
 import { requirePro } from "@/server/api/pro";
 import { consumerActivity, leadForPro, messages, updateLeadByPro } from "@/server/data/pro-leads";
+import { trackServer } from "@/lib/analytics/server";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 type Ctx = { params: Promise<{ id: string }> };
 const notFound = () => fail(404, { code: "not_found", message: "Lead not found." });
@@ -25,11 +27,15 @@ const Patch = z
   .refine((v) => v.status || v.note, "Change the status or add a note.");
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const who = await requirePro();
   if ("response" in who) return who.response;
   const { id } = await params;
   if (!isUuid(id)) return notFound();
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
-  return (await updateLeadByPro(who.pro.proId, id, parsed.data)) ? ok({ updated: true }) : notFound();
+  if (!(await updateLeadByPro(who.pro.proId, id, parsed.data))) return notFound();
+  if (parsed.data.status) await trackServer("lead_status_change", { leadId: id, status: parsed.data.status }, who.userId);
+  return ok({ updated: true });
 }

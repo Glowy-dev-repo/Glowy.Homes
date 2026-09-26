@@ -50,6 +50,20 @@
       "when": 1790401956716,
       "tag": "0006_user_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790403339129,
+      "tag": "0007_growth",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790403415280,
+      "tag": "0008_listings_created_index",
+      "breakpoints": true
     }
   ]
 }

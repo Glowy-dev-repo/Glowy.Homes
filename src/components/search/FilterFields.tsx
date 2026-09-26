@@ -252,6 +252,13 @@ export function FilterFields({ draft, onChange, sections }: Props) {
               ))}
             </select>
           </div>
+          {draft.type === "sale" && (
+            <div className="sm:col-span-2">
+              <Check checked={draft.parking === true} onChange={(on) => onChange({ parking: on ? true : undefined })}>
+                Parking
+              </Check>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <label htmlFor={`${id}-kw`} className={fieldLabel}>Keywords</label>
             <Input

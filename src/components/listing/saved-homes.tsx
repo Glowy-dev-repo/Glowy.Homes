@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { track } from "@/lib/analytics/client";
 import { cn } from "@/lib/utils";
 
 type SavedState = {
@@ -30,6 +31,7 @@ async function setSaved(listingId: string, saved: boolean) {
     body: JSON.stringify({ listingId }),
   });
   if (!res.ok) throw new Error("Could not update saved homes");
+  if (saved) track("save_home", { listingId });
 }
 
 /**

@@ -1,9 +1,15 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/lib/auth";
+import { createRateLimiter, rateLimitWrite } from "@/server/api/rate-limit";
+
+// Sign in links per address: stops anyone flooding someone else's inbox with sign in emails.
+const perHour = Number(process.env.SIGNIN_EMAILS_PER_HOUR ?? 10);
+const emailLimiter = createRateLimiter(perHour / 60, Date.now, Math.min(perHour, 5));
 
 export type SignInState = { status: "idle" | "error"; message?: string; fieldError?: string; email?: string };
 
@@ -28,6 +34,11 @@ export async function signInWithEmail(_prev: SignInState, formData: FormData): P
       fieldError: parsed.error.issues[0]?.message,
       email: String(formData.get("email") ?? ""),
     };
+  }
+
+  const req = new Request("http://local", { headers: await headers() });
+  if (rateLimitWrite(req) || !emailLimiter(parsed.data.email)) {
+    return { status: "error", message: "Too many sign in emails were requested. Wait a few minutes and try again.", email: parsed.data.email };
   }
 
   try {

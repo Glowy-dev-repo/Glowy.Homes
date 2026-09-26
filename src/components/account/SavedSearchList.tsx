@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatPrice, propertyTypeLabel } from "@/lib/format";
-import { ALERT_FREQUENCIES, ALERT_LABELS, type AlertFrequency } from "@/lib/saved-search-schema";
+import { ALERT_FREQUENCIES, ALERT_LABELS, type AlertFrequency } from "@/lib/saved-search-constants";
 import { toQueryString } from "@/lib/search/url";
 import type { SearchParams } from "@/types/search";
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SearchApp } from "@/components/search/SearchApp";
 import { searchTitle } from "@/lib/search/title";
 import { brand } from "@/config/brand";
-import { searchListings } from "@/lib/search/postgres";
+import { cachedSearch } from "@/lib/search/provider";
 import { findCity, findNeighborhood } from "@/lib/search/regions";
 import { parseSearchParams, toQueryString } from "@/lib/search/url";
 
@@ -36,7 +36,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function SearchPage({ searchParams }: Props) {
   const params = parseSearchParams(await searchParams);
-  const [result, place] = await Promise.all([searchListings(params), placeFor(params.city, params.neighborhood)]);
+  const [{ data: result }, place] = await Promise.all([cachedSearch(params), placeFor(params.city, params.neighborhood)]);
 
   // No Suspense boundary: the page is dynamic, so useSearchParams does not suspend, and a streamed
   // boundary would briefly duplicate the results in a hidden container.

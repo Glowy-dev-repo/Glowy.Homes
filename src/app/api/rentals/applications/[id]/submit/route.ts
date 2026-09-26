@@ -3,9 +3,12 @@ import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { submitApplication } from "@/server/data/rentals";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /** docs/02 POST /api/rentals/applications/[id]/submit: send the saved application to a listing. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;

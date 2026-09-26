@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { SavedHomesProvider } from "@/components/listing/saved-homes";
 import { RecentlyViewedSync } from "@/components/listing/RecentlyViewedSync";
+import { PageViewTracker } from "./Track";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SavedHomesProvider>
           <RecentlyViewedSync />
+          <PageViewTracker />
           {children}
         </SavedHomesProvider>
       </QueryClientProvider>

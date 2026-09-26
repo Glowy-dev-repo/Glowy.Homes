@@ -3,9 +3,12 @@ import { getPropertyEstimate } from "@/lib/valuation/read";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { FactsPatch, updateFacts } from "@/server/data/owner";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /** Owner fact override (docs/02 PATCH /api/properties/[id]/facts): owner only, revalues immediately. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;

@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, unique, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, unique, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { geography, id } from "./columns";
 
 export type RegionType = "country" | "province" | "city" | "neighborhood" | "postal_prefix";
@@ -23,6 +23,9 @@ export const regions = pgTable(
     boundary: geography("boundary", "multipolygon"),
     centroid: geography("centroid", "point"),
     stats: jsonb("stats").$type<RegionStats>().notNull().default({}),
+    /** Generated neighbourhood summary (docs/05 Phase 6 task 3), regenerated weekly. */
+    summary: text("summary"),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
   },
   (t) => [
     unique("regions_type_slug_parent_key").on(t.type, t.slug, t.parentId),

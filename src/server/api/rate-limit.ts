@@ -5,14 +5,15 @@ import { fail } from "./respond";
 
 type Bucket = { tokens: number; updated: number };
 
-export function createRateLimiter(perMinute: number, now: () => number = Date.now) {
+/** `burst` is the bucket size; it defaults to one minute of refill. */
+export function createRateLimiter(perMinute: number, now: () => number = Date.now, burst: number = perMinute) {
   const buckets = new Map<string, Bucket>();
   const refillPerMs = perMinute / 60_000;
 
   return function take(key: string): boolean {
     const t = now();
-    const b = buckets.get(key) ?? { tokens: perMinute, updated: t };
-    b.tokens = Math.min(perMinute, b.tokens + (t - b.updated) * refillPerMs);
+    const b = buckets.get(key) ?? { tokens: burst, updated: t };
+    b.tokens = Math.min(burst, b.tokens + (t - b.updated) * refillPerMs);
     b.updated = t;
     if (buckets.size > 10_000) buckets.clear();
     if (b.tokens < 1) {
@@ -25,7 +26,11 @@ export function createRateLimiter(perMinute: number, now: () => number = Date.no
   };
 }
 
-const limiter = createRateLimiter(Number(process.env.RATE_LIMIT_PER_MINUTE ?? 60));
+const perMinute = Number(process.env.RATE_LIMIT_PER_MINUTE ?? 60);
+const limiter = createRateLimiter(perMinute);
+// Writes (every POST, PATCH, PUT and DELETE route) get their own, smaller bucket, so browsing
+// the map never eats into saving and posting, and scripted abuse of write routes is capped.
+const writeLimiter = createRateLimiter(Number(process.env.RATE_LIMIT_WRITES_PER_MINUTE ?? Math.max(1, Math.floor(perMinute / 2))));
 
 export function clientIp(req: Request): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
@@ -34,5 +39,11 @@ export function clientIp(req: Request): string {
 /** Returns a 429 response when the caller is over the limit, otherwise null. */
 export function rateLimit(req: Request) {
   if (limiter(clientIp(req))) return null;
+  return fail(429, { code: "rate_limited", message: "Too many requests. Wait a moment and try again." });
+}
+
+/** Rate limit for write routes (docs/05 Phase 6 security review). */
+export function rateLimitWrite(req: Request) {
+  if (writeLimiter(clientIp(req))) return null;
   return fail(429, { code: "rate_limited", message: "Too many requests. Wait a moment and try again." });
 }

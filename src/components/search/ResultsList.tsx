@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ListingCard, ListingCardSkeleton } from "@/components/listing/ListingCard";
 import { SaveButton } from "@/components/listing/saved-homes";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { PAGE_SIZE, SORTS, type SearchParams, type SearchResult } from "@/types/search";
 import { SORT_LABELS } from "./filter-options";
 import { useHover } from "./search-state";
+
+const FIRST_PAINT_CARDS = 12;
 
 export function ResultsList({
   title,
@@ -29,6 +32,10 @@ export function ResultsList({
   onClearFilters: () => void;
   saveSearchSlot?: React.ReactNode;
 }) {
+  // The server renders the first cards only; the rest of the page (still 40 results) renders
+  // right after hydration. A smaller first document paints the top results sooner on phones.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const { hoveredId, setHoveredId } = useHover();
   const total = result?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -81,8 +88,9 @@ export function ResultsList({
       ) : (
         <>
           <ul className={cn("grid gap-4 transition-opacity sm:grid-cols-2", loading && "opacity-60")} aria-busy={loading}>
-            {result!.items.map((item, i) => (
-              <li key={item.id}>
+            {(hydrated ? result!.items : result!.items.slice(0, FIRST_PAINT_CARDS)).map((item, i) => (
+              // Cards below the fold skip style and layout until they scroll near the viewport.
+              <li key={item.id} className={i >= 4 ? "[contain-intrinsic-size:auto_360px] [content-visibility:auto]" : undefined}>
                 <ListingCard
                   listing={item}
                   highlighted={hoveredId === item.id}

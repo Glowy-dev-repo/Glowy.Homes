@@ -4,9 +4,12 @@ import { isUuid } from "@/lib/listings/detail";
 import { adminReassign } from "@/lib/leads/route";
 import { fail, invalid, ok } from "@/server/api/respond";
 import { requireAdmin } from "@/server/api/pro";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /** docs/01 AD4: manual reassignment, recorded in routing_log. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const who = await requireAdmin();
   if ("response" in who) return who.response;
   const { id } = await params;

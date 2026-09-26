@@ -9,6 +9,7 @@ export type RegionRef = {
   parentSlug: string | null;
   parentName: string | null;
   stats: RegionStats;
+  summary: string | null;
   bbox: [number, number, number, number] | null;
 };
 
@@ -22,7 +23,7 @@ export async function allRegions(): Promise<RegionRef[]> {
   const rows = await sqlClient<
     (Omit<RegionRef, "bbox"> & { xmin: number | null; ymin: number | null; xmax: number | null; ymax: number | null })[]
   >`
-    select r.id, r.type, r.name, r.slug, r.stats,
+    select r.id, r.type, r.name, r.slug, r.stats, r.summary,
       case when r.type = 'neighborhood' then p.slug end as "parentSlug",
       case when r.type = 'neighborhood' then p.name end as "parentName",
       ST_XMin(r.boundary::geometry) as xmin, ST_YMin(r.boundary::geometry) as ymin,

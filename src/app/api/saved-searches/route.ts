@@ -2,6 +2,7 @@ import { CreateSavedSearch } from "@/lib/saved-search-schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { createSavedSearch, MAX_SAVED_SEARCHES, savedSearches } from "@/server/data/saved";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 export async function GET() {
   const userId = await currentUserId();
@@ -10,6 +11,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = CreateSavedSearch.safeParse(await req.json().catch(() => null));

@@ -3,11 +3,15 @@ import { LeadInput } from "@/lib/leads/schema";
 import { leadViewToken } from "@/lib/leads/token";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { fail, invalid, ok } from "@/server/api/respond";
-import { clientIp, rateLimit } from "@/server/api/rate-limit";
+import { clientIp, rateLimit, rateLimitWrite } from "@/server/api/rate-limit";
 import { createLead } from "@/server/data/leads";
+import { trackServer } from "@/lib/analytics/server";
+import { sqlClient } from "@/db";
 
 /** docs/02 POST /api/leads: any lead type, captcha protected in production. Routing runs in route_lead. */
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const limited = rateLimit(req);
   if (limited) return limited;
   const parsed = LeadInput.safeParse(await req.json().catch(() => null));
@@ -17,6 +21,10 @@ export async function POST(req: Request) {
   }
   const session = await auth();
   const lead = await createLead(parsed.data, session?.user?.id ?? null);
+  const [place] = parsed.data.listingId
+    ? await sqlClient<{ city: string | null }[]>`select r.slug as city from listings l left join regions r on r.id = l.city_region_id where l.id = ${parsed.data.listingId}`
+    : [];
+  await trackServer("lead_submit", { leadType: parsed.data.leadType, listingId: parsed.data.listingId ?? null, city: place?.city ?? null }, session?.user?.id ?? null);
   // The status token lets this browser see who the lead went to, without an account.
   return ok({ leadId: lead.id, statusToken: leadViewToken(lead.id) }, {}, { status: 201 });
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 
+// Classic and mini schemas share the core error shape.
+type SchemaError = Pick<z.core.$ZodError, "issues">;
+
 // Every API route returns { data, error, meta } per docs/02 section 5.
 
 export type ApiError = { code: string; message: string; fields?: Record<string, string[]> };
@@ -13,7 +16,7 @@ export function fail(status: number, error: ApiError) {
   return NextResponse.json({ data: null, error, meta: {} }, { status });
 }
 
-export function invalid(err: z.ZodError) {
+export function invalid(err: SchemaError) {
   const fields: Record<string, string[]> = {};
   for (const issue of err.issues) {
     const key = issue.path.join(".") || "_";

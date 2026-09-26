@@ -4,6 +4,7 @@ import { fail, invalid, ok } from "@/server/api/respond";
 import { requireAdmin } from "@/server/api/pro";
 import { decideModeration, moderationQueue } from "@/server/data/admin";
 import { applyListingDecision } from "@/server/data/listing-moderation";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 export async function GET() {
   const who = await requireAdmin();
@@ -16,6 +17,8 @@ const Decision = z
   .refine((v) => v.decision === "approve" || !!v.note, { message: "Give a reason so the submitter knows what to fix.", path: ["note"] });
 
 export async function PATCH(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const who = await requireAdmin();
   if ("response" in who) return who.response;
   const parsed = Decision.safeParse(await req.json().catch(() => null));

@@ -3,6 +3,7 @@ import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { updateOwnerListing } from "@/server/data/user-listings";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 const Patch = z
   .object({ status: z.enum(["active", "pending", "sold", "leased", "withdrawn"]).optional(), price: z.number().int().positive().optional() })
@@ -10,6 +11,8 @@ const Patch = z
 
 /** Owner updates to their own live listing. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;

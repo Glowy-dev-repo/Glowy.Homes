@@ -1,15 +1,9 @@
 import { z } from "zod";
 import { SearchParams } from "@/types/search";
 
-export const ALERT_FREQUENCIES = ["instant", "daily", "weekly", "off"] as const;
-export type AlertFrequency = (typeof ALERT_FREQUENCIES)[number];
+import { ALERT_FREQUENCIES } from "./saved-search-constants";
 
-export const ALERT_LABELS: Record<AlertFrequency, string> = {
-  instant: "Instantly",
-  daily: "Daily",
-  weekly: "Weekly",
-  off: "No emails",
-};
+export { ALERT_FREQUENCIES, ALERT_LABELS, type AlertFrequency } from "./saved-search-constants";
 
 export const CreateSavedSearch = z.object({
   name: z.string().trim().min(1, "Give this search a name.").max(80),

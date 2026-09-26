@@ -4,6 +4,7 @@ import { SUBMISSION_STATUSES } from "@/lib/listings/user-listing-schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { updateSubmission } from "@/server/data/rentals";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 const Patch = z
   .object({ status: z.enum(SUBMISSION_STATUSES).exclude(["withdrawn"]).optional(), landlordNotes: z.string().trim().max(1000).optional() })
@@ -11,6 +12,8 @@ const Patch = z
 
 /** Landlord reviews an application to one of their listings (docs/01 R5). */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;

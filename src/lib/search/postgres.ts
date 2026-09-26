@@ -77,7 +77,11 @@ async function whereClause(
   if (p.pets !== undefined) conds.push(sql`coalesce((l.rental_terms->>'pets')::boolean, false) = ${p.pets}`);
   if (p.furnished !== undefined) conds.push(sql`coalesce((l.rental_terms->>'furnished')::boolean, false) = ${p.furnished}`);
   if (p.laundry !== undefined) conds.push(sql`(coalesce(l.rental_terms->>'laundry', '') = 'In suite') = ${p.laundry}`);
-  if (p.parking !== undefined) conds.push(sql`coalesce((l.rental_terms->>'parking')::boolean, false) = ${p.parking}`);
+  if (p.parking !== undefined) {
+    // Rentals: parking included in the rent. Sales: the home has at least one parking space.
+    conds.push(sql`(case when l.listing_type = 'rent' then coalesce((l.rental_terms->>'parking')::boolean, false)
+      else exists (select 1 from properties pk where pk.id = l.property_id and pk.parking_spaces > 0) end) = ${p.parking}`);
+  }
   if (p.availableBy) conds.push(sql`l.available_date <= ${p.availableBy}::date`);
 
   return { where: conds.reduce((acc, c) => sql`${acc} and ${c}`), extent };
@@ -119,6 +123,34 @@ export function coverJoin(sql: Sql): Fragment {
       where listing_id = l.id and kind = 'photo' and storage_key is not null
       order by position limit 1
     ) m on true`;
+}
+
+/**
+ * Listings matching a saved search that first appeared in (since, until]: the saved search alert
+ * query (docs/03 section 6). New means newly created in our database, so a listing is sent once.
+ */
+export async function newListingMatches(
+  p: SearchParams,
+  since: Date,
+  until: Date,
+  limit: number,
+  sql: Sql = sqlClient,
+): Promise<{ items: ListingSummary[]; total: number }> {
+  const clause = await whereClause(sql, p);
+  if (!clause) return { items: [], total: 0 };
+  const where = sql`${clause.where} and l.created_at > ${since} and l.created_at <= ${until}`;
+  const [items, [{ total }]] = await Promise.all([
+    sql<ListingSummary[]>`
+      select ${summaryColumns(sql)}
+      from listings l
+      join properties p on p.id = l.property_id
+      ${coverJoin(sql)}
+      where ${where}
+      order by l.created_at desc, l.id
+      limit ${limit}`,
+    sql<{ total: number }[]>`select count(*)::int as total from listings l where ${where}`,
+  ]);
+  return { items, total };
 }
 
 export async function searchListings(p: SearchParams, sql: Sql = sqlClient): Promise<SearchResult> {

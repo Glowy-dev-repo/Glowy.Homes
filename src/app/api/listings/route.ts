@@ -2,9 +2,12 @@ import { UserListingInput } from "@/lib/listings/user-listing-schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { createUserListing } from "@/server/data/user-listings";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /** docs/02 POST /api/listings: FSBO or rental listing, enters in_review with auto checks. */
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = UserListingInput.safeParse(await req.json().catch(() => null));

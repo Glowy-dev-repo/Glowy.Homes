@@ -8,6 +8,7 @@ import { SellLeadDialog } from "@/components/owner/SellLeadDialog";
 import { CompsMap } from "@/components/valuation/CompsMap";
 import { CompsTable } from "@/components/valuation/CompsTable";
 import { EstimateCard } from "@/components/valuation/EstimateCard";
+import { Track } from "@/components/layout/Track";
 import { ValueHistoryChart } from "@/components/valuation/ValueHistoryChart";
 import { sqlClient } from "@/db";
 import { formatArea, formatDate, formatPrice, propertyTypeLabel } from "@/lib/format";
@@ -79,6 +80,7 @@ export default async function PropertyValuePage({ params }: Props) {
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-10">
           <EstimateCard estimate={estimate} methodologyHref="/methodology" agentOpinionHref="#sell" size="large" />
+          <Track name="estimate_view" props={{ propertyId: id, confidence: estimate.value?.confidence ?? "insufficient" }} />
 
           <section aria-labelledby="history-heading">
             <h2 id="history-heading" className="mb-3 text-h2">Value history</h2>

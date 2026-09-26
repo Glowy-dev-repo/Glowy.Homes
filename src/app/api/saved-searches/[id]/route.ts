@@ -3,12 +3,15 @@ import { UpdateSavedSearch } from "@/lib/saved-search-schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { deleteSavedSearch, updateSavedSearch } from "@/server/data/saved";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const notFound = () => fail(404, { code: "not_found", message: "Saved search not found." });
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;
@@ -20,7 +23,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
   return row ? ok(row) : notFound();
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const { id } = await params;

@@ -4,9 +4,12 @@ import { MAX_UPLOAD_BYTES, UPLOAD_CONTENT_TYPES } from "@/lib/media/r2";
 import { putVariant } from "@/lib/media/storage";
 import { verifyUpload } from "@/lib/media/upload-token";
 import { fail, ok, unauthorized } from "@/server/api/respond";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /** Direct image upload when R2 is not configured: validates, processes with sharp and stores locally. */
 export async function PUT(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
   const url = new URL(req.url);

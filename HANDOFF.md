@@ -1,0 +1,168 @@
+# Glowy.Homes handoff
+
+The MVP described in `docs/` is built through Phase 6. Every phase gate passes locally against the production build and a seeded database of 50,000 synthetic listings. `PROGRESS.md` has the phase table, the gate results and the session log.
+
+## 1. Deployed URL
+
+Not deployed yet. The code has not left this computer: pushing and deploying wait for the owner's go ahead (PROGRESS.md, BLOCKED 1).
+
+Hosting is set up for Render. `render.yaml` defines the web service, a Render Postgres 16 database with PostGIS, and `/api/health` as the health check. To go live:
+
+1. Push the repository (`git push`), then in Render choose New, Blueprint, and pick the Glowy.Homes repository.
+2. In the Render dashboard, fill the secrets marked `sync: false`: at least `RESEND_API_KEY` and `AUTH_SECRET`; optionally Google OAuth, MapTiler, Inngest, R2, Sentry, Turnstile and Anthropic.
+3. Load the demo data once from the Render shell: `ALLOW_REMOTE_SEED=1 npm run db:seed`.
+4. Verify glowy.homes in Resend and add the DNS records it gives you in Squarespace, keeping the existing email security records.
+5. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
+6. Run Lighthouse on the preview URL for `/search?city=toronto` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 86 and 90, right at the targets, so check them on the preview first.
+
+The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowy.homes.
+
+## 2. Admin login
+
+1. The seed creates the admin account `admin@example.com`. Use a real address by setting `SEED_ADMIN_EMAIL` before seeding.
+2. Open `/signin`, enter the admin email and press "Email me a sign in link".
+3. Locally (`EMAIL_TRANSPORT=log`) the link is printed in the terminal and saved in `.dev-mail/`. In production it arrives by email through Resend.
+4. The admin area is `/admin`: overview with feed health, listing counts and lead volume, then Leads (manual reassignment), Moderation (listings, reviews, pro signups) and Funnel (search to listing to lead by city).
+
+To make another existing account an admin, add `admin` to its `roles` column in the `users` table.
+
+## 3. Switching `listing_feed` from synthetic to a licensed feed
+
+Only switch once a data agreement is signed. Never scrape (CLAUDE.md rule 1).
+
+1. Get credentials: CREA DDF for Canadian listings (`CREA_DDF_CLIENT_ID`, `CREA_DDF_CLIENT_SECRET`) or a RESO Web API feed from an MLS (`RESO_BASE_URL`, `RESO_ACCESS_TOKEN`).
+2. Write the adapter in `src/lib/ingestion/adapters/` by implementing `ListingFeedAdapter` from `src/lib/ingestion/types.ts`:
+   `fetchChanged(cursor, pageSize)` pages through listings changed since the cursor, and `normalize(raw)` maps one record to `NormalizedListing`. `synthetic.ts` is the reference implementation.
+3. Return the new adapter from `getAdapter()` in `src/lib/ingestion/adapters/index.ts`, where the `reso` and `crea_ddf` cases currently throw a clear error.
+4. Set `LISTING_FEED=reso` (or `crea_ddf`) in the environment and `listing_feed` in the CLAUDE.md brand config, then run `npm run brand:sync`.
+5. The `ingest_feed` Inngest job runs the adapter on its schedule. Everything downstream (upserts, price history, media processing, region stats, valuations, alerts) already works on normalized listings.
+6. Before switching, clear the synthetic data. Show the brokerage attribution and disclaimers the agreement requires; the listing page already shows "Listing courtesy of" and a reliability disclaimer.
+
+`csv` is accepted as a value but no CSV importer is built.
+
+## 4. Assumptions
+
+Every choice made where the spec was silent, copied from PROGRESS.md.
+
+1. Phase 0: Local database is Postgres 16 with PostGIS 3.4 in Docker (`docker-compose.yml`, port 5433, `npm run db:up`). Production uses a hosted Postgres with PostGIS (Neon per the stack, Supabase also works) through `DATABASE_URL` only.
+2. Phase 0: Brand config filled with Glowy.Homes, short GH, domain glowy.homes, support@glowy.homes. Market, currency, color and font kept from the blueprint.
+3. Phase 0: Auth.js uses JWT sessions with roles in the token so middleware can authorize without a database call. The Drizzle adapter still stores users, accounts and verification tokens. Roles refresh when the session is updated.
+4. Phase 0: Middleware runs on the Node runtime (stable in Next 15.5) because Auth.js needs APIs the Edge runtime lacks.
+5. Phase 0: Access rules: `/pro` is the public pro landing page; `/pro/*` needs agent, lender or admin; `/account`, `/landlord` and `/sell/list` need any signed in user; `/admin` needs admin and is checked again in the page.
+6. Phase 0: New env key `EMAIL_TRANSPORT` (resend or log). Log mode writes the latest email per recipient to `.dev-mail/` and the console, which is how magic links work in dev and in tests. It defaults to log when no Resend key is set.
+7. Phase 0: Google sign in may link to an existing magic link account with the same email, because Google verifies email ownership.
+8. Phase 0: The `users` table keeps the column names from docs/02 (`email_verified_at`, `image_url`) and maps them to the property names the Auth.js adapter expects.
+9. Phase 0: Migrations are `0000_extensions` (postgis, pg_trgm) and `0001_core_schema` (23 tables, everything in docs/02 except `subscriptions` and `valuation_accuracy`). The search vector and denormalization triggers ship in Phase 1 with ingestion.
+10. Phase 0: drizzle-kit quotes PostGIS column types, which Postgres rejects. `npm run db:generate` runs `scripts/fix_migrations.ts` afterwards to unquote them, and a unit test guards it.
+11. Phase 0: The foreign key from `rental_application_submissions` to `rental_applications` has an explicit short name because the generated one exceeds the Postgres 63 character limit.
+12. Phase 0: `NODE_ENV` was removed from `.env.example` because a development value there breaks `next build`. Next sets it itself.
+13. Phase 0: The Inngest client runs in dev mode whenever no real signing key is configured, and in cloud mode (signed requests) when keys are present.
+14. Phase 0: Sentry is inert without a DSN. When enabled it collects no user info, cookies or request bodies, so lead contact details never leave the app.
+15. Phase 0: The CSP allows inline scripts for now because Next's hydration payload needs them. Nonce based CSP is part of the Phase 6 security review.
+16. Phase 0: Inter is self hosted from `@fontsource-variable/inter` so builds never depend on a font CDN.
+17. Phase 0: Tailwind v4 reads `tailwind.config.ts` through `@config`. `scripts/sync_brand.ts` generates `src/config/brand.ts` and `src/styles/brand.css`, which maps `neutral-*` utilities to the configured neutral family and defines the accent color.
+18. Phase 0: The ui-ux-pro-max palette and font suggestions (teal, Cinzel) conflict with docs/04, so docs/04 wins. Its marketplace pattern (search bar as the main call to action) and UX checklist are adopted: Lucide icons, 44px targets, visible focus, 150 to 300ms transitions, reduced motion support.
+19. Phase 0: shadcn/ui primitives are written by hand in shadcn style (`components.json` present) instead of running the interactive CLI.
+20. Phase 0: The phase gate fails any phase that has no phase specific checks defined yet, so a gate can never pass by accident. It also refuses to run e2e when its port is already in use.
+21. Phase 0: `npm run lint` keeps `next lint` as CLAUDE.md section 10 specifies. Next 15.5 prints a deprecation notice; move to the ESLint CLI when upgrading to Next 16.
+22. Phase 0: Playwright runs every e2e test twice, on a 390px mobile viewport and a 1280px desktop viewport. Tests wait for a hydration marker before interacting.
+23. Phase 1: Hosting is Render instead of Vercel and Neon, by owner decision: one Render web service running `next start` plus Render Postgres 16 with PostGIS (`render.yaml`). Inngest Cloud, R2, Resend and Sentry are unchanged. Migrations run in the Render build because home and city pages are prerendered from the database.
+24. Phase 1: City boundaries are simplified polygons drawn for this project and bundled in code, so nothing is downloaded or scraped. Neighbourhoods are PostGIS Voronoi cells of generated seed points, clipped to the city, with invented generic names so they never imply real boundaries.
+25. Phase 1: Synthetic photos are rendered by sharp on first request through the `/media` route and cached on disk, instead of rendering about 625,000 images during the seed. `process_media` handles real feeds: download, sharp, then R2 (or local disk when R2 is not configured).
+26. Phase 1: `NormalizedListing` gained an optional `history` array (RESO feeds expose history resources). It is used only when a listing is first created; later changes are diffed.
+27. Phase 1: The hidden pricing formula lives in `src/lib/ingestion/synthetic/model.ts`, and the seed writes true values to `scripts/data/generated/truth.jsonl` for the Phase 3 accuracy check.
+28. Phase 1: The seed is deterministic for a given `SEED` and `SEED_AS_OF` date (default today in UTC). It refuses to run against a non local database unless `ALLOW_REMOTE_SEED=1`.
+29. Phase 1: Search returns clusters whenever a search matches more than 200 listings (with or without bounds), using a grid sized from the viewport or the searched region. At 200 or fewer it returns light pins so the map shows every match while the list pages at 40. Under 60 results pins show price labels.
+30. Phase 1: Without a MapTiler key the map uses a neutral base drawn from our own region outlines (`/api/regions/geo`). The MapLibre worker is served from `public/maplibre` (copied on install and before dev and build) because bundlers break its default path.
+31. Phase 1: On mobile the search page opens on the list with a Map toggle (docs/04 allows this) so MapLibre stays out of the first load. The map is loaded lazily everywhere.
+32. Phase 1: `units: metric`, so areas display in square metres. Storage and the `sqftMin`/`sqftMax` filters stay in sqft as the schema defines, converted at the UI.
+33. Phase 1: Moving the map replaces the city, neighbourhood and text query with the visible bounds and uses `replaceState`, so panning does not flood browser history. Filter changes use `pushState` so Back undoes them.
+34. Phase 1: The rate limit is configurable with `RATE_LIMIT_PER_MINUTE` (default 60 per docs/02). The phase gate raises it for its own test server.
+35. Phase 1: City browse pages are prerendered at build and revalidated daily; neighbourhood and rental pages render on first request and are then cached. Rentals have no neighbourhood pages in the route map, so rental neighbourhood links open the map search.
+36. Phase 1: Status badges show a coloured dot with dark text, because white text on the status green is below 4.5:1 contrast.
+37. Phase 1: Recently viewed is recorded when a listing card is opened; the listing page records it too once it exists in Phase 2.
+38. Phase 1: docs/04 does not place a search box on the search page; a SearchBar sits above the filter chips.
+39. Phase 1: Feed listings link to a pro when the feed agent's licence number matches a pro's licence number.
+40. Phase 1: The ui-ux-pro-max review items applied to search: 44px targets, visible focus, labelled controls, skeletons while loading, empty state with recovery actions, reduced motion respected.
+41. Phase 2: Synthetic data was made more realistic so similar homes behave like a real market: each neighbourhood has its own home type mix, rental share, typical home size and construction era; rentals are mostly condos; multi unit homes are about 2% and vacant land 0.1% of listings. Similar homes coverage is 95.8% with seed 42 and 95.3% with seed 7. The criterion script itself was not changed.
+42. Phase 2: When fewer than 6 homes meet the strict similar rule (same type, 3 km, 20% of price), the section is filled from a wider ring (15 km, 40% of price) and the API marks which results are strict.
+43. Phase 2: Until the Phase 4 lead forms exist, "Request a tour" and "Contact agent" on the listing page scroll to the listing agent card, which shows the agent's phone number.
+44. Phase 2: The estimate card shows the docs/04 "not enough recent sales" state until Phase 3 computes valuations. The monthly payment on the card is a range (rate plus or minus half a point) with a Medium confidence label and its own disclaimer.
+45. Phase 2: There is no licensed school or walkability data, so the neighbourhood section shows local density (homes within 1 km) and says school information is not available yet. The commute input is a straight line estimate with a time range, a Low confidence label and a disclaimer, using our own autocomplete for destinations.
+46. Phase 2: Tax history shows the annual tax the feed provides; there is no multi year tax data yet.
+47. Phase 2: The mortgage calculator uses Canadian semi annual compounding, a default 4.79% rate, standard mortgage default insurance premiums below 20% down (none at $1.5M and above) and the Canadian minimum down payment rules. Down payment, rate, amortization and insurance persist in local storage; price, tax and fees come from each listing.
+48. Phase 2: Intent survives sign in through the return URL: `?save=<listingId>` completes a save, and `?saveSearch=1` reopens the save search dialog.
+49. Phase 2: Recently viewed stays in local storage and, for signed in users, is pushed to and pulled from the database so it follows the user across devices.
+50. Phase 2: Saved searches store the SearchParams filters without the page number; a drawn polygon is also stored in the `boundary` column. Each user can keep up to 50.
+51. Phase 2: Drizzle and raw SQL use separate connection pools, because Drizzle replaces its client's JSON serializers and that broke `sql.json()` in raw queries.
+52. Phase 2: Server action forms echo submitted values back, because React 19 resets uncontrolled fields after an action.
+53. Phase 2: "Tours and inquiries" and "My homes" in the account area are empty states until Phases 4 and 3 fill them.
+54. Phase 2: Listing pages render on first request and are cached (ISR, hourly); each has its own Open Graph image. First load JavaScript is 257 KB on the listing page and 276 KB on search, to be brought under 250 KB in Phase 6.
+55. Phase 3: comps_v1 follows docs/03 section 3.2 exactly. The market index is the monthly median sold price per sqft per city, gaps interpolated, then smoothed with a centred three month average because small cities have few sales a month. Indexes live in `regions.stats` (`ppsf_index`, `rent_ppsf_index`).
+56. Phase 3: For speed, each home considers the 60 nearest closed sales within 10 km and 18 months, then applies the spec's 5 km and 12 month tier. A partial spatial index on sold and leased listings keeps this fast (37,500 homes valued in about 65 seconds).
+57. Phase 3: "Insufficient data" is stored as a valuation row with amount 0 and the reason, and the UI shows the docs/04 unavailable state for it.
+58. Phase 3: The rent fallback uses a 4.5% gross yield with a range of 15% either side and a Low confidence label.
+59. Phase 3: The owner's reported condition adjusts the comps estimate (needs work 0.90, average 1.00, good 1.03, excellent 1.07). docs/01 lists condition as editable but docs/03 does not say how it counts.
+60. Phase 3: The 12 month value history uses stored monthly valuations and fills missing months from the current estimate and the city index; the chart says so.
+61. Phase 3: Accuracy is scored nightly for real sales, and the seed also runs a backtest (estimate 30 days before each sale in the last 6 months, using only earlier sales) so the methodology page has figures from day one. The 12% city guard uses the last 180 days and needs at least 20 scored sales.
+62. Phase 3: Homes outside the nightly scope are valued on first view and cached for 30 days (docs/03 section 3.3). The nightly scope also includes pending listings.
+63. Phase 3: Address lookup geocodes with MapTiler when a key is set; otherwise a local geocoder places the address between known house numbers on the same street in a covered city. Unknown streets and addresses outside the covered cities get a clear message.
+64. Phase 3: Claims are instant in development and use the code step in production (`CLAIM_VERIFICATION` overrides either way).
+65. Phase 3: `POST /api/leads` shipped early for "Thinking of selling", with CASL consent (text and version) stored on the lead. Routing arrives in Phase 4; the queue call is capped at 2 seconds so a slow queue never delays the consumer.
+66. Phase 3: `/home-value` stays static as the route map says; an address passed from the home page tab is read on the client.
+67. Phase 3: The seed now also computes valuations and the accuracy backtest; the full seed takes about 2.6 minutes.
+68. Phase 3: Owner fact edits change only the owner's estimate, never the listing shown to buyers.
+69. Phase 4: Routing decisions are a pure function (unit tested with 20 plus scenarios) behind the database orchestration. Ranking is fewest leads today, then fastest response, then rating. The share weighted random step from docs/03 waits for paid area subscriptions (Phase 5); every share is 100 until then.
+70. Phase 4: Daily caps count leads assigned since midnight Toronto time. The chosen pro's row is locked and the cap rechecked before assigning, so concurrent leads cannot exceed it.
+71. Phase 4: A consumer who contacts a specific pro from their profile is routed to that pro even outside their service areas, as long as the pro is active, accepting and under their cap.
+72. Phase 4: Rental inquiries go straight to the listing owner when the owner has an active landlord profile. Feed rentals without an owner are routed to agents covering the area.
+73. Phase 4: A pro's first response is their first action on the lead: a status change, a note or a message.
+74. Phase 4: Without a first response in 30 minutes (agents) or 4 hours (lenders), the lead is reassigned, up to three times, and the pro's response time score gets 10 minutes worse. `LEAD_REASSIGN_SECONDS` and `LEAD_RETRY_SECONDS` shorten the timers; the phase gate uses 45 and 30 seconds.
+75. Phase 4: Unassigned leads retry every 30 minutes for 24 hours inside route_lead, and a 30 minute sweep picks up any lead that never reached the queue.
+76. Phase 4: The lead form polls a status link signed with an HMAC token, so a signed out submitter can see who their lead went to. Anyone else gets a 404, and other pros get a 404 on the lead itself.
+77. Phase 4: Agents and lenders start as pending; an admin approval records the licence as verified and activates them. Landlords are active at once. Signup adds the role to the user and refreshes the session token.
+78. Phase 4: Reviews can only come from the consumer on a closed lead with that pro, one per lead, and are moderated before they count toward the rating.
+79. Phase 4: Preapproval requests ask where the buyer is buying so they can be routed to a lender covering that city.
+80. Phase 4: Turnstile is enforced only when `TURNSTILE_SECRET_KEY` is set.
+81. Phase 4: The mortgage page uses a static partner rate table shown as typical rates. Affordability uses the usual Canadian limits (39% of income for housing, 44% for all debts) at the stress test rate, shown as a range with a Medium confidence label and a disclaimer.
+82. Phase 4: Pros show initials until photo upload arrives with Phase 5 media uploads.
+83. Phase 4: The phase gate now starts the Inngest dev server next to the test build so lead routing runs for real in e2e tests.
+84. Phase 5: FSBO sellers and landlords share one seven step wizard (address, facts, photos, price, description, contact, review). The address must resolve to a property through the same lookup as the home value page, and listing a home claims it for the lister when nobody else has.
+85. Phase 5: Without R2 keys, photos upload straight to the app with a short lived signed token and are processed with sharp into local storage. With R2 keys the browser uses a presigned URL instead.
+86. Phase 5: Auto checks never block a submission; they mark the moderation item high priority and list the failed checks for the reviewer (docs/03 section 7). Fewer than 3 photos is the exception and is refused outright, in the browser and on the server.
+87. Phase 5: Owners and landlords get a pro record of type owner or landlord so tours, inquiries and applications on their listings route straight to them, with no reassignment timer.
+88. Phase 5: The rental application holds only what the applicant types (no SIN, no credit check, docs/06). One application per renter, reused for every submission; landlords always see its latest version, so an edit also reaches rentals already applied to.
+89. Phase 5: The laundry filter means in suite laundry; the parking filter means parking included in the rent. Both read the listing's rental terms.
+90. Phase 5: Featured placement is capped at 4 boosted slots, pinned to the top of page 1; other featured listings keep their natural position.
+91. Phase 5: Stripe is not configured, so there is no checkout and no Feature button anywhere (docs/05 Phase 5 criterion 5). See BLOCKED 3.
+92. Phase 6: A saved search alert includes listings created in our database since the last send, so each listing is sent once. Windows: instant every 5 minutes, daily on the Toronto calendar day (08:00), weekly per ISO week (Monday 08:00). Everyone uses the market timezone until users can set their own.
+93. Phase 6: The unsubscribe link in an alert opens a confirmation page, so mail scanners that follow links cannot unsubscribe anyone; the List-Unsubscribe header gives mail clients a one click POST (RFC 8058).
+94. Phase 6: Natural language search is not disabled without an ANTHROPIC_API_KEY (docs/05 said disabled): a rule based parser runs instead and scores 10 of 10 fixtures. With a key, the Anthropic API parses through a forced tool call, falling back to the rules on error or after 6 seconds. Default model claude-haiku-4-5-20251001 for speed, set by ANTHROPIC_MODEL.
+95. Phase 6: The parking filter also works for homes for sale (at least one parking space), so "with parking" means the same thing for both.
+96. Phase 6: Neighbourhood summaries come from a template over housing facts. With an API key the LLM rewrites the same facts; any text mentioning people, schools, safety or using dashes is rejected and the template is used.
+97. Phase 6: A shared list invitation is accepted only by the invited email, expires in 14 days, and allows up to 3 people per owner. Members see all saved homes of the group with who saved each; either side can stop sharing.
+98. Phase 6: Analytics use a random visitor id in a first party httpOnly cookie set by /api/events, and events carry only ids, slugs and types. The funnel counts visitors who searched a city, then opened a listing there, then sent a lead about a home there, in 30 days. Raw events are deleted after 13 months; there is no aggregate table yet.
+99. Phase 6: Sentry in the browser loads after the page load event to keep the first load under 250 KB (search 215 KB, LDP 214 KB). Browser errors before that event are not reported; server errors always are.
+100. Phase 6: The script CSP keeps 'unsafe-inline', because a nonce CSP makes every page dynamic and turns off static and ISR pages. All other security headers are strict.
+101. Phase 6: Write routes share a per IP bucket (default 30 a minute) and sign in emails are limited per address (10 an hour). Limits are in memory per instance; move them to Redis before running more than one instance.
+102. Phase 6: postcss inside Next 15 is overridden to 8.5.28 (patched, high advisories). 4 moderate advisories remain in drizzle kit's development only esbuild, with no non breaking fix; nothing from it ships.
+103. Phase 6: Typesense was not added: search p95 stays at 75 to 113 ms at 50,000 listings, under the 300 ms target (docs/05 Phase 6 task 8 condition not met).
+104. Phase 6: Lighthouse targets are measured locally against the production build and must be rechecked on the deployed preview (criterion 3 says preview).
+105. Phase 6: About, terms and privacy pages are plain language drafts written for the MVP. They need review by a lawyer before launch.
+106. Phase 6: The gate's Lighthouse checks take the median of three runs, as Lighthouse recommends; single runs on this machine swing by up to 10 points while other apps keep the CPU busy. Thresholds are unchanged.
+107. Phase 6: Search renders its first 12 cards on the server and the rest of the 40 right after hydration; cards below the fold use content-visibility, listing links do not prefetch, and the page and /api/search share one 60 second cache.
+108. Phase 6: The search filter schema uses zod/mini, the smaller Zod build, because it ships to the browser. Server only schemas keep the classic API.
+109. Phase 6: /api/events never reads the session (Auth.js can refresh the session cookie there, which signed users back in during sign out). Browser events carry the visitor id; server events such as login and lead_submit carry both ids.
+
+## 5. Top ten things to build next
+
+1. **Go live.** Push, deploy the Render blueprint, set the secrets, verify the domain with Resend, point glowy.homes at Render, and recheck Lighthouse on the live URL.
+2. **Licensed listing feed.** Sign CREA DDF (or an Ontario MLS RESO feed) and write the adapter (section 3). The product is demo only until then.
+3. **Legal review.** Have a lawyer review the terms, the privacy page, the fair housing rules in moderation and CASL consent for emails before real users arrive.
+4. **Email deliverability.** Add Resend webhooks for bounces and complaints, stop alerts to addresses that bounce, and monitor the failure signals in docs/03 section 6.
+5. **Stripe.** Featured listing checkout and pro area subscriptions, with the webhook setting `featured_until` (BLOCKED 3; the cap of 4 featured slots is already in search).
+6. **Shared rate limits and caches.** Move the in memory rate limits and search cache to Redis before running more than one web instance.
+7. **Map tiles and geocoding keys.** Add a MapTiler key for real basemap tiles and address geocoding; without it the map uses the built in outline style.
+8. **Postal claim codes.** Pick a mail vendor (PostGrid or Lob) so home claim codes are mailed to the property (BLOCKED 2).
+9. **Alert improvements.** Per user timezones, instant alerts triggered by ingestion instead of the 5 minute poll, and price drop alerts.
+10. **Analytics depth.** A monthly aggregate table before raw events expire at 13 months, plus conversion reporting per lead type and per pro.

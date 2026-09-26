@@ -11,6 +11,7 @@ import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
 import { magicLinkEmail } from "@/lib/email/templates/magic-link";
 import { env } from "@/lib/env";
+import { trackServer } from "@/lib/analytics/server";
 
 const e = env();
 
@@ -61,8 +62,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   events: {
-    async signIn({ user }) {
+    async signIn({ user, isNewUser }) {
       if (user.id) await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, user.id));
+      if (user.id) await trackServer(isNewUser ? "signup" : "login", {}, user.id);
     },
   },
 });

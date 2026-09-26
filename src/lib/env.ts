@@ -33,6 +33,7 @@ const EnvSchema = z.object({
   LISTING_FEED: z.enum(["synthetic", "reso", "crea_ddf", "csv"]).default("synthetic"),
   STRIPE_SECRET_KEY: optional,
   ANTHROPIC_API_KEY: optional,
+  ANTHROPIC_MODEL: optional,
 });
 
 export type Env = z.infer<typeof EnvSchema>;

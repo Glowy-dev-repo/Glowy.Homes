@@ -8,7 +8,8 @@ import { useSession } from "next-auth/react";
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ALERT_FREQUENCIES, ALERT_LABELS, type AlertFrequency } from "@/lib/saved-search-schema";
+import { track } from "@/lib/analytics/client";
+import { ALERT_FREQUENCIES, ALERT_LABELS, type AlertFrequency } from "@/lib/saved-search-constants";
 import type { SearchParams } from "@/types/search";
 
 const INTENT = "saveSearch";
@@ -72,6 +73,7 @@ export function SaveSearchButton({
       body: JSON.stringify({ name, filters: { ...params, page: 1 }, alertFrequency: frequency }),
     });
     if (res.ok) {
+      track("save_search", { city: params.city ?? null, type: params.type, frequency });
       setState("saved");
       return;
     }

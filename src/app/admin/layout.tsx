@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           ["/admin", "Overview"],
           ["/admin/leads", "Leads"],
           ["/admin/moderation", "Moderation"],
+          ["/admin/funnel", "Funnel"],
         ].map(([href, label]) => (
           <Link key={href} href={href} className="inline-flex min-h-11 items-center rounded-md px-3 font-medium text-neutral-800 hover:bg-neutral-100">
             {label}

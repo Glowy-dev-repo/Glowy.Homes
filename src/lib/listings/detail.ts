@@ -54,7 +54,7 @@ export type ListingDetail = {
   parkingSpaces: number | null;
   facts: Record<string, unknown>;
   city: { id: string; name: string; slug: string; stats: RegionStats } | null;
-  neighborhood: { id: string; name: string; slug: string; stats: RegionStats } | null;
+  neighborhood: { id: string; name: string; slug: string; stats: RegionStats; summary: string | null } | null;
   media: ListingMediaItem[];
   priceHistory: PriceEvent[];
   agent: ListingAgent | null;
@@ -89,7 +89,7 @@ export async function getListingDetail(id: string): Promise<ListingDetail | null
       p.lot_sqft as "lotSqft", p.year_built as "yearBuilt", p.stories, p.parking_spaces as "parkingSpaces",
       p.facts || coalesce(p.owner_facts_override, '{}'::jsonb) as facts,
       case when c.id is null then null else json_build_object('id', c.id, 'name', c.name, 'slug', c.slug, 'stats', c.stats) end as city,
-      case when n.id is null then null else json_build_object('id', n.id, 'name', n.name, 'slug', n.slug, 'stats', n.stats) end as neighborhood
+      case when n.id is null then null else json_build_object('id', n.id, 'name', n.name, 'slug', n.slug, 'stats', n.stats, 'summary', n.summary) end as neighborhood
     from listings l
     join properties p on p.id = l.property_id
     left join regions c on c.id = l.city_region_id

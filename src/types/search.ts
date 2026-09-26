@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 import { PROPERTY_TYPES } from "@/db/schema/listings";
 
 // docs/02 section 4. Every search page, saved search and alert uses this one schema.
@@ -6,33 +6,45 @@ import { PROPERTY_TYPES } from "@/db/schema/listings";
 export const LISTING_SEARCH_STATUSES = ["active", "pending", "sold", "leased"] as const;
 export const SORTS = ["newest", "price_asc", "price_desc", "sqft_desc", "ppsf_asc"] as const;
 
+// zod/mini: this schema ships to the browser with the search page, and the mini build is a
+// fraction of the classic one (docs/05 Phase 6 task 6). Same parsing, functional syntax.
+const opt = z.optional;
+const int = () => z.number().check(z.int());
 export const SearchParams = z.object({
-  type: z.enum(["sale", "rent"]).default("sale"),
-  status: z.array(z.enum(LISTING_SEARCH_STATUSES)).min(1).default(["active"]),
-  q: z.string().trim().max(200).optional(),
-  city: z.string().max(80).optional(),
-  neighborhood: z.string().max(80).optional(),
-  bounds: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90), z.number().min(-180).max(180), z.number().min(-90).max(90)]).optional(),
-  polygon: z.array(z.tuple([z.number(), z.number()])).min(3).max(200).optional(),
-  priceMin: z.number().int().nonnegative().optional(),
-  priceMax: z.number().int().positive().optional(),
-  bedsMin: z.number().min(0).max(10).optional(),
-  bathsMin: z.number().min(0).max(10).optional(),
-  propertyTypes: z.array(z.enum(PROPERTY_TYPES)).optional(),
-  sqftMin: z.number().int().optional(),
-  sqftMax: z.number().int().optional(),
-  yearBuiltMin: z.number().int().optional(),
-  daysOnMarketMax: z.number().int().optional(),
-  keywords: z.string().trim().max(200).optional(),
+  type: z._default(z.enum(["sale", "rent"]), "sale"),
+  status: z._default(z.array(z.enum(LISTING_SEARCH_STATUSES)).check(z.minLength(1)), ["active"]),
+  q: opt(z.string().check(z.trim(), z.maxLength(200))),
+  city: opt(z.string().check(z.maxLength(80))),
+  neighborhood: opt(z.string().check(z.maxLength(80))),
+  bounds: opt(
+    z.tuple([
+      z.number().check(z.minimum(-180), z.maximum(180)),
+      z.number().check(z.minimum(-90), z.maximum(90)),
+      z.number().check(z.minimum(-180), z.maximum(180)),
+      z.number().check(z.minimum(-90), z.maximum(90)),
+    ]),
+  ),
+  polygon: opt(z.array(z.tuple([z.number(), z.number()])).check(z.minLength(3), z.maxLength(200))),
+  priceMin: opt(int().check(z.nonnegative())),
+  priceMax: opt(int().check(z.positive())),
+  bedsMin: opt(z.number().check(z.minimum(0), z.maximum(10))),
+  bathsMin: opt(z.number().check(z.minimum(0), z.maximum(10))),
+  propertyTypes: opt(z.array(z.enum(PROPERTY_TYPES))),
+  sqftMin: opt(int()),
+  sqftMax: opt(int()),
+  yearBuiltMin: opt(int()),
+  daysOnMarketMax: opt(int()),
+  keywords: opt(z.string().check(z.trim(), z.maxLength(200))),
+  /** Parking included (rentals) or at least one parking space (sales). */
+  parking: opt(z.boolean()),
   // rental only
-  pets: z.boolean().optional(),
-  furnished: z.boolean().optional(),
-  /** In suite laundry (rentals). */
-  laundry: z.boolean().optional(),
-  parking: z.boolean().optional(),
-  availableBy: z.string().date().optional(),
-  sort: z.enum(SORTS).default("newest"),
-  page: z.number().int().min(1).default(1),
+  pets: opt(z.boolean()),
+  furnished: opt(z.boolean()),
+  /** In suite laundry. */
+  laundry: opt(z.boolean()),
+  availableBy: opt(z.iso.date()),
+  sort: z._default(z.enum(SORTS), "newest"),
+  page: z._default(int().check(z.minimum(1)), 1),
 });
 
 export type SearchParams = z.infer<typeof SearchParams>;

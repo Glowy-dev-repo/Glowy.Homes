@@ -44,6 +44,7 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
 
 export const accountNav: NavLink[] = [
   { label: "Saved homes", href: "/account" },
+  { label: "Shared list", href: "/account/shared" },
   { label: "Saved searches", href: "/account/searches" },
   { label: "Tours and inquiries", href: "/account/inquiries" },
   { label: "Rental applications", href: "/account/applications" },

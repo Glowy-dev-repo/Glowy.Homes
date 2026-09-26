@@ -64,6 +64,8 @@ export function ListingCard({
             placeholder={l.coverBlur ? "blur" : "empty"}
             blurDataURL={l.coverBlur ?? undefined}
             priority={priority}
+            fetchPriority={priority ? "high" : undefined}
+            decoding={priority ? "sync" : "async"}
             className="object-cover"
           />
         ) : null}
@@ -86,6 +88,8 @@ export function ListingCard({
         <h3 className="truncate text-body font-normal text-neutral-900">
           <Link
             href={listingHref(l)}
+            // Lists show up to 40 cards; prefetching every one on a phone costs more than it saves.
+            prefetch={false}
             onClick={() => recordRecentlyViewed(l)}
             className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-accent"
           >

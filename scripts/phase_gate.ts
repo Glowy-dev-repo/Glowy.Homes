@@ -8,6 +8,7 @@ import postgres from "postgres";
 
 type Result = { check: string; ok: boolean; ms: number; note?: string };
 const results: Result[] = [];
+let buildOutput = "";
 
 const phaseArg = process.argv.indexOf("--phase");
 const phase = phaseArg >= 0 ? Number(process.argv[phaseArg + 1]) : null;
@@ -179,11 +180,11 @@ async function ldpLighthouse(ctx: Ctx) {
   const res = await fetch(`${ctx.baseUrl}/listing/${row.id}`, { redirect: "manual" });
   const url = new URL(res.headers.get("location") ?? `/listing/${row.id}`, ctx.baseUrl).toString();
   await fetch(url); // warm the ISR cache so the audit measures the cached page
-  const { runLighthouse } = await import("./lib/lighthouse");
-  const { scores, failing } = await runLighthouse(url, ["performance", "accessibility"]);
+  const { runLighthouseMedian } = await import("./lib/lighthouse");
+  const { scores, failing, all } = await runLighthouseMedian(url, ["performance", "accessibility"]);
   return {
     ok: scores.performance >= 90 && scores.accessibility >= 95,
-    note: `perf ${scores.performance}, a11y ${scores.accessibility}${failing.length ? `, failing: ${failing.join(", ")}` : ""}`,
+    note: `median perf ${scores.performance} (runs ${all.join(", ")}), a11y ${scores.accessibility}${failing.length ? `, failing: ${failing.join(", ")}` : ""}`,
   };
 }
 
@@ -236,6 +237,62 @@ async function moderationFlow() {
   return { ok: live > 0 && unmoderated === 0 && thin === 0, note: `${live} live user listings, ${unmoderated} skipped moderation, ${thin} under 3 photos` };
 }
 
+/** The last output line starting with `prefix`: the summary line each perf script prints. */
+function lastLine(output: string, prefix: string): string | undefined {
+  return output.trim().split(/\r?\n/).filter((l) => l.startsWith(prefix)).at(-1);
+}
+
+/** Phase 6 criterion 5: every docs/01 route answers 200 or the right redirect. */
+async function allRoutes(ctx: Ctx) {
+  const { ok, output } = await run("npx tsx tests/perf/routes.ts", { PERF_BASE_URL: ctx.baseUrl });
+  return { ok, note: lastLine(output, "routes") };
+}
+
+/** Phase 6 task 6: first load JS under 250 KB on search and the LDP, read from the build output. */
+async function bundleSize() {
+  const BUDGET_KB = 250;
+  const routes = ["/search", "/listing/[id]/[slug]"];
+  const sizes = routes.map((r) => {
+    // Build output rows look like "├ ƒ /search   13.9 kB   215 kB"; the last number is first load JS.
+    const row = buildOutput.split(/\r?\n/).find((l) => /^[├└┌]/.test(l) && l.split(/\s+/)[2] === r);
+    const m = row?.match(/([\d.]+) kB\s*$/);
+    return { route: r, kb: m ? Number(m[1]) : null };
+  });
+  const ok = sizes.every((x) => x.kb !== null && x.kb < BUDGET_KB);
+  return { ok, note: sizes.map((x) => `${x.route} ${x.kb ?? "?"} KB`).join(", ") + ` (budget ${BUDGET_KB} KB)` };
+}
+
+/** Phase 6 criterion 4: npm audit shows no critical or high vulnerabilities. */
+async function audit() {
+  const { output } = await run("npm audit --json");
+  const counts = (JSON.parse(output.slice(output.indexOf("{"))) as { metadata: { vulnerabilities: Record<string, number> } }).metadata.vulnerabilities;
+  return { ok: counts.high === 0 && counts.critical === 0, note: `critical ${counts.critical}, high ${counts.high}, moderate ${counts.moderate}, low ${counts.low}` };
+}
+
+/** Phase 6 criterion 1: daily alerts send exactly once per saved search, with a test clock. */
+async function alertsOnce() {
+  const { ok, output } = await run("npx tsx --require ./scripts/lib/allow-server-only.cjs tests/perf/alerts.ts");
+  return { ok, note: lastLine(output, "alerts") };
+}
+
+/** Phase 6 criterion 2: 9 of 10 natural language fixtures parse correctly. */
+async function nlSearch() {
+  const { ok, output } = await run("npx tsx --require ./scripts/lib/allow-server-only.cjs tests/perf/nl-search.ts");
+  return { ok, note: lastLine(output, "nl-search") };
+}
+
+/** Phase 6 criterion 3 (CLAUDE.md section 9 item 10): search page mobile performance at least 85. */
+async function searchLighthouse(ctx: Ctx) {
+  const url = `${ctx.baseUrl}/search?city=toronto`;
+  await fetch(url);
+  const { runLighthouseMedian } = await import("./lib/lighthouse");
+  const { scores, failing, all } = await runLighthouseMedian(url, ["performance", "accessibility"]);
+  return {
+    ok: scores.performance >= 85 && scores.accessibility >= 95,
+    note: `median perf ${scores.performance} (runs ${all.join(", ")}), a11y ${scores.accessibility}${failing.length ? `, failing: ${failing.join(", ")}` : ""}`,
+  };
+}
+
 type Ctx = { baseUrl: string };
 type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
 
@@ -263,6 +320,15 @@ const PHASE_CHECKS: Record<number, Check[]> = {
     { name: "user listings pass moderation with 3+ photos", fn: moderationFlow },
     { name: "moderation and schema unit tests", fn: async () => (await run("npx vitest run tests/unit/user-listings.test.ts")).ok },
   ],
+  6: [
+    { name: "all routes 200 or redirect", fn: allRoutes },
+    { name: "first load JS under 250 KB", fn: bundleSize },
+    { name: "npm audit: no high or critical", fn: audit },
+    { name: "daily alert sends exactly once", fn: alertsOnce },
+    { name: "natural language search 9 of 10", fn: nlSearch },
+    { name: "search Lighthouse perf 85 and a11y 95", fn: searchLighthouse },
+    { name: "LDP Lighthouse perf 90 and a11y 95", fn: ldpLighthouse },
+  ],
 };
 
 async function runPhaseChecks(ctx: Ctx) {
@@ -281,7 +347,11 @@ async function main() {
   await step("lint", cmd("npm run lint"));
   await step("typecheck", cmd("npm run typecheck"));
   await step("unit tests", cmd("npm run test"));
-  const built = await step("build", cmd("npm run build"));
+  const built = await step("build", async () => {
+    const r = await run("npm run build");
+    buildOutput = r.output;
+    return r.ok;
+  });
 
   const portBusy = await fetch(BASE_URL).then(
     () => true,
@@ -299,6 +369,7 @@ async function main() {
         NODE_ENV: "production",
         // Tests and the perf script send far more than 60 requests a minute from one IP.
         RATE_LIMIT_PER_MINUTE: "100000",
+        SIGNIN_EMAILS_PER_HOUR: "100000",
         // Shortened lead timers so reassignment is testable (docs/05 Phase 4 criterion 3).
         LEAD_REASSIGN_SECONDS: process.env.LEAD_REASSIGN_SECONDS ?? "45",
         LEAD_RETRY_SECONDS: process.env.LEAD_RETRY_SECONDS ?? "30",

@@ -6,6 +6,7 @@ import { runIngest } from "../src/lib/ingestion/ingest";
 import { SYNTHETIC_FEED_PATH, syntheticAdapter } from "../src/lib/ingestion/adapters/synthetic";
 import { generateMarket, type GeneratedMarket } from "../src/lib/ingestion/synthetic/generate";
 import { refreshRegionStats } from "../src/lib/regions/stats";
+import { generateRegionSummaries } from "../src/lib/regions/summary";
 import { backtestAccuracy, nightlyScope, refreshValuations } from "../src/lib/valuation/engine";
 
 // Deterministic synthetic market: regions with boundaries, 50,000 listings through the real
@@ -32,7 +33,7 @@ const lap = (label: string) => console.log(`[${((Date.now() - started) / 1000).t
 
 async function wipe() {
   await sql`
-    truncate table valuation_accuracy, property_claims, listing_price_events, listing_media, valuations, saved_homes, saved_searches, recently_viewed,
+    truncate table valuation_accuracy, property_claims, listing_price_events, listing_media, valuations, saved_homes, saved_home_shares, alert_sends, saved_searches, recently_viewed,
       rental_application_submissions, rental_applications, lead_messages, pro_reviews, leads, listings, properties,
       pro_service_areas, pros, moderation_items, feed_runs, events, sessions, accounts, verification_tokens, users, regions
     restart identity cascade`;
@@ -138,6 +139,8 @@ async function main() {
   await refreshRegionStats(sql);
   await sql`analyze`;
   lap("region stats refreshed");
+  const summaries = await generateRegionSummaries(sql, { force: true });
+  lap(`region summaries: ${summaries}`);
 
   const scope = await nightlyScope(sql);
   const v = await refreshValuations(sql, scope, { refreshIndex: true, concurrency: 4 });

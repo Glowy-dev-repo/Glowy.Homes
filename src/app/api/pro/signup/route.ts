@@ -2,8 +2,11 @@ import { ProSignup } from "@/lib/pros/schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { createPro } from "@/server/data/pros";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = ProSignup.safeParse(await req.json().catch(() => null));

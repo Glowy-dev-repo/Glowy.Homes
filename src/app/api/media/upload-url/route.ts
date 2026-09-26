@@ -2,12 +2,15 @@ import { auth } from "@/lib/auth";
 import { presignUpload, r2Configured, UploadRequest, uploadKey } from "@/lib/media/r2";
 import { signUpload } from "@/lib/media/upload-token";
 import { invalid, ok, unauthorized } from "@/server/api/respond";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 /**
  * docs/02 POST /api/media/upload-url. With R2: a presigned PUT limited to image types and 10 MB.
  * Without R2 (local development): a signed token for a direct upload to /api/media/upload.
  */
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const session = await auth();
   if (!session?.user?.id) return unauthorized();
 

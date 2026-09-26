@@ -3,6 +3,7 @@ import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { addMessage, leadParticipant, messages } from "@/server/data/pro-leads";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 type Ctx = { params: Promise<{ id: string }> };
 const Body = z.object({ body: z.string().trim().min(1, "Write a message.").max(4000) });
@@ -25,6 +26,8 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 export async function POST(req: Request, ctx: Ctx) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const p = await participant(ctx.params);
   if ("error" in p) return p.error;
   const parsed = Body.safeParse(await req.json().catch(() => null));

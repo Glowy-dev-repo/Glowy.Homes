@@ -41,6 +41,18 @@ export async function runLighthouse(url: string, categories = ["performance", "a
   }
 }
 
+/**
+ * Median of several runs per score. Lighthouse scores on one machine vary by several points
+ * between runs; its own guidance is to report the median rather than a single run.
+ */
+export async function runLighthouseMedian(url: string, categories: string[], runs = 3) {
+  const results: Awaited<ReturnType<typeof runLighthouse>>[] = [];
+  for (let i = 0; i < runs; i++) results.push(await runLighthouse(url, categories));
+  const median = (k: keyof LighthouseScores) => results.map((r) => r.scores[k]).sort((a, b) => a - b)[Math.floor(runs / 2)];
+  const scores: LighthouseScores = { performance: median("performance"), accessibility: median("accessibility"), seo: median("seo"), bestPractices: median("bestPractices") };
+  return { scores, failing: results[0].failing, all: results.map((r) => r.scores.performance) };
+}
+
 // CLI: tsx scripts/lib/lighthouse.ts <url>
 if (process.argv[1]?.endsWith("lighthouse.ts") && process.argv[2]) {
   const { scores, failing } = await runLighthouse(process.argv[2]);

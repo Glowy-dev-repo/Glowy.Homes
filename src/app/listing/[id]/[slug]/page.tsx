@@ -14,6 +14,7 @@ import { SaveButton } from "@/components/listing/saved-homes";
 import { ShareButton } from "@/components/listing/ShareButton";
 import { StatusBadge } from "@/components/listing/StatusBadge";
 import { ApplyButton } from "@/components/rentals/ApplyButton";
+import { Track } from "@/components/layout/Track";
 import { EstimateCard } from "@/components/valuation/EstimateCard";
 import { brand } from "@/config/brand";
 import { sqlClient } from "@/db";
@@ -102,6 +103,7 @@ export default async function ListingPage({ params }: Props) {
     <div className="pb-24 lg:pb-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <RecordView listing={toSummary(l)} />
+      <Track name="listing_view" props={{ listingId: l.id, city: l.city?.slug, type: l.listingType }} />
 
       {/* 1. Photo gallery */}
       <div className="container-page px-0 pt-0 md:px-8 md:pt-6">
@@ -238,6 +240,7 @@ export default async function ListingPage({ params }: Props) {
 
           {/* 11. Neighbourhood */}
           <Section id="neighbourhood" title={l.neighborhood ? `Neighbourhood: ${l.neighborhood.name}` : "Neighbourhood"}>
+            {l.neighborhood?.summary && <p className="mb-4 max-w-prose text-body text-neutral-700" data-testid="neighbourhood-summary">{l.neighborhood.summary}</p>}
             <div className="grid gap-6 md:grid-cols-2">
               <dl className="space-y-2 text-body">
                 {hoodStats.median_price ? (

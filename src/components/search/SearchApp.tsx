@@ -4,7 +4,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ListingCard } from "@/components/listing/ListingCard";
+import { NaturalSearch } from "./NaturalSearch";
 import { searchTitle } from "@/lib/search/title";
+import { track } from "@/lib/analytics/client";
 import { toQueryString } from "@/lib/search/url";
 import type { SearchResult } from "@/types/search";
 import { FilterBar, clearedFilters } from "./FilterBar";
@@ -68,6 +70,11 @@ function SearchAppInner({
   const result = query.data;
 
   useEffect(() => setSelectedId(null), [key]);
+  // One search event per distinct query, for the search to listing to lead funnel.
+  useEffect(() => {
+    track("search", { city: params.city ?? null, neighborhood: params.neighborhood ?? null, type: params.type, area: !!(params.bounds || params.polygon) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key captures every param
+  }, [key]);
 
   const selected = useMemo(() => result?.items.find((i) => i.id === selectedId) ?? null, [result, selectedId]);
   const title = searchTitle(params, params.bounds || params.polygon ? null : placeName);
@@ -83,6 +90,9 @@ function SearchAppInner({
             defaultValue={params.q ?? ""}
             onSubmitText={(text) => update({ q: text || undefined, city: undefined, neighborhood: undefined, bounds: undefined, polygon: undefined })}
           />
+        </div>
+        <div className="max-w-xl">
+          <NaturalSearch />
         </div>
       </div>
       <FilterBar

@@ -61,3 +61,5 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SENTRY_DSN
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

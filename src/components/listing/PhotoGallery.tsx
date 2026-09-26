@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Images, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import type { ListingMediaItem } from "@/lib/listings/detail";
+import { track } from "@/lib/analytics/client";
 
 function altFor(m: ListingMediaItem, i: number, total: number, address: string) {
   return m.caption ? `${m.caption}, photo ${i + 1} of ${total}, ${address}` : `Photo ${i + 1} of ${total}, ${address}`;
@@ -23,6 +24,7 @@ export function PhotoGallery({ media, address, virtualTourUrl }: { media: Listin
   const openAt = (i: number) => {
     setIndex(i);
     setOpen(true);
+    track("photo_gallery_open", { index: i });
   };
 
   useEffect(() => {

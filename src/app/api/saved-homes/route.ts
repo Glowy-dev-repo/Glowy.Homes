@@ -2,6 +2,7 @@ import { z } from "zod";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
 import { saveHome, savedHomeIds, savedHomes, unsaveHome } from "@/server/data/saved";
+import { rateLimitWrite } from "@/server/api/rate-limit";
 
 const Body = z.object({ listingId: z.string().uuid() });
 
@@ -17,6 +18,8 @@ async function parse(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = await parse(req);
@@ -26,6 +29,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const writeLimited = rateLimitWrite(req);
+  if (writeLimited) return writeLimited;
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = await parse(req);

@@ -118,11 +118,12 @@ test.describe("rentals and user listings", () => {
     });
 
     const renter = await browser.newPage();
+    let renterEmail = "";
     const own = await sampleListingPath(`l.id = '${listing.id}'`);
     const other = await sampleListingPath("l.listing_type = 'rent' and l.status = 'active' and l.owner_user_id is null");
 
     await test.step("renter fills one application and sends it to two rentals without retyping", async () => {
-      await signIn(renter, "renter", "/account/application");
+      renterEmail = await signIn(renter, "renter", "/account/application");
       const form = renter.locator("form");
       await form.getByLabel("Full name").fill("Sam Rivera");
       await form.getByLabel("Phone").fill("416 555 0199");
@@ -144,8 +145,7 @@ test.describe("rentals and user listings", () => {
 
       const subs = await db()<{ application_id: string }[]>`
         select s.application_id from rental_application_submissions s where s.listing_id in (${own.id}, ${other.id})
-          and s.application_id in (select a.id from rental_applications a join users u on u.id = a.applicant_user_id where a.profile->>'fullName' = 'Sam Rivera')
-          and s.created_at > now() - interval '5 minutes'`;
+          and s.application_id in (select a.id from rental_applications a join users u on u.id = a.applicant_user_id where u.email = ${renterEmail})`;
       expect(subs).toHaveLength(2);
       expect(subs[0].application_id).toBe(subs[1].application_id);
     });

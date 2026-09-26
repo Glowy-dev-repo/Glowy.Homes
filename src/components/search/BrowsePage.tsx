@@ -79,6 +79,12 @@ export async function BrowsePage(props: Props) {
           <p className="mt-2 max-w-3xl text-body text-neutral-700" data-testid="browse-summary">
             {browseSummary(place, type, region.stats)}
           </p>
+          {region.summary && (
+            <section aria-labelledby="about-heading" className="mt-4 max-w-3xl">
+              <h2 id="about-heading" className="text-h3">About {region.name}</h2>
+              <p className="mt-1 text-body text-neutral-700" data-testid="region-summary">{region.summary}</p>
+            </section>
+          )}
 
           <ul
             className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
