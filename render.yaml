@@ -25,8 +25,9 @@ services:
         fromDatabase:
           name: glowy-homes-db
           property: connectionString
+      # The Render address until glowy.homes points here; then change it to https://glowy.homes and redeploy.
       - key: NEXT_PUBLIC_APP_URL
-        value: https://glowy.homes
+        value: https://glowy-homes.onrender.com
       - key: AUTH_SECRET
         generateValue: true
       - key: EMAIL_FROM
