@@ -21,7 +21,7 @@ import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listing
 import { similarListings } from "@/lib/listings/similar";
 import { mediaUrl } from "@/lib/media/urls";
 import { DEFAULT_RATE_PERCENT, monthlyCostRange } from "@/lib/mortgage";
-import { getPropertyEstimate } from "@/lib/valuation/read";
+import { getOrComputeEstimate } from "@/lib/valuation/read";
 
 // ISR: rendered on first request, cached, refreshed hourly and on listing change (docs/02 section 7).
 export const revalidate = 3600;
@@ -72,7 +72,7 @@ export default async function ListingPage({ params }: Props) {
   const canonical = listingPath(l);
   if (!canonical.endsWith(`/${slug}`)) permanentRedirect(canonical);
 
-  const [estimate, similar, density] = await Promise.all([getPropertyEstimate(l.propertyId), similarListings(l.id), homesWithin1Km(l)]);
+  const [estimate, similar, density] = await Promise.all([getOrComputeEstimate(l.propertyId), similarListings(l.id), homesWithin1Km(l)]);
 
   const sale = l.listingType === "sale";
   const closed = l.status === "sold" || l.status === "leased";

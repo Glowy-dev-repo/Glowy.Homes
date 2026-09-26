@@ -29,6 +29,20 @@
       "when": 1790392799766,
       "tag": "0003_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790397903698,
+      "tag": "0004_valuation_accuracy_and_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790398369190,
+      "tag": "0005_closed_listings_gix",
+      "breakpoints": true
     }
   ]
 }

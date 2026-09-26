@@ -148,6 +148,10 @@ export const listings = pgTable(
     // Beyond docs/02: neighborhood browse pages, incremental ingest lookups, property history.
     index("listings_neighborhood_idx").on(t.neighborhoodRegionId, t.listingType, t.status),
     index("listings_property_idx").on(t.propertyId),
+    // Valuation comps: nearest closed sales and leases only, so KNN scans far fewer rows.
+    index("listings_closed_gix")
+      .using("gist", t.location)
+      .where(sql`${t.status} in ('sold', 'leased')`),
   ],
 );
 

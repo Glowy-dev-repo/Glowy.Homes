@@ -45,6 +45,10 @@ export const ingestFeed = inngest.createFunction(
       });
     }
 
+    if (result.soldPropertyIds.length) {
+      await step.sendEvent("nearby-sales", { name: "valuation/nearby-sales", data: { propertyIds: result.soldPropertyIds.slice(0, 2000) } });
+    }
+
     await step.sendEvent("feed-completed", {
       name: "feed/completed",
       data: { runId: result.runId, source, status: result.status, stats: result.stats },

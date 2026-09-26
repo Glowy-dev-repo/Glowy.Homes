@@ -1,0 +1,1 @@
+CREATE INDEX "listings_closed_gix" ON "listings" USING gist ("location") WHERE "listings"."status" in ('sold', 'leased');

@@ -6,6 +6,7 @@ import { runIngest } from "../src/lib/ingestion/ingest";
 import { SYNTHETIC_FEED_PATH, syntheticAdapter } from "../src/lib/ingestion/adapters/synthetic";
 import { generateMarket, type GeneratedMarket } from "../src/lib/ingestion/synthetic/generate";
 import { refreshRegionStats } from "../src/lib/regions/stats";
+import { backtestAccuracy, nightlyScope, refreshValuations } from "../src/lib/valuation/engine";
 
 // Deterministic synthetic market: regions with boundaries, 50,000 listings through the real
 // ingestion path, 200 pros with service areas, 20 test consumers and 1 admin.
@@ -25,13 +26,13 @@ const AS_OF = process.env.SEED_AS_OF ? new Date(`${process.env.SEED_AS_OF}T00:00
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
 export const TRUTH_PATH = resolve(process.cwd(), "scripts/data/generated/truth.jsonl");
 
-const sql = postgres(url, { max: 4, onnotice: () => {} });
+const sql = postgres(url, { max: 10, onnotice: () => {} });
 const started = Date.now();
 const lap = (label: string) => console.log(`[${((Date.now() - started) / 1000).toFixed(1)}s] ${label}`);
 
 async function wipe() {
   await sql`
-    truncate table listing_price_events, listing_media, valuations, saved_homes, saved_searches, recently_viewed,
+    truncate table valuation_accuracy, property_claims, listing_price_events, listing_media, valuations, saved_homes, saved_searches, recently_viewed,
       rental_application_submissions, rental_applications, lead_messages, pro_reviews, leads, listings, properties,
       pro_service_areas, pros, moderation_items, feed_runs, events, sessions, accounts, verification_tokens, users, regions
     restart identity cascade`;
@@ -137,6 +138,12 @@ async function main() {
   await refreshRegionStats(sql);
   await sql`analyze`;
   lap("region stats refreshed");
+
+  const scope = await nightlyScope(sql);
+  const v = await refreshValuations(sql, scope, { refreshIndex: true, concurrency: 4 });
+  lap(`valuations: ${v.valued} properties, ${v.insufficient} with insufficient data`);
+  const scored = await backtestAccuracy(sql);
+  lap(`accuracy backtest: ${scored} sales scored`);
 
   const [{ listings, properties, media, events }] = await sql`
     select (select count(*)::int from listings) as listings, (select count(*)::int from properties) as properties,

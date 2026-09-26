@@ -85,7 +85,8 @@ async function migrationsOnEmptyDatabase() {
     const check = postgres(target.toString(), { max: 1 });
     const [{ count }] = await check`select count(*)::int as count from pg_tables where schemaname = 'public' and tablename <> 'spatial_ref_sys'`;
     await check.end();
-    return { ok: count === 23, note: `${count} tables` };
+    // Phase 0 creates 23 tables; later phases add more through their own migrations.
+    return { ok: count >= 23, note: `${count} tables` };
   } finally {
     await admin.unsafe(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
     await admin.end();
@@ -159,6 +160,18 @@ async function similarCoverage() {
   return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("similar")).at(-1) };
 }
 
+/** Phase 3 criteria 1 and 2: coverage (insufficient under 2%) and accuracy against the hidden truth. */
+async function valuationCoverage() {
+  const { ok, output } = await run("npx tsx tests/perf/valuation.ts");
+  return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("valuation")).at(-1) };
+}
+
+/** Phase 3 gate: no page shows an estimate without its range, confidence and disclaimer. */
+async function disclaimerPresence(ctx: Ctx) {
+  const { ok, output } = await run("npx tsx tests/perf/disclaimers.ts", { PERF_BASE_URL: ctx.baseUrl });
+  return { ok, note: output.trim().split("\n").filter((l) => l.startsWith("disclaimers")).at(-1) };
+}
+
 type Ctx = { baseUrl: string };
 type Check = { name: string; fn: (ctx: Ctx) => Promise<boolean | { ok: boolean; note?: string }> };
 
@@ -173,6 +186,10 @@ const PHASE_CHECKS: Record<number, Check[]> = {
   2: [
     { name: "LDP Lighthouse perf 90 and a11y 95", fn: ldpLighthouse },
     { name: "similar homes for 95% of active listings", fn: similarCoverage },
+  ],
+  3: [
+    { name: "valuation coverage and accuracy", fn: valuationCoverage },
+    { name: "disclaimer presence on estimate pages", fn: disclaimerPresence },
   ],
 };
 
