@@ -9,7 +9,7 @@ import {
   type SearchPin,
   type SearchResult,
 } from "@/types/search";
-import { findCity, findNeighborhood } from "./regions";
+import { findCity, findNeighborhood, marketBbox } from "./regions";
 
 // Postgres search strategy (docs/02 section 6). PostGIS for bounds and polygons, full text on
 // listings.search_vector, grid clusters when a search matches more than 200 listings.
@@ -84,6 +84,8 @@ async function whereClause(
   }
   if (p.availableBy) conds.push(sql`l.available_date <= ${p.availableBy}::date`);
 
+  // No place and no viewport: the whole market, so clusters are sized for a state wide view.
+  extent ??= await marketBbox();
   return { where: conds.reduce((acc, c) => sql`${acc} and ${c}`), extent };
 }
 

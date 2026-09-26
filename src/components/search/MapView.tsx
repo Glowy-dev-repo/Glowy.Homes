@@ -10,7 +10,6 @@ import type { SearchCluster, SearchPin } from "@/types/search";
 
 export type Bounds = [number, number, number, number];
 
-const ONTARIO: Bounds = [-81.5, 42.8, -75.4, 45.6];
 
 // Worker files are copied into public/ by scripts/copy_maplibre_worker.ts (bundlers break the default path).
 maplibregl.setWorkerUrl(`/maplibre/${maplibregl.getVersion()}/maplibre-gl-worker.mjs`);
@@ -19,7 +18,10 @@ const PRICE_LABEL_LIMIT = 60;
 function styleFor(): StyleSpecification | string {
   const key = process.env.NEXT_PUBLIC_MAPTILER_KEY;
   if (key && !key.includes("replace")) return `https://api.maptiler.com/maps/dataviz-light/style.json?key=${key}`;
-  // No tile provider configured: a calm neutral base drawn from our own region outlines.
+  // Without a MapTiler key: OpenFreeMap (free, no key, OpenStreetMap data, attribution shown on the
+  // map), unless NEXT_PUBLIC_MAP_STYLE is "outline" for fully offline runs.
+  if (process.env.NEXT_PUBLIC_MAP_STYLE !== "outline") return process.env.NEXT_PUBLIC_MAP_STYLE_URL || "https://tiles.openfreemap.org/styles/positron";
+  // Offline fallback: a calm neutral base drawn from our own region outlines.
   return {
     version: 8,
     sources: { regions: { type: "geojson", data: "/api/regions/geo" } },
@@ -76,8 +78,9 @@ export default function MapView({
       map = new maplibregl.Map({
         container: container.current,
         style: styleFor(),
-        bounds: initialBounds ?? ONTARIO,
-        fitBoundsOptions: { padding: 24 },
+        // The search page always passes a view: the place searched, or every city in the market.
+        bounds: initialBounds ?? [-180, -60, 180, 75],
+        fitBoundsOptions: { padding: { top: 72, bottom: 40, left: 40, right: 56 } },
         attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,

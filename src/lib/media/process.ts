@@ -51,23 +51,23 @@ export async function encodeVariants(input: Buffer) {
   };
 }
 
-export async function renderSynthetic(opts: { sourceUrl: string; address: string; caption?: string | null; width: number }) {
+export async function renderSynthetic(opts: { sourceUrl: string; address: string; caption?: string | null; propertyType?: string | null; width: number }) {
   const svg = syntheticPhotoSvg(opts);
   return sharp(Buffer.from(svg)).webp({ quality: 80 }).toBuffer();
 }
 
-type MediaRow = { id: string; listing_id: string; source_url: string | null; caption: string | null; address: string };
+type MediaRow = { id: string; listing_id: string; source_url: string | null; caption: string | null; address: string; property_type: string };
 
 export async function processMedia(sql: postgres.Sql, mediaId: string, fetchImpl: typeof fetch = fetch) {
   const [row] = await sql<MediaRow[]>`
-    select m.id, m.listing_id, m.source_url, m.caption,
+    select m.id, m.listing_id, m.source_url, m.caption, l.property_type,
       concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address
     from listing_media m join listings l on l.id = m.listing_id join properties p on p.id = l.property_id
     where m.id = ${mediaId}`;
   if (!row?.source_url) return { skipped: true as const };
 
   const input = row.source_url.startsWith("synthetic://")
-    ? await renderSynthetic({ sourceUrl: row.source_url, address: row.address, caption: row.caption, width: 1600 })
+    ? await renderSynthetic({ sourceUrl: row.source_url, address: row.address, caption: row.caption, propertyType: row.property_type, width: 1600 })
     : await downloadImage(row.source_url, fetchImpl);
 
   const encoded = await encodeVariants(input);

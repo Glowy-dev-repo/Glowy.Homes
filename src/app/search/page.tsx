@@ -3,7 +3,7 @@ import { SearchApp } from "@/components/search/SearchApp";
 import { searchTitle } from "@/lib/search/title";
 import { brand } from "@/config/brand";
 import { cachedSearch } from "@/lib/search/provider";
-import { findCity, findNeighborhood } from "@/lib/search/regions";
+import { findCity, findNeighborhood, marketBbox } from "@/lib/search/regions";
 import { parseSearchParams, toQueryString } from "@/lib/search/url";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -36,7 +36,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function SearchPage({ searchParams }: Props) {
   const params = parseSearchParams(await searchParams);
-  const [{ data: result }, place] = await Promise.all([cachedSearch(params), placeFor(params.city, params.neighborhood)]);
+  // Without a place, the map opens on every city in the market.
+  const [{ data: result }, place, market] = await Promise.all([cachedSearch(params), placeFor(params.city, params.neighborhood), marketBbox()]);
 
   // No Suspense boundary: the page is dynamic, so useSearchParams does not suspend, and a streamed
   // boundary would briefly duplicate the results in a hidden container.
@@ -45,7 +46,7 @@ export default async function SearchPage({ searchParams }: Props) {
       initialKey={toQueryString(params)}
       initialResult={result}
       placeName={place?.name ?? null}
-      regionBbox={place?.bbox ?? null}
+      regionBbox={place?.bbox ?? market}
     />
   );
 }

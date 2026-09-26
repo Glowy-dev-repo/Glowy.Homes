@@ -24,8 +24,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
   if (!synthetic) return new Response("Not found", { status: 404 });
 
   const sourceUrl = `synthetic://${synthetic[1]}/${synthetic[2]}`;
-  const [row] = await sqlClient<{ address: string; caption: string | null }[]>`
-    select concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address, m.caption
+  const [row] = await sqlClient<{ address: string; caption: string | null; propertyType: string }[]>`
+    select concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address, m.caption, l.property_type as "propertyType"
     from listings l
     join properties p on p.id = l.property_id
     left join listing_media m on m.listing_id = l.id and m.source_url = ${sourceUrl}
@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
     limit 1`;
   if (!row) return new Response("Not found", { status: 404 });
 
-  const full = await renderSynthetic({ sourceUrl, address: row.address, caption: row.caption, width: 1600 });
+  const full = await renderSynthetic({ sourceUrl, address: row.address, caption: row.caption, propertyType: row.propertyType, width: 1600 });
   const body = width === 1600 ? full : await sharp(full).resize({ width }).webp({ quality: 78 }).toBuffer();
   await writeLocal(key, width, body).catch(() => {});
   return new Response(new Uint8Array(body), { headers: IMMUTABLE });

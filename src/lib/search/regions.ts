@@ -39,6 +39,13 @@ export async function allRegions(): Promise<RegionRef[]> {
   return regions;
 }
 
+/** Bounding box around every city in the market: the view for searches without a place. */
+export async function marketBbox(): Promise<[number, number, number, number] | null> {
+  const boxes = (await allRegions()).filter((r) => r.type === "city" && r.bbox).map((r) => r.bbox!);
+  if (!boxes.length) return null;
+  return [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+}
+
 export async function findCity(slug: string): Promise<RegionRef | null> {
   return (await allRegions()).find((r) => r.type === "city" && r.slug === slug) ?? null;
 }

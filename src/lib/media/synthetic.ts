@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { SCENE_H, SCENE_W, sceneFor } from "./scenes";
 
-// Synthetic listing photos: soft two tone gradients with the address baked in. Never third
-// party images (docs/03 section 1.2). Rendered lazily by /media on first request.
+// Synthetic listing photos: original illustrations of the home type or the room in the caption,
+// labelled as demo images. Never third party images (docs/03 section 1.2). Rendered lazily by /media.
 
 export const SYNTHETIC_PREFIX = "synthetic/";
 export const SYNTHETIC_WIDTHS = [400, 800, 1600] as const;
@@ -48,18 +49,20 @@ const escapeXml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);
 
 /** SVG source for a synthetic photo at a given width; sharp rasterizes it to WebP. */
-export function syntheticPhotoSvg(opts: { sourceUrl: string; width: number; address: string; caption?: string | null }): string {
-  const { from, to } = syntheticPalette(opts.sourceUrl);
+export function syntheticPhotoSvg(opts: { sourceUrl: string; width: number; address: string; caption?: string | null; propertyType?: string | null }): string {
+  const hash = createHash("md5").update(opts.sourceUrl).digest();
+  let i = 0;
+  // Deterministic choices per photo, so a listing always renders the same pictures.
+  const pick = <T,>(items: readonly T[]): T => items[hash[i++ % hash.length] % items.length];
   const w = opts.width;
   const h = Math.round(w * SYNTHETIC_ASPECT);
-  const size = Math.max(14, Math.round(w / 28));
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs>
-  <rect width="${w}" height="${h}" fill="url(#g)"/>
-  <rect x="${w * 0.3}" y="${h * 0.38}" width="${w * 0.4}" height="${h * 0.34}" fill="#ffffff" fill-opacity="0.35"/>
-  <polygon points="${w * 0.26},${h * 0.4} ${w * 0.5},${h * 0.2} ${w * 0.74},${h * 0.4}" fill="#ffffff" fill-opacity="0.45"/>
-  <rect x="${w * 0.455}" y="${h * 0.47}" width="${w * 0.09}" height="${h * 0.12}" rx="${w * 0.006}" fill="#EFF6FF" fill-opacity="0.9"/>
-  <text x="${size}" y="${h - size * 2.2}" font-family="Arial, sans-serif" font-size="${size}" font-weight="600" fill="#0F172A">${escapeXml(opts.address)}</text>
-  <text x="${size}" y="${h - size * 0.9}" font-family="Arial, sans-serif" font-size="${Math.round(size * 0.8)}" fill="#1E293B">${escapeXml(opts.caption ?? "Photo")} · Synthetic image</text>
+  const caption = opts.caption ?? "Front exterior";
+  const scene = sceneFor(caption, opts.propertyType ?? "detached", pick, hash[15]);
+  const label = `${escapeXml(caption)} · Demo image`;
+  const labelW = 40 + label.length * 16.5;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${SCENE_W} ${SCENE_H}" preserveAspectRatio="xMidYMid slice">
+${scene}
+<rect x="32" y="${SCENE_H - 88}" width="${labelW}" height="56" rx="28" fill="#0F172A" fill-opacity="0.72"/>
+<text x="58" y="${SCENE_H - 50}" font-family="Arial, sans-serif" font-size="28" font-weight="600" fill="#FFFFFF">${label}</text>
 </svg>`;
 }
