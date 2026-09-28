@@ -1,5 +1,5 @@
 import { signIn } from "./support/auth";
-import { db, sampleListingPath } from "./support/db";
+import { COVERED_ZIP, db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
 import { uniqueEmail, waitForEmailLink } from "./support/mail";
 
@@ -38,10 +38,11 @@ test.describe("lead routing", () => {
   test("a tour request is assigned within 60 seconds and shows in the agent inbox as New", async ({ page, browser, isMobile }) => {
     test.skip(isMobile, "one routing flow per run");
     test.setTimeout(150_000);
-    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city')");
+    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
     await page.getByRole("button", { name: "Request a tour" }).first().click();
     const dialog = page.getByRole("dialog");
+    await expect(dialog.getByTestId("lead-recipient")).toContainText("partner agent who serves this ZIP code, not to the listing agent");
     const email = uniqueEmail("tour");
     await dialog.getByLabel("Name").fill("Taylor Buyer");
     await dialog.getByLabel("Email").fill(email);
@@ -56,6 +57,10 @@ test.describe("lead routing", () => {
     const lead = await waitForAssignment({ email });
     expect(Date.now() - started).toBeLessThan(60_000);
     expect(lead.status).toBe("new");
+    const [covers] = await db()`
+      select exists (select 1 from pro_zip_codes z join leads ld on ld.id = ${lead.id} join listings l on l.id = ld.listing_id
+        join properties p on p.id = l.property_id where z.pro_id = ${lead.pro} and z.zip = left(p.postal_code, 5)) as ok`;
+    expect(covers.ok).toBe(true);
     const [consent] = await db()`select payload->'consent'->>'version' as v, payload->'tour'->>'mode' as mode from leads where id = ${lead.id}`;
     expect(consent).toMatchObject({ mode: "video" });
     expect(consent.v).toBeTruthy();
@@ -99,9 +104,9 @@ test.describe("lead routing", () => {
     test.skip(isMobile, "authorization is viewport independent");
     test.setTimeout(120_000);
     const email = await signIn(page, "inquirer", "/");
-    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-diego' and type = 'city')");
+    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-diego' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
-    await page.getByRole("button", { name: "Contact agent" }).first().click();
+    await page.getByRole("button", { name: "Ask a local agent" }).first().click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Name").fill("Casey Signedin");
     await dialog.getByRole("checkbox").check();
@@ -125,20 +130,33 @@ test.describe("lead routing", () => {
     await otherPage.close();
   });
 
-  test("a preapproval request routes to a lender", async ({ page, isMobile }) => {
+  test("a question goes to the best suited agent for the home's ZIP code", async ({ page, isMobile }) => {
     test.skip(isMobile, "one flow per run");
     test.setTimeout(90_000);
-    await page.goto("/mortgage/preapproval");
-    const email = uniqueEmail("preapproval");
-    await page.getByLabel("Name").fill("Morgan Borrower");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Where are you buying?").selectOption("los-angeles");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Request preapproval" }).click();
-    await expect(page.getByTestId("lead-success")).toBeVisible();
+    // A home whose ZIP code has an agent whose price range fits it, so the best suited agent is known.
+    const [home] = await db()<{ id: string; zip: string }[]>`
+      select l.id, left(p.postal_code, 5) as zip from listings l join properties p on p.id = l.property_id
+      where l.listing_type = 'sale' and l.status = 'active' and l.internet_display
+        and exists (select 1 from pro_zip_codes z join pros pr on pr.id = z.pro_id
+          where z.zip = left(p.postal_code, 5) and pr.status = 'active' and pr.is_accepting_leads
+            and pr.price_min is not null and l.price between pr.price_min and coalesce(pr.price_max, 2147483647))
+      order by l.list_date desc limit 1`;
+    const { path } = await sampleListingPath(`l.id = '${home.id}'`);
+    await page.goto(path);
+    await page.getByRole("button", { name: "Ask a local agent" }).first().click();
+    const dialog = page.getByRole("dialog");
+    const email = uniqueEmail("zipmatch");
+    await dialog.getByLabel("Name").fill("Alex Asker");
+    await dialog.getByLabel("Email").fill(email);
+    await dialog.getByRole("checkbox").check();
+    await dialog.getByRole("button", { name: "Send message" }).click();
     const lead = await waitForAssignment({ email });
-    const [pro] = await db()`select pro_type from pros where id = ${lead.pro}`;
-    expect(pro.pro_type).toBe("lender");
+    const [pro] = await db()<{ zip: boolean; fits: boolean; type: string }[]>`
+      select exists (select 1 from pro_zip_codes z where z.pro_id = pr.id and z.zip = ${home.zip}) as zip,
+        (select l.price from listings l where l.id = ${home.id}) between coalesce(pr.price_min, 0) and coalesce(pr.price_max, 2147483647) as fits,
+        pr.pro_type as type
+      from pros pr where pr.id = ${lead.pro}`;
+    expect(pro).toMatchObject({ zip: true, fits: true, type: "agent" });
   });
 });
 
@@ -146,9 +164,9 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   test.skip(isMobile, "multi party desktop flow");
   test.setTimeout(150_000);
   const email = await signIn(page, "reviewer", "/");
-  const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-francisco' and type = 'city')");
+  const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-francisco' and type = 'city') and ${COVERED_ZIP}`);
   await page.goto(path);
-  await page.getByRole("button", { name: "Contact agent" }).first().click();
+  await page.getByRole("button", { name: "Ask a local agent" }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Name").fill("Robin Reviewer");
   await dialog.getByRole("checkbox").check();
@@ -215,15 +233,18 @@ test.describe("admin and pros", () => {
     await signIn(page, "newagent", "/pro/join");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name clients will see").fill(agentName);
-    await page.getByLabel("Real estate license number").fill("7654321");
-    await page.getByLabel("Business phone").fill("416 555 0199");
+    await page.getByLabel("California DRE license number").fill("02123456");
+    await page.getByLabel("Business phone").fill("213 555 0199");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.getByText("Choose at least one area you serve.")).toBeVisible();
-    await page.getByLabel("All of Sacramento").check();
+    await expect(page.getByText("Choose at least one ZIP code you serve.")).toBeVisible();
+    await page.getByTestId("zip-picker").getByText("Sacramento", { exact: true }).click();
+    await page.getByLabel("All ZIP codes in Sacramento").check();
+    await page.getByLabel("Lowest home price ($)").fill("300000");
+    await page.getByLabel("Highest home price ($)").fill("900000");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
-    await expect(page.locator("dd").filter({ hasText: "Sacramento" })).toBeVisible();
+    await expect(page.locator("dd").filter({ hasText: "95811" })).toBeVisible();
     await page.getByRole("button", { name: "Create my profile" }).click();
     await expect(page).toHaveURL(/\/pro\/profile/);
     await expect(page.getByTestId("pro-pending")).toBeVisible();
@@ -237,9 +258,13 @@ test.describe("admin and pros", () => {
 
     const [pro] = await db()`select slug, status, license_verified_at is not null as verified from pros where display_name = ${agentName} order by created_at desc limit 1`;
     expect(pro).toMatchObject({ status: "active", verified: true });
+    const [prefs] = await db()`select price_min, price_max, (select count(*)::int from pro_zip_codes z join pros p2 on p2.id = z.pro_id where p2.slug = ${pro.slug}) as zips from pros where slug = ${pro.slug}`;
+    expect(prefs).toMatchObject({ price_min: 300000, price_max: 900000 });
+    expect(prefs.zips).toBeGreaterThan(5);
     await page.goto(`/agent/${pro.slug}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(agentName);
     await expect(page.getByText("License verified")).toBeVisible();
+    await expect(page.getByTestId("agent-zips")).toContainText("95811");
     await page.goto("/agents/sacramento");
     await expect(page.getByTestId("agent-list")).toContainText(agentName);
   });

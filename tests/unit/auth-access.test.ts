@@ -10,7 +10,7 @@ describe("accessFor", () => {
   });
 
   it("sends signed out visitors to sign in for protected areas", () => {
-    for (const path of ["/account", "/account/homes", "/pro/leads", "/landlord", "/admin", "/admin/feeds", "/sell/list"]) {
+    for (const path of ["/account", "/account/homes", "/pro/leads", "/landlord", "/admin", "/admin/feeds"]) {
       expect(accessFor(path, null), path).toBe("signin");
     }
   });
@@ -28,7 +28,7 @@ describe("accessFor", () => {
   it("requires a pro role for the pro workspace", () => {
     expect(accessFor("/pro/leads", ["consumer"])).toBe("forbidden");
     expect(accessFor("/pro/leads", ["consumer", "agent"])).toBe("allow");
-    expect(accessFor("/pro/leads", ["lender"])).toBe("allow");
+    expect(accessFor("/pro/leads", ["lender"])).toBe("forbidden");
   });
 
   it("requires admin for admin", () => {

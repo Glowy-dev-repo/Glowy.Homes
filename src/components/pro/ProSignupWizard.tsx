@@ -7,10 +7,11 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { AreaPicker, type AreaOption } from "./AreaPicker";
+import type { ZipOption } from "@/lib/zips";
+import { LeadPreferences, prefsToPayload, ZipPicker, type LeadPrefs } from "./ZipPicker";
 
 type Draft = {
-  proType: "agent" | "lender" | "landlord";
+  proType: "agent" | "landlord";
   displayName: string;
   brokerageName: string;
   licenseNumber: string;
@@ -18,23 +19,23 @@ type Draft = {
   yearsExperience: string;
   languages: string;
   bio: string;
-  serviceAreaIds: string[];
+  zipCodes: string[];
+  prefs: LeadPrefs;
 };
 
-const STEPS = ["Role", "Details", "Areas", "Review"] as const;
+const STEPS = ["Role", "Details", "ZIP codes", "Review"] as const;
 const ROLES = [
-  { value: "agent", label: "Real estate agent", hint: "Buyer and seller leads in your areas" },
-  { value: "lender", label: "Mortgage professional", hint: "Preapproval requests from buyers" },
+  { value: "agent", label: "Real estate agent", hint: "Buyer and seller leads for homes in your ZIP codes" },
   { value: "landlord", label: "Landlord or property manager", hint: "Post rentals and receive inquiries" },
 ] as const;
 
-/** Pro signup wizard (docs/01 P1): role, details with license, service areas, review. */
-export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; defaultName: string }) {
+/** Partner signup: role, details with license, ZIP codes and lead preferences, review. */
+export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defaultName: string }) {
   const router = useRouter();
   const { update } = useSession();
   const id = useId();
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>({ proType: "agent", displayName: defaultName, brokerageName: "", licenseNumber: "", phone: "", yearsExperience: "", languages: "en", bio: "", serviceAreaIds: [] });
+  const [draft, setDraft] = useState<Draft>({ proType: "agent", displayName: defaultName, brokerageName: "", licenseNumber: "", phone: "", yearsExperience: "", languages: "en", bio: "", zipCodes: [], prefs: { priceMin: "", priceMax: "", homeTypes: [] } });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -48,8 +49,8 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
       if (licensed && !draft.licenseNumber.trim()) e.licenseNumber = "Enter your license number.";
       if (!/^\+?\d{10,15}$/.test(draft.phone.replace(/[^\d+]/g, ""))) e.phone = "Enter a phone number with area code.";
     }
-    if (step === 2 && !draft.serviceAreaIds.length) e.serviceAreaIds = "Choose at least one area you serve.";
-    if (step === 2 && draft.serviceAreaIds.length > 12) e.serviceAreaIds = "Choose up to 12 areas.";
+    if (step === 2 && licensed && !draft.zipCodes.length) e.zipCodes = "Choose at least one ZIP code you serve.";
+    if (step === 2 && draft.prefs.priceMin && draft.prefs.priceMax && Number(draft.prefs.priceMin) > Number(draft.prefs.priceMax)) e.zipCodes = "The lowest price must be below the highest price.";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -71,7 +72,8 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
         yearsExperience: draft.yearsExperience ? Number(draft.yearsExperience) : undefined,
         languages: draft.languages.split(/[\s,]+/).filter(Boolean),
         bio: draft.bio || undefined,
-        serviceAreaIds: draft.serviceAreaIds,
+        zipCodes: licensed ? draft.zipCodes : [],
+        ...(licensed ? prefsToPayload(draft.prefs) : {}),
       }),
     });
     const body = (await res.json().catch(() => null)) as { error?: { message: string; fields?: Record<string, string[]> } } | null;
@@ -146,8 +148,8 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
       {step === 1 && (
         <div className="grid gap-4">
           {text("displayName", "Name clients will see", { autoComplete: "name" })}
-          {licensed && text("brokerageName", draft.proType === "lender" ? "Company (optional)" : "Brokerage (optional)", { autoComplete: "organization" })}
-          {licensed && text("licenseNumber", draft.proType === "lender" ? "Mortgage license number" : "Real estate license number")}
+          {licensed && text("brokerageName", "Brokerage (optional)", { autoComplete: "organization" })}
+          {licensed && text("licenseNumber", "California DRE license number")}
           {text("phone", "Business phone", { type: "tel", inputMode: "tel", autoComplete: "tel" })}
           {licensed && text("yearsExperience", "Years of experience (optional)", { type: "number", inputMode: "numeric", min: 0 })}
           {text("languages", "Languages (codes, for example en, fr)")}
@@ -160,7 +162,15 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
         </div>
       )}
 
-      {step === 2 && <AreaPicker areas={areas} value={draft.serviceAreaIds} onChange={(serviceAreaIds) => set({ serviceAreaIds })} error={errors.serviceAreaIds} />}
+      {step === 2 &&
+        (licensed ? (
+          <div className="grid gap-8">
+            <ZipPicker zips={zips} value={draft.zipCodes} onChange={(zipCodes) => set({ zipCodes })} error={errors.zipCodes} />
+            <LeadPreferences value={draft.prefs} onChange={(prefs) => set({ prefs })} />
+          </div>
+        ) : (
+          <p className="text-body text-neutral-700">Landlords receive inquiries on the rentals they post, so there is nothing to choose here.</p>
+        ))}
 
       {step === 3 && (
         <div className="space-y-3 rounded-lg border border-neutral-200 p-5">
@@ -178,8 +188,12 @@ export function ProSignupWizard({ areas, defaultName }: { areas: AreaOption[]; d
             )}
             <dt className="text-neutral-600">Phone</dt>
             <dd>{draft.phone}</dd>
-            <dt className="text-neutral-600">Areas</dt>
-            <dd>{draft.serviceAreaIds.map((a) => areas.find((x) => x.id === a)?.name).join(", ")}</dd>
+            {licensed && (
+              <>
+                <dt className="text-neutral-600">ZIP codes</dt>
+                <dd>{draft.zipCodes.join(", ")}</dd>
+              </>
+            )}
           </dl>
           {licensed && <p className="text-small text-neutral-600">We verify licenses with the regulator before you receive leads. This typically takes one business day.</p>}
         </div>

@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { useCallback, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { brand } from "@/config/brand";
 import type { LeadType } from "@/db/schema/leads";
 import { CONSENT_TEXT } from "@/lib/leads/schema";
 import { cn } from "@/lib/utils";
@@ -189,19 +188,6 @@ export function LeadForm({
       {field("name", "Name", { autoComplete: "name", defaultValue: session?.user?.name ?? "" })}
       {field("email", "Email", { type: "email", autoComplete: "email", inputMode: "email", defaultValue: session?.user?.email ?? "" })}
       {field("phone", "Phone (optional)", { type: "tel", autoComplete: "tel", inputMode: "tel" })}
-
-      {leadType === "preapproval" && !listingId && !propertyId && (
-        <div className="grid gap-1">
-          <label htmlFor={`${id}-city`} className="text-small font-medium text-neutral-800">
-            Where are you buying?
-          </label>
-          <select id={`${id}-city`} name="citySlug" defaultValue={brand.market.cities[0].slug} className="h-11 rounded-md border border-neutral-300 bg-white px-3 text-base">
-            {brand.market.cities.map((c) => (
-              <option key={c.slug} value={c.slug}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {tour && (
         <fieldset className="grid gap-3">

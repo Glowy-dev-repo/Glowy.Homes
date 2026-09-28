@@ -33,7 +33,8 @@ describe("user listing schema (docs/05 Phase 5)", () => {
   it("requires rental terms and an available date for rentals", () => {
     expect(UserListingInput.safeParse({ ...rental, rentalTerms: undefined }).success).toBe(false);
     expect(UserListingInput.safeParse({ ...rental, availableDate: undefined }).success).toBe(false);
-    expect(UserListingInput.safeParse({ ...rental, listingType: "sale", rentalTerms: undefined, availableDate: undefined, price: 640000 }).success).toBe(true);
+    // Homes for sale come from the MLS only; owners cannot post them.
+    expect(UserListingInput.safeParse({ ...rental, listingType: "sale", rentalTerms: undefined, availableDate: undefined, price: 640000 }).success).toBe(false);
   });
 
   it("requires a phone number when phone is the preferred contact", () => {

@@ -19,7 +19,6 @@ export default async function LandlordPage() {
         <h1 className="text-h1">My listings</h1>
         <div className="flex gap-2">
           <Button asChild><Link href="/landlord/listings/new">List a rental</Link></Button>
-          <Button asChild variant="secondary"><Link href="/sell/list">Sell my home</Link></Button>
         </div>
       </div>
       <LandlordDashboard listings={listings} inquiries={inquiries} applications={applications} />

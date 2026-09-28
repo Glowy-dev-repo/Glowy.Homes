@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AreaPicker, type AreaOption } from "./AreaPicker";
+import type { ZipOption } from "@/lib/zips";
+import { LeadPreferences, prefsToPayload, ZipPicker } from "./ZipPicker";
 
 type Initial = {
   displayName: string;
@@ -16,14 +17,20 @@ type Initial = {
   yearsExperience: number | null;
   isAcceptingLeads: boolean;
   leadCapPerDay: number;
-  areaIds: string[];
+  zipCodes: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  homeTypes: string[];
+  proType: string;
 };
 
-/** Pro profile edit (docs/01 P1): details, lead preferences and service areas. */
-export function ProProfileForm({ initial, areas }: { initial: Initial; areas: AreaOption[] }) {
+/** Partner profile edit: details, lead preferences and the ZIP codes leads come from. */
+export function ProProfileForm({ initial, zips }: { initial: Initial; zips: ZipOption[] }) {
   const router = useRouter();
   const id = useId();
-  const [areaIds, setAreaIds] = useState(initial.areaIds);
+  const [zipCodes, setZipCodes] = useState(initial.zipCodes);
+  const [prefs, setPrefs] = useState({ priceMin: initial.priceMin?.toString() ?? "", priceMax: initial.priceMax?.toString() ?? "", homeTypes: initial.homeTypes });
+  const agent = initial.proType === "agent";
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -44,7 +51,7 @@ export function ProProfileForm({ initial, areas }: { initial: Initial; areas: Ar
         yearsExperience: f.get("yearsExperience") ? Number(f.get("yearsExperience")) : undefined,
         isAcceptingLeads: f.get("isAcceptingLeads") === "on",
         leadCapPerDay: Number(f.get("leadCapPerDay")),
-        serviceAreaIds: areaIds,
+        ...(agent ? { zipCodes, ...prefsToPayload(prefs) } : {}),
       }),
     });
     if (!res.ok) {
@@ -98,7 +105,13 @@ export function ProProfileForm({ initial, areas }: { initial: Initial; areas: Ar
         <input type="checkbox" name="isAcceptingLeads" defaultChecked={initial.isAcceptingLeads} className="size-5 accent-[var(--color-accent)]" />
         I am accepting new leads
       </label>
-      <AreaPicker areas={areas} value={areaIds} onChange={setAreaIds} error={errors.serviceAreaIds} />
+      {agent && (
+        <>
+          <ZipPicker zips={zips} value={zipCodes} onChange={setZipCodes} error={errors.zipCodes} />
+          <LeadPreferences value={prefs} onChange={setPrefs} />
+          {errors.priceMax && <p role="alert" className="text-small text-danger">{errors.priceMax}</p>}
+        </>
+      )}
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={state === "saving"}>
           {state === "saving" && <Loader2 className="animate-spin" aria-hidden />}

@@ -11,10 +11,9 @@ const RULES: Rule[] = [
   { match: under("/admin"), roles: ["admin"] },
   // Any signed in user can apply to become a pro.
   { match: under("/pro/join"), roles: "any" },
-  { match: (p) => p.startsWith("/pro/"), roles: ["agent", "lender", "admin"] },
+  { match: (p) => p.startsWith("/pro/"), roles: ["agent", "admin"] },
   { match: under("/landlord"), roles: "any" },
   { match: under("/account"), roles: "any" },
-  { match: under("/sell/list"), roles: "any" },
 ];
 
 /** Decides whether a request to `path` may proceed. Edge safe: no database access. */

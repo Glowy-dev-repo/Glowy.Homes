@@ -8,7 +8,7 @@ export async function requirePro(): Promise<{ userId: string; pro: ProContext } 
   const session = await auth();
   if (!session?.user?.id) return { response: unauthorized() };
   const pro = await proForUser(session.user.id);
-  if (!pro) return { response: fail(403, { code: "not_a_pro", message: "This area is for agents, lenders and landlords." }) };
+  if (!pro) return { response: fail(403, { code: "not_a_pro", message: "This area is for partner agents and landlords." }) };
   return { userId: session.user.id, pro };
 }
 

@@ -10,7 +10,6 @@ export const LEAD_TYPES = [
   "tour",
   "contact",
   "sell",
-  "preapproval",
   "rental_inquiry",
   "rental_application",
 ] as const;

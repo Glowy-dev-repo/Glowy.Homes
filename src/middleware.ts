@@ -25,5 +25,5 @@ export default auth((req) => {
 // Node runtime (stable in Next 15.5): Auth.js pulls in jose APIs the Edge runtime lacks.
 export const config = {
   runtime: "nodejs",
-  matcher: ["/account/:path*", "/pro/:path+", "/landlord/:path*", "/admin/:path*", "/sell/list"],
+  matcher: ["/account/:path*", "/pro/:path+", "/landlord/:path*", "/admin/:path*"],
 };

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/listing/ListingCard";
+import { MlsDisclaimer } from "@/components/listing/MlsDisclaimer";
+import { lastFeedUpdate } from "@/lib/ingestion/feed-status";
 import { SaveButton } from "@/components/listing/saved-homes";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
@@ -8,7 +10,7 @@ import { browseSummary, quickLinks } from "@/lib/search/browse-copy";
 import { searchListings } from "@/lib/search/postgres";
 import { allRegions, regionOutline, type RegionRef } from "@/lib/search/regions";
 import { toQueryString } from "@/lib/search/url";
-import { PAGE_SIZE, SearchParams } from "@/types/search";
+import { MAX_PAGE, PAGE_SIZE, SearchParams } from "@/types/search";
 import { MiniMap } from "./MiniMap";
 
 type Props = { type: "sale" | "rent"; city: RegionRef; neighborhood?: RegionRef };
@@ -121,8 +123,8 @@ export async function BrowsePage(props: Props) {
 
           {pages > 1 && (
             <nav aria-label="More results" className="mt-8 flex flex-wrap items-center justify-center gap-2">
-              <span className="px-2 text-body text-neutral-700">Page 1 of {formatNumber(pages)}</span>
-              {Array.from({ length: Math.min(pages - 1, 4) }, (_, i) => i + 2).map((p) => (
+              <span className="px-2 text-body text-neutral-700">Page 1 of {formatNumber(Math.min(pages, MAX_PAGE))}</span>
+              {Array.from({ length: Math.min(Math.min(pages, MAX_PAGE) - 1, 4) }, (_, i) => i + 2).map((p) => (
                 <Link
                   key={p}
                   href={searchHref({ page: String(p) })}
@@ -136,6 +138,8 @@ export async function BrowsePage(props: Props) {
               </Link>
             </nav>
           )}
+
+          <MlsDisclaimer className="mt-8" demo={brand.listingFeed === "synthetic"} updatedAt={await lastFeedUpdate()} />
         </div>
 
         <aside className="space-y-8">

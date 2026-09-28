@@ -212,14 +212,14 @@ async function routingScenarios() {
   return { ok, note: output.match(/Tests\s+(\d+ passed[^\n]*)/)?.[1]?.trim() };
 }
 
-/** Phase 4 criterion 4: an agent with no service area never receives a lead. */
+/** Phase 4 criterion 4: an agent with no ZIP codes never receives a lead. */
 async function noAreaNoLeads() {
   const n = await dbCount(`
     select count(*) from leads l join pros p on p.id = l.assigned_pro_id
-    where p.pro_type = 'agent' and not exists (select 1 from pro_service_areas a where a.pro_id = p.id)
+    where p.pro_type = 'agent' and not exists (select 1 from pro_zip_codes z where z.pro_id = p.id)
       and coalesce(l.payload->>'requested_pro_id', '') <> p.id::text`);
-  const pros = await dbCount(`select count(*) from pros p where p.pro_type = 'agent' and not exists (select 1 from pro_service_areas a where a.pro_id = p.id)`);
-  return { ok: n === 0 && pros > 0, note: `${pros} agents without areas, ${n} leads routed to them` };
+  const pros = await dbCount(`select count(*) from pros p where p.pro_type = 'agent' and not exists (select 1 from pro_zip_codes z where z.pro_id = p.id)`);
+  return { ok: n === 0 && pros > 0, note: `${pros} agents without ZIP codes, ${n} leads routed to them` };
 }
 
 /**
@@ -314,7 +314,7 @@ const PHASE_CHECKS: Record<number, Check[]> = {
   ],
   4: [
     { name: "routing scenario tests", fn: routingScenarios },
-    { name: "agents without a service area get no leads", fn: noAreaNoLeads },
+    { name: "agents without ZIP codes get no leads", fn: noAreaNoLeads },
   ],
   5: [
     { name: "user listings pass moderation with 3+ photos", fn: moderationFlow },

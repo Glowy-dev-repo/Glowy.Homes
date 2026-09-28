@@ -65,10 +65,11 @@ export async function recentLeads(limit = 30) {
 export async function activeProsForRegion(leadId: string) {
   return sql<{ id: string; displayName: string; proType: string; covers: boolean }[]>`
     select p.id, p.display_name as "displayName", p.pro_type as "proType",
-      exists (select 1 from pro_service_areas a join leads ld on ld.id = ${leadId}
-        left join regions r on r.id = ld.region_id
-        where a.pro_id = p.id and a.region_id in (ld.region_id, r.parent_id)) as covers
-    from pros p where p.status = 'active' and p.pro_type in ('agent', 'lender')
+      exists (select 1 from pro_zip_codes z join leads ld on ld.id = ${leadId}
+        left join listings l on l.id = ld.listing_id
+        join properties pp on pp.id = coalesce(ld.property_id, l.property_id)
+        where z.pro_id = p.id and z.zip = left(pp.postal_code, 5)) as covers
+    from pros p where p.status = 'active' and p.pro_type = 'agent'
     order by covers desc, p.display_name limit 200`;
 }
 

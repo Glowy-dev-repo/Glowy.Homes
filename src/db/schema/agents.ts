@@ -43,6 +43,9 @@ export const pros = pgTable("pros", {
   reviewCount: integer("review_count").notNull().default(0),
   responseTimeMinutes: integer("response_time_minutes"),
   leadCapPerDay: integer("lead_cap_per_day").notNull().default(10),
+  /** Price range the agent works in; leads inside it rank higher (lead routing by ZIP code). */
+  priceMin: integer("price_min"),
+  priceMax: integer("price_max"),
   isAcceptingLeads: boolean("is_accepting_leads").notNull().default(true),
   status: text("status").$type<"pending" | "active" | "suspended">().notNull().default("pending"),
   createdAt: createdAt(),
@@ -66,6 +69,20 @@ export const proServiceAreas = pgTable(
     unique("pro_service_areas_pro_region_key").on(t.proId, t.regionId),
     index("psa_region_idx").on(t.regionId),
   ],
+);
+
+/** ZIP codes an agent receives leads for: a lead goes to an agent covering the home's ZIP code. */
+export const proZipCodes = pgTable(
+  "pro_zip_codes",
+  {
+    proId: uuid("pro_id")
+      .notNull()
+      .references(() => pros.id, { onDelete: "cascade" }),
+    zip: text("zip").notNull(),
+    activeUntil: timestamp("active_until", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("pro_zip_codes_pro_zip_key").on(t.proId, t.zip), index("pro_zip_codes_zip_idx").on(t.zip)],
 );
 
 export const proReviews = pgTable(

@@ -6,7 +6,7 @@ import { LeadDialog } from "@/components/lead/LeadDialog";
 import { CommuteEstimator } from "@/components/listing/CommuteEstimator";
 import { FactsGrid } from "@/components/listing/FactsGrid";
 import { ListingCard } from "@/components/listing/ListingCard";
-import { MonthlyCostCalculator } from "@/components/listing/MonthlyCostCalculator";
+import { MlsDisclaimer } from "@/components/listing/MlsDisclaimer";
 import { PhotoGallery } from "@/components/listing/PhotoGallery";
 import { PriceHistoryTable } from "@/components/listing/PriceHistoryTable";
 import { RecordView } from "@/components/listing/RecordView";
@@ -23,8 +23,6 @@ import { getListingDetail, isOwnerListing, type ListingDetail } from "@/lib/list
 import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription, toSummary } from "@/lib/listings/ldp";
 import { similarListings } from "@/lib/listings/similar";
 import { mediaUrl } from "@/lib/media/urls";
-import { market } from "@/config/market";
-import { DEFAULT_AMORTIZATION_YEARS, DEFAULT_RATE_PERCENT, monthlyCostRange } from "@/lib/mortgage";
 import { getOrComputeEstimate } from "@/lib/valuation/read";
 
 // ISR: rendered on first request, cached, refreshed hourly and on listing change (docs/02 section 7).
@@ -85,20 +83,10 @@ export default async function ListingPage({ params }: Props) {
   const address = fullAddress(l);
   const dom = daysOnMarket(l);
   const facts = [formatBeds(l.beds), formatBaths(l.baths), formatArea(l.sqft)].filter(Boolean);
-  const payment = sale
-    ? monthlyCostRange({
-        price: l.price,
-        downPaymentPercent: 20,
-        ratePercent: DEFAULT_RATE_PERCENT,
-        amortizationYears: DEFAULT_AMORTIZATION_YEARS,
-        propertyTaxAnnual: l.taxAnnual ?? l.price * market.finance.taxRate,
-        insuranceMonthly: 125,
-        hoaMonthly: l.hoaFee ?? 0,
-      })
-    : null;
   const jsonLd = listingJsonLd(l, appUrl(), l.media.slice(0, 6).map((m) => `${appUrl()}${mediaUrl(m.storageKey, 1600)}`));
   const hoodStats = l.neighborhood?.stats ?? {};
   const sellHref = `/sell?property=${l.propertyId}`;
+  const recipientNote = owner ? undefined : `This goes to a ${brand.name} partner agent who serves this ZIP code, not to the listing agent.`;
 
   return (
     <div className="pb-24 lg:pb-12">
@@ -131,6 +119,19 @@ export default async function ListingPage({ params }: Props) {
                 {closed ? `${dom} days on market` : `${dom} ${dom === 1 ? "day" : "days"} on ${brand.name}`}
                 {l.saveCount > 0 ? ` · ${formatNumber(l.saveCount)} saves` : ""}
               </p>
+              {!owner && (l.listAgentName || l.brokerageName) && (
+                <p className="mt-2 text-body text-neutral-800" data-testid="listed-by">
+                  Listed by {l.listAgentName ?? "the listing agent"}
+                  {l.brokerageName ? ` of ${l.brokerageName}` : ""}
+                  {(l.listOfficePhone || l.listAgentPhone) && <span className="text-neutral-600"> · {l.listOfficePhone ?? l.listAgentPhone}</span>}
+                  {l.coListAgentName && (
+                    <span className="block text-small text-neutral-600">
+                      Co listed by {l.coListAgentName}
+                      {l.coListOfficeName ? ` of ${l.coListOfficeName}` : ""}
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -140,6 +141,7 @@ export default async function ListingPage({ params }: Props) {
                     leadType="tour"
                     listingId={l.id}
                     address={address}
+                    recipientNote={recipientNote}
                     triggerClassName="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover"
                     trigger={
                       <>
@@ -152,11 +154,12 @@ export default async function ListingPage({ params }: Props) {
                     leadType={sale ? "contact" : "rental_inquiry"}
                     listingId={l.id}
                     address={address}
+                    recipientNote={recipientNote}
                     triggerClassName="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5"
                     trigger={
                       <>
                         <MessageSquare className="size-5" aria-hidden />
-                        {sale ? (owner ? "Contact the owner" : "Contact agent") : "Ask about this rental"}
+                        {owner ? (sale ? "Contact the owner" : "Ask the landlord") : "Ask a local agent"}
                       </>
                     }
                   />
@@ -170,14 +173,24 @@ export default async function ListingPage({ params }: Props) {
               )}
               <SaveButton listingId={l.id} variant="button" />
               <ShareButton title={address} />
+              {!closed && !owner && (
+                <p className="col-span-2 text-small text-neutral-600" data-testid="cta-note">
+                  Tour requests and questions go to a {brand.name} partner agent who serves this ZIP code, not to the listing agent.
+                </p>
+              )}
             </div>
 
+            {l.hideEstimate ? (
+              <p className="rounded-lg border border-neutral-200 bg-white p-5 text-small text-neutral-600" data-testid="estimate-hidden">
+                The seller asked us not to show an estimated value for this home.
+              </p>
+            ) : (
             <EstimateCard
               estimate={estimate}
-              payment={payment}
               methodologyHref={`/home-value/${l.propertyId}/${slug}`}
               agentOpinionHref={sellHref}
             />
+            )}
           </div>
         </aside>
 
@@ -231,13 +244,6 @@ export default async function ListingPage({ params }: Props) {
               </table>
             </Section>
           ) : null}
-
-          {/* 10. Monthly cost calculator */}
-          {sale && !closed && (
-            <Section id="monthly-cost" title="Monthly cost">
-              <MonthlyCostCalculator price={l.price} taxAnnual={l.taxAnnual} hoaMonthly={l.hoaFee} />
-            </Section>
-          )}
 
           {/* 11. Neighborhood */}
           <Section id="neighborhood" title={l.neighborhood ? `Neighborhood: ${l.neighborhood.name}` : "Neighborhood"}>
@@ -313,31 +319,37 @@ export default async function ListingPage({ params }: Props) {
               <p className="mt-3 text-small text-neutral-600">This listing was posted by its owner and reviewed by {brand.name}. Details are provided by the owner and are not guaranteed.</p>
             </Section>
           ) : (
-            <Section id="agent" title="Listing agent">
-              <div className="flex flex-wrap items-center gap-4 rounded-lg border border-neutral-200 p-5" data-testid="agent-card">
-                <div aria-hidden className="grid size-14 place-items-center rounded-full bg-neutral-100 text-h3 text-neutral-700">
-                  {(l.agent?.displayName ?? l.brokerageName ?? brand.short).split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {l.agent ? (
-                    <Link href={`/agent/${l.agent.slug}`} className="text-h3 hover:underline">
-                      {l.agent.displayName}
-                    </Link>
-                  ) : (
-                    <p className="text-h3">{l.brokerageName ?? "Listing brokerage"}</p>
+            <Section id="agent" title="Listing information">
+              <div className="rounded-lg border border-neutral-200 p-5" data-testid="agent-card">
+                <p className="text-h3">
+                  Listed by {l.listAgentName ?? "the listing agent"}
+                  {l.brokerageName ? ` of ${l.brokerageName}` : ""}
+                </p>
+                <dl className="mt-2 grid gap-1 text-body text-neutral-700">
+                  {(l.listOfficePhone || l.listAgentPhone) && (
+                    <div className="flex flex-wrap gap-2">
+                      <dt className="text-neutral-600">Listing office phone</dt>
+                      <dd>{l.listOfficePhone ?? l.listAgentPhone}</dd>
+                    </div>
                   )}
-                  <p className="text-small text-neutral-600">Listing courtesy of {l.brokerageName ?? "the listing brokerage"}</p>
-                </div>
-                {l.agent?.phone && (
-                  <a href={`tel:${l.agent.phone.replace(/\D/g, "")}`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-neutral-300 px-4 font-medium">
-                    <Phone className="size-4" aria-hidden />
-                    Call {l.agent.phone}
-                  </a>
-                )}
+                  {l.listAgentEmail && (
+                    <div className="flex flex-wrap gap-2">
+                      <dt className="text-neutral-600">Listing agent email</dt>
+                      <dd>{l.listAgentEmail}</dd>
+                    </div>
+                  )}
+                  {l.coListAgentName && (
+                    <div className="flex flex-wrap gap-2">
+                      <dt className="text-neutral-600">Co listed by</dt>
+                      <dd>
+                        {l.coListAgentName}
+                        {l.coListOfficeName ? ` of ${l.coListOfficeName}` : ""}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
               </div>
-              <p className="mt-3 text-small text-neutral-600">
-                Information is provided by the listing brokerage and is deemed reliable but not guaranteed. {l.source === "synthetic" ? "This is demonstration data, not a real listing." : ""}
-              </p>
+              <MlsDisclaimer className="mt-4" demo={l.source === "synthetic"} updatedAt={l.sourceUpdatedAt ?? l.updatedAt} />
             </Section>
           )}
         </div>
@@ -356,13 +368,15 @@ export default async function ListingPage({ params }: Props) {
               leadType={sale ? "contact" : "rental_inquiry"}
               listingId={l.id}
               address={address}
+              recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent"
-              trigger="Contact"
+              trigger={owner ? "Contact" : "Ask an agent"}
             />
             <LeadDialog
               leadType="tour"
               listingId={l.id}
               address={address}
+              recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md bg-accent px-3 font-semibold text-white"
               trigger="Request tour"
             />

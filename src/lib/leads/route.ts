@@ -32,6 +32,9 @@ type LeadRow = {
   listingOwnerProId: string | null;
   listingPrice: number | null;
   listingType: string | null;
+  propertyType: string | null;
+  /** Five digit ZIP code of the home the lead is about. */
+  zip: string | null;
   address: string | null;
 };
 
@@ -47,6 +50,8 @@ async function loadLead(sql: Sql, leadId: string): Promise<LeadRow | null> {
       l.listing_agent_id as "listingAgentId",
       (select pr.id from pros pr where pr.user_id = l.owner_user_id and pr.status = 'active') as "listingOwnerProId",
       l.price as "listingPrice", l.listing_type as "listingType",
+      coalesce(l.property_type, p.property_type) as "propertyType",
+      nullif(left(p.postal_code, 5), '') as zip,
       coalesce(concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city), null) as address
     from leads ld
     left join regions r on r.id = ld.region_id
@@ -75,19 +80,20 @@ async function scoreFor(sql: Sql, lead: LeadRow): Promise<number> {
   });
 }
 
+/** Agents covering the lead's ZIP code (plus any named agents), with how well each suits the home. */
 async function loadCandidates(sql: Sql, lead: LeadRow, extraIds: string[]): Promise<Candidate[]> {
   return sql<Candidate[]>`
     select pr.id as "proId", pr.pro_type as "proType", pr.status, pr.is_accepting_leads as "isAccepting",
       pr.lead_cap_per_day as "capPerDay", pr.response_time_minutes as "responseTimeMinutes", pr.rating::float8 as rating,
       (select count(*)::int from leads x where x.assigned_pro_id = pr.id
         and x.assigned_at >= (date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})) as "assignedToday",
-      case
-        when exists (select 1 from pro_service_areas a where a.pro_id = pr.id and a.region_id = ${lead.hoodId} and (a.active_until is null or a.active_until > now())) then 'neighborhood'
-        when exists (select 1 from pro_service_areas a where a.pro_id = pr.id and a.region_id = ${lead.cityId} and (a.active_until is null or a.active_until > now())) then 'city'
-        else null
-      end as "areaMatch"
+      exists (select 1 from pro_zip_codes z where z.pro_id = pr.id and z.zip = ${lead.zip} and (z.active_until is null or z.active_until > now())) as "zipMatch",
+      case when ${lead.listingPrice}::int is null or (pr.price_min is null and pr.price_max is null) then null
+        else ${lead.listingPrice}::int between coalesce(pr.price_min, 0) and coalesce(pr.price_max, 2147483647) end as "priceFit",
+      case when ${lead.propertyType}::text is null or coalesce(cardinality(pr.specialties), 0) = 0 then null
+        else ${lead.propertyType}::text = any(pr.specialties) end as "typeFit"
     from pros pr
-    where pr.id in (select pro_id from pro_service_areas where region_id in (${lead.hoodId}, ${lead.cityId}))
+    where pr.id in (select pro_id from pro_zip_codes where zip = ${lead.zip})
        or pr.id = any(${extraIds}::uuid[])`;
 }
 
@@ -115,6 +121,7 @@ export async function routeLead(sql: Sql, leadId: string, mode: "initial" | "ret
     const candidates = await loadCandidates(sql, lead, extra);
     const decision = decideRoute({
       leadType: lead.leadType,
+      zip: lead.zip,
       requestedProId,
       listingAgentId: lead.listingAgentId,
       listingOwnerProId: lead.listingOwnerProId,

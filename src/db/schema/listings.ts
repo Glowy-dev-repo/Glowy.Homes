@@ -122,7 +122,18 @@ export const listings = pgTable(
     listingAgentId: uuid("listing_agent_id").references(() => pros.id),
     /** User listings: how the owner wants to be contacted (docs/05 Phase 5 task 1). */
     contactPrefs: jsonb("contact_prefs").$type<{ showPhone?: boolean; phone?: string | null; preferred?: "email" | "phone" }>(),
+    /** Listing office (MLS ListOfficeName); shown as "Listed by [agent] of [brokerage]" (CSMAR Rule 12.16.5). */
     brokerageName: text("brokerage_name"),
+    listAgentName: text("list_agent_name"),
+    listAgentPhone: text("list_agent_phone"),
+    listAgentEmail: text("list_agent_email"),
+    listOfficePhone: text("list_office_phone"),
+    coListAgentName: text("co_list_agent_name"),
+    coListOfficeName: text("co_list_office_name"),
+    /** Seller choices carried by the MLS (CSMAR Rules 12.16.11 and 12.16.15). */
+    internetDisplay: boolean("internet_display").notNull().default(true),
+    addressDisplay: boolean("address_display").notNull().default(true),
+    hideEstimate: boolean("hide_estimate").notNull().default(false),
     ownerUserId: uuid("owner_user_id").references(() => users.id),
     isFeatured: boolean("is_featured").notNull().default(false),
     featuredUntil: timestamp("featured_until", { withTimezone: true }),

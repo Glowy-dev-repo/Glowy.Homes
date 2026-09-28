@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProProfileForm } from "@/components/pro/ProProfileForm";
 import { auth } from "@/lib/auth";
-import { allRegions } from "@/lib/search/regions";
+import { zipOptions } from "@/lib/zips";
 import { proForEdit } from "@/server/data/pros";
 
 export const metadata: Metadata = { title: "Pro profile", robots: { index: false }, alternates: { canonical: "/pro/profile" } };
@@ -12,9 +12,7 @@ export default async function ProProfilePage() {
   const session = await auth();
   const pro = await proForEdit(session!.user.id);
   if (!pro) redirect("/pro/join");
-  const regions = await allRegions();
-  const cityIds = new Map(regions.filter((r) => r.type === "city").map((r) => [r.slug, r.id]));
-  const areas = regions.map((r) => ({ id: r.id, name: r.name, type: r.type, parentId: r.type === "neighborhood" ? (cityIds.get(r.parentSlug ?? "") ?? null) : null }));
+  const zips = await zipOptions();
 
   return (
     <div className="container-page py-10">
@@ -36,7 +34,7 @@ export default async function ProProfilePage() {
           Your profile is not receiving leads. Contact support to find out why.
         </p>
       )}
-      <ProProfileForm initial={pro} areas={areas} />
+      <ProProfileForm initial={pro} zips={zips} />
     </div>
   );
 }

@@ -8,8 +8,9 @@ import { slugify } from "@/lib/slug";
 const sql = sqlClient;
 
 /**
- * Pro signup (docs/01 P1). Agents and lenders start pending until an admin verifies the license
- * (docs/06 SOP 2); landlords are active at once. The user gains the matching role.
+ * Signup for partner agents and landlords. Agents start pending until an admin verifies the
+ * license; landlords are active at once. The user gains the matching role. Agents choose the ZIP
+ * codes they receive leads for, and optionally a price range and home types that suit them.
  */
 export async function createPro(userId: string, input: z.infer<typeof ProSignup>) {
   const existing = await sql`select id from pros where user_id = ${userId}`;
@@ -18,14 +19,16 @@ export async function createPro(userId: string, input: z.infer<typeof ProSignup>
   const status = input.proType === "landlord" ? "active" : "pending";
   return sql.begin(async (tx) => {
     const [pro] = await tx<{ id: string; slug: string }[]>`
-      insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region, phone, bio, languages, years_experience, status)
+      insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region, phone, bio, languages,
+        years_experience, price_min, price_max, specialties, status)
       values (${userId}, ${input.proType}, ${`${slugify(input.displayName)}-${Math.random().toString(36).slice(2, 7)}`}, ${input.displayName},
         ${input.brokerageName}, ${input.licenseNumber}, ${input.licenseNumber ? market.regionCode : null}, ${input.phone}, ${input.bio},
-        ${tx.array(input.languages)}, ${input.yearsExperience ?? null}, ${status})
+        ${tx.array(input.languages)}, ${input.yearsExperience ?? null}, ${input.priceMin ?? null}, ${input.priceMax ?? null},
+        ${tx.array(input.homeTypes)}, ${status})
       returning id, slug`;
-    await tx`
-      insert into pro_service_areas (pro_id, region_id)
-      select ${pro.id}, r.id from regions r where r.id = any(${input.serviceAreaIds}::uuid[]) and r.type in ('city', 'neighborhood')`;
+    if (input.zipCodes.length) {
+      await tx`insert into pro_zip_codes ${tx(input.zipCodes.map((zip) => ({ pro_id: pro.id, zip })), "pro_id", "zip")} on conflict do nothing`;
+    }
     await tx`update users set roles = array(select distinct unnest(roles || ${tx.array([role])}::text[])) where id = ${userId}`;
     if (status === "pending") {
       await tx`insert into moderation_items (item_type, item_id, reason) values ('pro', ${pro.id}, 'new_submission')`;
@@ -45,15 +48,16 @@ export async function updatePro(proId: string, input: z.infer<typeof ProProfileU
       years_experience = coalesce(${input.yearsExperience ?? null}, years_experience),
       is_accepting_leads = coalesce(${input.isAcceptingLeads ?? null}, is_accepting_leads),
       lead_cap_per_day = coalesce(${input.leadCapPerDay ?? null}, lead_cap_per_day),
+      price_min = case when ${input.priceMin !== undefined} then ${input.priceMin ?? null}::int else price_min end,
+      price_max = case when ${input.priceMax !== undefined} then ${input.priceMax ?? null}::int else price_max end,
+      specialties = coalesce(${input.homeTypes ? sql.array(input.homeTypes) : null}::text[], specialties),
       updated_at = now()
     where id = ${proId}`;
-  if (input.serviceAreaIds) {
+  if (input.zipCodes) {
+    const zips = input.zipCodes;
     await sql.begin(async (tx) => {
-      await tx`delete from pro_service_areas where pro_id = ${proId} and region_id <> all(${input.serviceAreaIds!}::uuid[])`;
-      await tx`
-        insert into pro_service_areas (pro_id, region_id)
-        select ${proId}, r.id from regions r where r.id = any(${input.serviceAreaIds!}::uuid[]) and r.type in ('city', 'neighborhood')
-        on conflict do nothing`;
+      await tx`delete from pro_zip_codes where pro_id = ${proId} and zip <> all(${zips}::text[])`;
+      if (zips.length) await tx`insert into pro_zip_codes ${tx(zips.map((zip) => ({ pro_id: proId, zip })), "pro_id", "zip")} on conflict do nothing`;
     });
   }
 }
@@ -72,28 +76,37 @@ export type ProPublic = {
   rating: number | null;
   reviewCount: number;
   licenseVerified: boolean;
-  areas: { name: string; slug: string; type: string; citySlug: string | null }[];
+  /** ZIP codes the agent serves, with the city each belongs to. */
+  zips: { zip: string; cityName: string | null; citySlug: string | null }[];
 };
+
+// City of a ZIP code: the city most of its homes are in.
+const ZIP_CITY = `
+  select distinct on (zip) zip, "cityName", "citySlug" from (
+    select left(pp.postal_code, 5) as zip, c.name as "cityName", c.slug as "citySlug", count(*) as n
+    from properties pp join regions c on c.id = pp.city_region_id where pp.postal_code ~ '^[0-9]{5}' group by 1, 2, 3
+  ) t order by zip, n desc`;
 
 export async function proBySlug(slug: string): Promise<ProPublic | null> {
   const [p] = await sql<ProPublic[]>`
     select p.id, p.slug, p.pro_type as "proType", p.display_name as "displayName", p.brokerage_name as "brokerageName",
       p.phone, p.bio, p.photo_url as "photoUrl", p.languages, p.years_experience as "yearsExperience",
       p.rating::float8 as rating, p.review_count as "reviewCount", p.license_verified_at is not null as "licenseVerified",
-      coalesce((select json_agg(json_build_object('name', r.name, 'slug', r.slug, 'type', r.type, 'citySlug', c.slug) order by r.name)
-        from pro_service_areas a join regions r on r.id = a.region_id left join regions c on c.id = r.parent_id and r.type = 'neighborhood'
-        where a.pro_id = p.id), '[]'::json) as areas
+      coalesce((select json_agg(json_build_object('zip', z.zip, 'cityName', zc."cityName", 'citySlug', zc."citySlug") order by zc."cityName", z.zip)
+        from pro_zip_codes z left join (${sql.unsafe(ZIP_CITY)}) zc on zc.zip = z.zip
+        where z.pro_id = p.id), '[]'::json) as zips
     from pros p where p.slug = ${slug} and p.status = 'active'`;
   return p ?? null;
 }
 
 export async function proForEdit(userId: string) {
-  const [p] = await sql<(ProPublic & { status: string; isAcceptingLeads: boolean; leadCapPerDay: number; licenseNumber: string | null; areaIds: string[] })[]>`
+  const [p] = await sql<(ProPublic & { status: string; isAcceptingLeads: boolean; leadCapPerDay: number; licenseNumber: string | null; zipCodes: string[]; priceMin: number | null; priceMax: number | null; homeTypes: string[] })[]>`
     select p.id, p.slug, p.pro_type as "proType", p.display_name as "displayName", p.brokerage_name as "brokerageName", p.phone, p.bio,
       p.photo_url as "photoUrl", p.languages, p.years_experience as "yearsExperience", p.rating::float8 as rating, p.review_count as "reviewCount",
       p.license_verified_at is not null as "licenseVerified", p.status, p.is_accepting_leads as "isAcceptingLeads",
       p.lead_cap_per_day as "leadCapPerDay", p.license_number as "licenseNumber",
-      coalesce(array(select region_id::text from pro_service_areas where pro_id = p.id), '{}') as "areaIds", '[]'::json as areas
+      coalesce(array(select zip from pro_zip_codes where pro_id = p.id order by zip), '{}') as "zipCodes", '[]'::json as zips,
+      p.price_min as "priceMin", p.price_max as "priceMax", coalesce(p.specialties, '{}') as "homeTypes"
     from pros p where p.user_id = ${userId}`;
   return p ?? null;
 }
@@ -120,16 +133,15 @@ export async function submitReview(userId: string, input: z.infer<typeof ReviewI
   return { status: "created" as const, reviewId: review.id };
 }
 
-/** docs/01 route /agents/[city]: active agents covering the city or its neighborhoods. */
-export async function agentsInCity(citySlug: string, proType: "agent" | "lender" = "agent") {
+/** Find an agent page: active partner agents serving any ZIP code in the city. */
+export async function agentsInCity(citySlug: string) {
   return sql<{ id: string; slug: string; displayName: string; brokerageName: string | null; photoUrl: string | null; rating: number | null; reviewCount: number; yearsExperience: number | null; responseTimeMinutes: number | null; languages: string[] }[]>`
     select distinct on (p.id) p.id, p.slug, p.display_name as "displayName", p.brokerage_name as "brokerageName", p.photo_url as "photoUrl",
       p.rating::float8 as rating, p.review_count as "reviewCount", p.years_experience as "yearsExperience",
       p.response_time_minutes as "responseTimeMinutes", p.languages
     from pros p
-    join pro_service_areas a on a.pro_id = p.id
-    join regions r on r.id = a.region_id
-    left join regions c on c.id = r.parent_id
-    where p.status = 'active' and p.pro_type = ${proType} and (r.slug = ${citySlug} and r.type = 'city' or c.slug = ${citySlug})
+    join pro_zip_codes z on z.pro_id = p.id
+    join (${sql.unsafe(ZIP_CITY)}) zc on zc.zip = z.zip
+    where p.status = 'active' and p.pro_type = 'agent' and zc."citySlug" = ${citySlug}
     order by p.id`;
 }

@@ -51,6 +51,9 @@ export type SearchParams = z.infer<typeof SearchParams>;
 export type SearchParamsInput = z.input<typeof SearchParams>;
 
 export const PAGE_SIZE = 40;
+/** At most 500 listings per search (CSMAR Rule 12.16.16): 12 pages of 40 is 480. */
+export const MAX_RESULTS = 500;
+export const MAX_PAGE = Math.floor(MAX_RESULTS / PAGE_SIZE);
 export const CLUSTER_THRESHOLD = 200;
 
 export type ListingSummary = {
@@ -67,6 +70,7 @@ export type ListingSummary = {
   statusDate: string;
   isFeatured: boolean;
   brokerageName: string | null;
+  listAgentName?: string | null;
   addressLine1: string;
   addressLine2: string | null;
   city: string;

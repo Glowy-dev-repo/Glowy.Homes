@@ -11,7 +11,6 @@ const TITLES: Partial<Record<LeadType, string>> = {
   tour: "Request a tour",
   contact: "Contact an agent",
   rental_inquiry: "Ask about this rental",
-  preapproval: "Get preapproved",
 };
 
 /** A lead form in a dialog, opened from the LDP actions and the mobile sticky bar. */
@@ -22,6 +21,7 @@ export function LeadDialog({
   listingId,
   proId,
   address,
+  recipientNote,
 }: {
   leadType: LeadType;
   trigger: React.ReactNode;
@@ -29,6 +29,8 @@ export function LeadDialog({
   listingId?: string;
   proId?: string;
   address?: string;
+  /** Who the request reaches, when it is not obvious from the page (CSMAR Rule 12.16.22). */
+  recipientNote?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -42,6 +44,7 @@ export function LeadDialog({
               <Dialog.Title className="text-h2">{TITLES[leadType] ?? "Contact"}</Dialog.Title>
               {address && <Dialog.Description className="mt-1 text-small text-neutral-600">{address}</Dialog.Description>}
               {!address && <Dialog.Description className="sr-only">Send your details to a local professional</Dialog.Description>}
+              {recipientNote && <p className="mt-2 text-small text-neutral-700" data-testid="lead-recipient">{recipientNote}</p>}
             </div>
             <Dialog.Close className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-neutral-100" aria-label="Close">
               <X className="size-5" aria-hidden />

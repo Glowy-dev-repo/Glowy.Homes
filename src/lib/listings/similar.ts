@@ -24,7 +24,7 @@ export async function similarListings(id: string): Promise<SimilarListing[]> {
     select ${summaryColumns(sql)}, ST_Distance(l.location, s.location)::int as "distanceM", true as strict
     from listings s
     join listings l on l.listing_type = s.listing_type and l.property_type = s.property_type
-      and l.status = 'active' and l.id <> s.id
+      and l.status = 'active' and l.internet_display and l.id <> s.id
       and l.price between ${low} and ${high}
       and ST_DWithin(l.location, s.location, ${SIMILAR_RADIUS_M})
     join properties p on p.id = l.property_id
@@ -39,7 +39,7 @@ export async function similarListings(id: string): Promise<SimilarListing[]> {
     select ${summaryColumns(sql)}, ST_Distance(l.location, s.location)::int as "distanceM", false as strict
     from listings s
     join listings l on l.listing_type = s.listing_type and l.property_type = s.property_type
-      and l.status = 'active' and l.id <> all(${exclude}::uuid[])
+      and l.status = 'active' and l.internet_display and l.id <> all(${exclude}::uuid[])
       and l.price between ${Math.floor(subject.price * 0.6)} and ${Math.ceil(subject.price * 1.4)}
       and ST_DWithin(l.location, s.location, 15000)
     join properties p on p.id = l.property_id

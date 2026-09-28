@@ -6,7 +6,6 @@ const TYPE_LABEL: Record<string, string> = {
   tour: "tour request",
   contact: "question",
   sell: "seller inquiry",
-  preapproval: "preapproval request",
   rental_inquiry: "rental inquiry",
   rental_application: "rental application",
 };

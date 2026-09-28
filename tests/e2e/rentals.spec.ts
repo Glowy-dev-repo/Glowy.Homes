@@ -166,10 +166,10 @@ test.describe("rentals and user listings", () => {
     await renter.close();
   });
 
-  test("owner listing wizard fits a phone and validates the address step", async ({ page, isMobile }) => {
+  test("rental listing wizard fits a phone and validates the address step", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mobile layout check");
-    await signIn(page, "fsbo", "/sell/list");
-    await expect(page.getByRole("heading", { name: "List your home for sale" })).toBeVisible();
+    await signIn(page, "landlord-mobile", "/landlord/listings/new");
+    await expect(page.getByRole("heading", { name: "List a rental" })).toBeVisible();
     const width = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(width).toBeLessThanOrEqual(390);
     await page.getByRole("button", { name: "Continue" }).click();

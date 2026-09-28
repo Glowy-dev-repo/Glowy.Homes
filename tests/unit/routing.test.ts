@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { decideRoute, rankCandidates, responseWindowMs, scoreLead, type Candidate, type RouteInput } from "@/lib/leads/routing";
+import { decideRoute, rankCandidates, responseWindowMs, scoreLead, suitability, type Candidate, type RouteInput } from "@/lib/leads/routing";
 
-// docs/05 Phase 4 criterion 2: routing respects service area and daily cap, in 20 scenarios.
+// Lead routing by ZIP code: a lead goes to the most suitable partner agent covering the home's
+// ZIP code, within daily caps (docs/05 Phase 4 criterion 2: 20 scenarios).
 
 const pro = (id: string, over: Partial<Candidate> = {}): Candidate => ({
   proId: id,
@@ -12,35 +13,38 @@ const pro = (id: string, over: Partial<Candidate> = {}): Candidate => ({
   assignedToday: 0,
   responseTimeMinutes: 15,
   rating: 4.5,
-  areaMatch: "city",
+  zipMatch: true,
+  priceFit: null,
+  typeFit: null,
   ...over,
 });
 
 const route = (candidates: Candidate[], over: Partial<RouteInput> = {}) =>
-  decideRoute({ leadType: "tour", routeToListingAgent: false, exclude: [], candidates, ...over });
+  decideRoute({ leadType: "tour", zip: "90027", routeToListingAgent: false, exclude: [], candidates, ...over });
 
 describe("routing scenarios", () => {
   const scenarios: [string, Candidate[], Partial<RouteInput>, string | null][] = [
-    ["1. single covering agent gets the lead", [pro("a")], {}, "a"],
-    ["2. agent with no service area never gets a lead", [pro("a", { areaMatch: null })], {}, null],
-    ["3. only the covering agent of two gets it", [pro("a", { areaMatch: null }), pro("b")], {}, "b"],
-    ["4. agent at daily cap is skipped", [pro("a", { assignedToday: 10 }), pro("b", { assignedToday: 3 })], {}, "b"],
+    ["1. the only agent covering the ZIP code gets the lead", [pro("a")], {}, "a"],
+    ["2. an agent not covering the ZIP code never gets it", [pro("a", { zipMatch: false })], {}, null],
+    ["3. of two agents, only the one covering the ZIP code gets it", [pro("a", { zipMatch: false }), pro("b")], {}, "b"],
+    ["4. an agent at their daily cap is skipped", [pro("a", { assignedToday: 10 }), pro("b", { assignedToday: 3 })], {}, "b"],
     ["5. everyone at cap leaves the lead unassigned", [pro("a", { assignedToday: 10 }), pro("b", { capPerDay: 2, assignedToday: 2 })], {}, null],
-    ["6. neighborhood coverage beats city coverage", [pro("a", { areaMatch: "city", assignedToday: 0 }), pro("b", { areaMatch: "neighborhood", assignedToday: 5 })], {}, "b"],
-    ["7. city coverage used when no neighborhood agent is eligible", [pro("a", { areaMatch: "neighborhood", assignedToday: 10 }), pro("b", { areaMatch: "city" })], {}, "b"],
-    ["8. fewest leads today wins", [pro("a", { assignedToday: 4 }), pro("b", { assignedToday: 1 })], {}, "b"],
-    ["9. faster responder breaks a tie", [pro("a", { responseTimeMinutes: 40 }), pro("b", { responseTimeMinutes: 5 })], {}, "b"],
-    ["10. higher rating breaks the next tie", [pro("a", { rating: 4.1 }), pro("b", { rating: 4.9 })], {}, "b"],
-    ["11. suspended agents are skipped", [pro("a", { status: "suspended" }), pro("b", { assignedToday: 9 })], {}, "b"],
-    ["12. pending agents are skipped", [pro("a", { status: "pending" })], {}, null],
-    ["13. agents not accepting leads are skipped", [pro("a", { isAccepting: false }), pro("b")], {}, "b"],
-    ["14. lenders never get tour leads", [pro("a", { proType: "lender" })], {}, null],
-    ["15. preapproval goes to a covering lender", [pro("a"), pro("l", { proType: "lender" })], { leadType: "preapproval" }, "l"],
-    ["16. reassignment excludes the previous agent", [pro("a"), pro("b", { assignedToday: 5 })], { exclude: ["a"] }, "b"],
-    ["17. listing agent is not used by default", [pro("la", { assignedToday: 0 }), pro("b", { assignedToday: 0, responseTimeMinutes: 1 })], { listingAgentId: "la" }, "b"],
-    ["18. listing agent used when configured", [pro("la", { assignedToday: 3 }), pro("b")], { listingAgentId: "la", routeToListingAgent: true }, "la"],
-    ["19. consumer requested agent is honoured even outside their area", [pro("r", { areaMatch: null }), pro("b")], { requestedProId: "r", leadType: "contact" }, "r"],
-    ["20. requested agent at cap falls back to area routing", [pro("r", { assignedToday: 10 }), pro("b")], { requestedProId: "r", leadType: "contact" }, "b"],
+    ["6. a price in the agent's range beats an agent without a range", [pro("a", { assignedToday: 0 }), pro("b", { priceFit: true, assignedToday: 5 })], {}, "b"],
+    ["7. an agent whose range misses the price ranks last", [pro("a", { priceFit: false }), pro("b", { assignedToday: 6 })], {}, "b"],
+    ["8. a matching home type breaks a price tie", [pro("a", { priceFit: true }), pro("b", { priceFit: true, typeFit: true, assignedToday: 4 })], {}, "b"],
+    ["9. price fit outranks home type fit", [pro("a", { typeFit: true }), pro("b", { priceFit: true })], {}, "b"],
+    ["10. among equally suited agents, fewest leads today wins", [pro("a", { assignedToday: 4 }), pro("b", { assignedToday: 1 })], {}, "b"],
+    ["11. then the faster responder", [pro("a", { responseTimeMinutes: 40 }), pro("b", { responseTimeMinutes: 5 })], {}, "b"],
+    ["12. then the higher rating", [pro("a", { rating: 4.1 }), pro("b", { rating: 4.9 })], {}, "b"],
+    ["13. suspended agents are skipped", [pro("a", { status: "suspended" }), pro("b", { assignedToday: 9 })], {}, "b"],
+    ["14. pending agents are skipped", [pro("a", { status: "pending" })], {}, null],
+    ["15. agents not accepting leads are skipped", [pro("a", { isAccepting: false }), pro("b")], {}, "b"],
+    ["16. a lead without a ZIP code is left for an admin", [pro("a")], { zip: null }, null],
+    ["17. reassignment excludes the previous agent", [pro("a"), pro("b", { assignedToday: 5 })], { exclude: ["a"] }, "b"],
+    ["18. the listing agent is not used by default", [pro("la", { zipMatch: false }), pro("b")], { listingAgentId: "la" }, "b"],
+    ["19. an agent the consumer asked for is honoured even outside their ZIP codes", [pro("r", { zipMatch: false }), pro("b")], { requestedProId: "r", leadType: "contact" }, "r"],
+    ["20. a requested agent at cap falls back to ZIP routing", [pro("r", { assignedToday: 10 }), pro("b")], { requestedProId: "r", leadType: "contact" }, "b"],
+    ["21. only agents take leads, not landlords", [pro("a", { proType: "landlord" })], {}, null],
   ];
 
   for (const [name, candidates, over, expected] of scenarios) {
@@ -51,24 +55,27 @@ describe("routing scenarios", () => {
     });
   }
 
-  it("leads on owner posted listings go straight to the owner", () => {
+  it("rentals posted by their landlord go straight to the landlord", () => {
     expect(route([pro("a")], { leadType: "rental_inquiry", listingOwnerProId: "owner" }).assign).toBe("owner");
     expect(route([pro("a")], { leadType: "tour", listingOwnerProId: "owner" }).assign).toBe("owner");
     expect(route([pro("a")], { leadType: "sell", listingOwnerProId: "owner" }).assign).toBe("a");
   });
 
-  it("explains why nothing was assigned", () => {
-    expect(route([]).reason).toBe("no agent covers this area");
+  it("explains the decision", () => {
+    expect(route([]).reason).toBe("no agent covers ZIP 90027");
     expect(route([pro("a", { assignedToday: 10 })]).reason).toMatch(/daily cap/);
+    expect(route([pro("a", { priceFit: true })]).reason).toMatch(/covers ZIP 90027, price in range/);
   });
 
-  it("ranks stably", () => {
+  it("scores suitability and ranks stably", () => {
+    expect(suitability(pro("a", { priceFit: true, typeFit: true }))).toBe(3);
+    expect(suitability(pro("a", { priceFit: false, typeFit: false }))).toBe(-3);
     expect(rankCandidates([pro("b"), pro("a")]).map((c) => c.proId)).toEqual(["a", "b"]);
   });
 });
 
 describe("lead score", () => {
-  it("adds the docs/03 points and caps at 100", () => {
+  it("adds the points and caps at 100", () => {
     const base = { loggedIn: false, hasPhone: false, savedHomes: 0, listingsViewed7d: 0, listingInTop30PctOfCity: false };
     expect(scoreLead({ ...base, leadType: "tour" })).toBe(30);
     expect(scoreLead({ ...base, leadType: "rental_inquiry", loggedIn: true, hasPhone: true })).toBe(35);
@@ -78,13 +85,12 @@ describe("lead score", () => {
 });
 
 describe("response window", () => {
-  it("is 30 minutes for agents and 4 hours for lenders unless overridden", () => {
+  it("is 30 minutes unless overridden", () => {
     const saved = process.env.LEAD_REASSIGN_SECONDS;
     delete process.env.LEAD_REASSIGN_SECONDS;
-    expect(responseWindowMs("agent")).toBe(1_800_000);
-    expect(responseWindowMs("lender")).toBe(14_400_000);
+    expect(responseWindowMs()).toBe(1_800_000);
     process.env.LEAD_REASSIGN_SECONDS = "5";
-    expect(responseWindowMs("agent")).toBe(5000);
+    expect(responseWindowMs()).toBe(5000);
     if (saved === undefined) delete process.env.LEAD_REASSIGN_SECONDS;
     else process.env.LEAD_REASSIGN_SECONDS = saved;
   });

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { MlsDisclaimer } from "@/components/listing/MlsDisclaimer";
 import { SearchApp } from "@/components/search/SearchApp";
+import { lastFeedUpdate } from "@/lib/ingestion/feed-status";
 import { searchTitle } from "@/lib/search/title";
 import { brand } from "@/config/brand";
 import { cachedSearch } from "@/lib/search/provider";
@@ -42,11 +44,16 @@ export default async function SearchPage({ searchParams }: Props) {
   // No Suspense boundary: the page is dynamic, so useSearchParams does not suspend, and a streamed
   // boundary would briefly duplicate the results in a hidden container.
   return (
+    <>
     <SearchApp
       initialKey={toQueryString(params)}
       initialResult={result}
       placeName={place?.name ?? null}
       regionBbox={place?.bbox ?? market}
     />
+    <div className="container-page border-t border-neutral-200 py-6">
+      <MlsDisclaimer demo={brand.listingFeed === "synthetic"} updatedAt={await lastFeedUpdate()} />
+    </div>
+    </>
   );
 }

@@ -3,11 +3,6 @@ import { describeFilters } from "@/components/account/SavedSearchList";
 import { estimateCommute, haversineKm } from "@/lib/commute";
 import type { ListingDetail } from "@/lib/listings/detail";
 import { factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription } from "@/lib/listings/ldp";
-import { financeRulesFor } from "@/config/market";
-import { minimumDownPayment, monthlyCost, monthlyCostRange, monthlyPrincipalAndInterest } from "@/lib/mortgage";
-
-const CANADA = financeRulesFor("CA");
-const US = financeRulesFor("US");
 import { CreateSavedSearch, UpdateSavedSearch } from "@/lib/saved-search-schema";
 import { SearchParams } from "@/types/search";
 
@@ -53,46 +48,16 @@ const listing: ListingDetail = {
   priceHistory: [],
   agent: null,
   contactPrefs: null,
+  listAgentName: "Sam Lee",
+  listAgentPhone: "(213) 555 0101",
+  listAgentEmail: null,
+  listOfficePhone: "(213) 555 0200",
+  coListAgentName: null,
+  coListOfficeName: null,
+  hideEstimate: false,
+  addressDisplay: true,
+  sourceUpdatedAt: null,
 };
-
-describe("mortgage math, US rules (monthly compounding, PMI)", () => {
-  it("matches a known payment", () => {
-    // $500,000 at 6% over 30 years, compounded monthly: about $2,997.75 a month.
-    expect(monthlyPrincipalAndInterest(500_000, 6, 30, US)).toBeCloseTo(2997.75, 1);
-    expect(monthlyPrincipalAndInterest(360_000, 0, 30, US)).toBeCloseTo(1000, 5);
-  });
-
-  it("adds monthly PMI below 20% down and flags too little down", () => {
-    const base = { price: 800_000, ratePercent: 6, amortizationYears: 30, propertyTaxAnnual: 9200, insuranceMonthly: 125, hoaMonthly: 0 };
-    expect(monthlyCost({ ...base, downPaymentPercent: 20 }, 6, US).mortgageInsuranceMonthly).toBe(0);
-    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 6, US).mortgageInsuranceMonthly).toBeCloseTo((720_000 * 0.006) / 12);
-    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 6, US).insurancePremium).toBe(0);
-    expect(minimumDownPayment(800_000, US)).toBe(24_000);
-    expect(monthlyCost({ ...base, downPaymentPercent: 2 }, 6, US).belowMinimumDown).toBe(true);
-  });
-});
-
-describe("mortgage math, Canadian rules (semi annual compounding)", () => {
-  it("matches a known payment", () => {
-    // $500,000 at 5% over 25 years, compounded semi annually: about $2,908.02 a month.
-    expect(monthlyPrincipalAndInterest(500_000, 5, 25, CANADA)).toBeCloseTo(2908.02, 1);
-    expect(monthlyPrincipalAndInterest(300_000, 0, 25, CANADA)).toBeCloseTo(1000, 5);
-  });
-
-  it("adds default insurance below 20% down and flags too little down", () => {
-    const base = { price: 800_000, ratePercent: 5, amortizationYears: 25, propertyTaxAnnual: 6000, insuranceMonthly: 100, hoaMonthly: 0 };
-    expect(monthlyCost({ ...base, downPaymentPercent: 20 }, 5, CANADA).insurancePremium).toBe(0);
-    expect(monthlyCost({ ...base, downPaymentPercent: 10 }, 5, CANADA).insurancePremium).toBeCloseTo(720_000 * 0.031);
-    expect(minimumDownPayment(800_000, CANADA)).toBe(55_000);
-    expect(monthlyCost({ ...base, downPaymentPercent: 5 }, 5, CANADA).belowMinimumDown).toBe(true);
-  });
-
-  it("shows a range around the chosen rate", () => {
-    const r = monthlyCostRange({ price: 800_000, downPaymentPercent: 20, ratePercent: 5, amortizationYears: 25, propertyTaxAnnual: 6000, insuranceMonthly: 100, hoaMonthly: 0 });
-    expect(r.low).toBeLessThan(r.mid);
-    expect(r.high).toBeGreaterThan(r.mid);
-  });
-});
 
 describe("commute estimate", () => {
   it("gives ranges from straight line distance", () => {

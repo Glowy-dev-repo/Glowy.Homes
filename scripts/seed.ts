@@ -38,7 +38,7 @@ async function wipe() {
   await sql`
     truncate table valuation_accuracy, property_claims, listing_price_events, listing_media, valuations, saved_homes, saved_home_shares, alert_sends, saved_searches, recently_viewed,
       rental_application_submissions, rental_applications, lead_messages, pro_reviews, leads, listings, properties,
-      pro_service_areas, pros, moderation_items, feed_runs, events, sessions, accounts, verification_tokens, users, regions
+      pro_zip_codes, pro_service_areas, pros, moderation_items, feed_runs, events, sessions, accounts, verification_tokens, users, regions
     restart identity cascade`;
 }
 
@@ -105,14 +105,16 @@ async function insertPeople(market: GeneratedMarket) {
       returning id`;
     const [row] = await sql<{ id: string }[]>`
       insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region,
-        license_verified_at, phone, bio, languages, years_experience, rating, review_count, response_time_minutes, status)
+        license_verified_at, phone, bio, languages, years_experience, rating, review_count, response_time_minutes,
+        price_min, price_max, specialties, status)
       values (${user.id}, ${pro.proType}, ${`${pro.displayName.toLowerCase().replace(/[^a-z]+/g, "-")}-${pro.key}`},
         ${pro.displayName}, ${pro.brokerageName}, ${pro.licenseNumber}, ${pro.licenseNumber ? MARKET.regionCode : null},
         ${pro.licenseNumber ? new Date() : null}, ${pro.phone}, ${pro.bio}, ${sql.array(pro.languages)},
-        ${pro.yearsExperience}, ${pro.rating}, ${pro.reviewCount}, ${pro.responseTimeMinutes}, 'active')
+        ${pro.yearsExperience}, ${pro.rating}, ${pro.reviewCount}, ${pro.responseTimeMinutes},
+        ${pro.priceMin}, ${pro.priceMax}, ${sql.array(pro.homeTypes)}, 'active')
       returning id`;
-    const areas = pro.serviceAreas.map((key) => ({ pro_id: row.id, region_id: regionIds.get(key)! }));
-    if (areas.length) await sql`insert into pro_service_areas ${sql(areas, "pro_id", "region_id")}`;
+    const zips = pro.zipCodes.map((zip) => ({ pro_id: row.id, zip }));
+    if (zips.length) await sql`insert into pro_zip_codes ${sql(zips, "pro_id", "zip")}`;
   }
 }
 

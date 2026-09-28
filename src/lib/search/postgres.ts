@@ -2,6 +2,7 @@ import type postgres from "postgres";
 import { sqlClient } from "@/db";
 import {
   CLUSTER_THRESHOLD,
+  MAX_PAGE,
   PAGE_SIZE,
   type ListingSummary,
   type SearchCluster,
@@ -41,7 +42,8 @@ async function whereClause(
   sql: Sql,
   p: SearchParams,
 ): Promise<{ where: Fragment; extent: [number, number, number, number] | null } | null> {
-  const conds: Fragment[] = [sql`l.listing_type = ${p.type}`, sql`l.status = any(${p.status}::text[])`];
+  // Sellers can keep a listing off the internet entirely (CSMAR Rule 12.16.11).
+  const conds: Fragment[] = [sql`l.listing_type = ${p.type}`, sql`l.status = any(${p.status}::text[])`, sql`l.internet_display`];
   let extent = p.bounds ?? null;
 
   if (p.city) {
@@ -113,7 +115,9 @@ export function summaryColumns(sql: Sql): Fragment {
     l.id, l.listing_type as "listingType", l.status, l.price, l.sold_price as "soldPrice",
     l.beds::float8 as beds, l.baths::float8 as baths, l.sqft, l.property_type as "propertyType",
     l.list_date::text as "listDate", l.status_date::text as "statusDate", l.is_featured as "isFeatured",
-    l.brokerage_name as "brokerageName", p.address_line1 as "addressLine1", p.address_line2 as "addressLine2",
+    l.brokerage_name as "brokerageName", l.list_agent_name as "listAgentName",
+    case when l.address_display then p.address_line1 else 'Address not disclosed' end as "addressLine1",
+    case when l.address_display then p.address_line2 end as "addressLine2",
     p.city, ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng,
     m.storage_key as "coverKey", m.blur_data_url as "coverBlur"`;
 }
@@ -160,7 +164,7 @@ export async function searchListings(p: SearchParams, sql: Sql = sqlClient): Pro
   if (!clause) return { items: [], total: 0 };
   const { where, extent } = clause;
 
-  const offset = (p.page - 1) * PAGE_SIZE;
+  const offset = (Math.min(p.page, MAX_PAGE) - 1) * PAGE_SIZE;
   const [items, [{ total }]] = await Promise.all([
     sql<ListingSummary[]>`
       with pinned as (
@@ -191,7 +195,7 @@ export async function searchListings(p: SearchParams, sql: Sql = sqlClient): Pro
   } else {
     result.pins = await sql<SearchPin[]>`
       select l.id, ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng, l.price
-      from listings l where ${where}`;
+      from listings l where ${where} and l.address_display`;
   }
   return result;
 }

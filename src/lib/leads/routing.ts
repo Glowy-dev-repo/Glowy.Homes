@@ -1,7 +1,8 @@
 import type { LeadType } from "@/db/schema/leads";
 
-// route_lead decision logic (docs/03 section 5). Pure functions: the database layer gathers
-// candidates and signals, these decide. Unit tested with fixed scenarios.
+// route_lead decision logic. Glowy Homes is a lead generation business for real estate agents:
+// a lead goes to the partner agent covering the home's ZIP code who suits it best. Pure functions:
+// the database layer gathers candidates and signals, these decide. Unit tested with fixed scenarios.
 
 export type ScoreSignals = {
   leadType: LeadType;
@@ -12,9 +13,9 @@ export type ScoreSignals = {
   listingInTop30PctOfCity: boolean;
 };
 
-const TYPE_POINTS: Record<LeadType, number> = { tour: 30, contact: 20, sell: 40, preapproval: 25, rental_inquiry: 15, rental_application: 15 };
+const TYPE_POINTS: Record<LeadType, number> = { tour: 30, contact: 20, sell: 40, rental_inquiry: 15, rental_application: 15 };
 
-/** docs/03 step 1: 0 to 100. */
+/** Lead quality, 0 to 100. */
 export function scoreLead(s: ScoreSignals): number {
   let score = TYPE_POINTS[s.leadType];
   if (s.loggedIn) score += 10;
@@ -23,11 +24,6 @@ export function scoreLead(s: ScoreSignals): number {
   if (s.listingsViewed7d >= 5) score += 10;
   if (s.listingInTop30PctOfCity) score += 10;
   return Math.min(100, score);
-}
-
-/** docs/03 step 2. Landlord inquiries go straight to the listing owner when there is one. */
-export function targetProType(leadType: LeadType): "agent" | "lender" {
-  return leadType === "preapproval" ? "lender" : "agent";
 }
 
 export type Candidate = {
@@ -39,19 +35,25 @@ export type Candidate = {
   assignedToday: number;
   responseTimeMinutes: number | null;
   rating: number | null;
-  /** How the pro covers the lead's location: its neighborhood, its city, or not at all. */
-  areaMatch: "neighborhood" | "city" | null;
+  /** The agent covers the lead's ZIP code. */
+  zipMatch: boolean;
+  /** The home's price is inside the agent's price range (null: the agent set no range, or no price). */
+  priceFit: boolean | null;
+  /** The home type is one the agent works with (null: the agent set no home types). */
+  typeFit: boolean | null;
 };
 
 export type RouteInput = {
   leadType: LeadType;
-  /** Pro the consumer asked for (contact from a pro profile). */
+  /** ZIP code of the home the lead is about, if any. */
+  zip: string | null;
+  /** Agent the consumer asked for (contact from an agent profile). */
   requestedProId?: string | null;
   listingAgentId?: string | null;
-  /** The listing's own owner (landlord or FSBO seller): rental inquiries go to them directly. */
+  /** The listing's own owner (a landlord posting a rental): rental inquiries go to them directly. */
   listingOwnerProId?: string | null;
   routeToListingAgent: boolean;
-  /** Pros who already had this lead (reassignment). */
+  /** Agents who already had this lead (reassignment). */
   exclude: string[];
   candidates: Candidate[];
 };
@@ -60,13 +62,21 @@ export type RouteDecision =
   | { assign: string; reason: string; considered: string[] }
   | { assign: null; reason: string; considered: string[] };
 
-const eligible = (c: Candidate, type: string, exclude: Set<string>) =>
-  c.status === "active" && c.isAccepting && c.proType === type && c.assignedToday < c.capPerDay && !exclude.has(c.proId);
+const eligible = (c: Candidate, exclude: Set<string>) =>
+  c.status === "active" && c.isAccepting && c.proType === "agent" && c.assignedToday < c.capPerDay && !exclude.has(c.proId);
 
-/** docs/03 step 5: fewest leads today, then fastest response, then best rating. */
+/** How well an agent suits the lead: a price in their range counts most, then the home type. */
+export function suitability(c: Candidate): number {
+  const price = c.priceFit === true ? 2 : c.priceFit === false ? -2 : 0;
+  const type = c.typeFit === true ? 1 : c.typeFit === false ? -1 : 0;
+  return price + type;
+}
+
+/** Most suitable first, then fewest leads today, fastest response, best rating. */
 export function rankCandidates(cs: Candidate[]): Candidate[] {
   return [...cs].sort(
     (a, b) =>
+      suitability(b) - suitability(a) ||
       a.assignedToday - b.assignedToday ||
       (a.responseTimeMinutes ?? 9999) - (b.responseTimeMinutes ?? 9999) ||
       (b.rating ?? 0) - (a.rating ?? 0) ||
@@ -76,10 +86,9 @@ export function rankCandidates(cs: Candidate[]): Candidate[] {
 
 export function decideRoute(input: RouteInput): RouteDecision {
   const exclude = new Set(input.exclude);
-  const type = targetProType(input.leadType);
   const byId = new Map(input.candidates.map((c) => [c.proId, c]));
 
-  // Listings posted by their owner (landlord or FSBO seller): every consumer lead goes to the owner.
+  // Rentals posted by their landlord on Glowy Homes: inquiries go to the landlord.
   const ownerTypes: LeadType[] = ["tour", "contact", "rental_inquiry", "rental_application"];
   if (ownerTypes.includes(input.leadType) && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
     return { assign: input.listingOwnerProId, reason: "listing owner", considered: [input.listingOwnerProId] };
@@ -92,31 +101,35 @@ export function decideRoute(input: RouteInput): RouteDecision {
     }
   }
 
-  if (input.routeToListingAgent && input.listingAgentId && type === "agent") {
+  if (input.routeToListingAgent && input.listingAgentId) {
     const c = byId.get(input.listingAgentId);
-    if (c && eligible(c, "agent", exclude)) return { assign: c.proId, reason: "listing agent", considered: [c.proId] };
+    if (c && eligible(c, exclude)) return { assign: c.proId, reason: "listing agent", considered: [c.proId] };
   }
 
-  // docs/03 step 4: service area must contain the lead's region, neighborhood first, then city.
-  const pool = input.candidates.filter((c) => c.areaMatch !== null && eligible(c, type, exclude));
-  const considered = pool.map((c) => c.proId);
-  const neighborhood = rankCandidates(pool.filter((c) => c.areaMatch === "neighborhood"));
-  if (neighborhood.length) return { assign: neighborhood[0].proId, reason: "neighborhood coverage, fewest leads today", considered };
-  const city = rankCandidates(pool.filter((c) => c.areaMatch === "city"));
-  if (city.length) return { assign: city[0].proId, reason: "city coverage, fewest leads today", considered };
+  if (!input.zip) return { assign: null, reason: "the lead has no ZIP code to match", considered: [] };
 
-  const covering = input.candidates.filter((c) => c.areaMatch !== null && c.proType === type);
+  // The agent must cover the home's ZIP code.
+  const pool = input.candidates.filter((c) => c.zipMatch && eligible(c, exclude));
+  const considered = pool.map((c) => c.proId);
+  const ranked = rankCandidates(pool);
+  if (ranked.length) {
+    const best = ranked[0];
+    const why = [best.priceFit ? "price in range" : null, best.typeFit ? "home type match" : null].filter(Boolean).join(", ");
+    return { assign: best.proId, reason: `covers ZIP ${input.zip}${why ? `, ${why}` : ""}, fewest leads today among the best suited`, considered };
+  }
+
+  const covering = input.candidates.filter((c) => c.zipMatch && c.proType === "agent");
   const reason = !covering.length
-    ? `no ${type} covers this area`
+    ? `no agent covers ZIP ${input.zip}`
     : covering.every((c) => c.assignedToday >= c.capPerDay || exclude.has(c.proId))
-      ? "every covering pro is at their daily cap or already had this lead"
-      : "no covering pro is active and accepting leads";
+      ? "every agent covering this ZIP code is at their daily cap or already had this lead"
+      : "no agent covering this ZIP code is active and accepting leads";
   return { assign: null, reason, considered };
 }
 
-/** docs/03 step 9: how long a pro has to respond before reassignment. */
-export function responseWindowMs(proType: string): number {
+/** How long an agent has to respond before the lead moves to the next suitable agent. */
+export function responseWindowMs(): number {
   const override = Number(process.env.LEAD_REASSIGN_SECONDS);
   if (Number.isFinite(override) && override > 0) return override * 1000;
-  return proType === "lender" ? 4 * 3600_000 : 30 * 60_000;
+  return 30 * 60_000;
 }

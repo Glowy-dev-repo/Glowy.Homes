@@ -26,8 +26,7 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
   {
     title: "Professionals",
     links: [
-      { label: "For agents", href: "/pro" },
-      { label: "For lenders", href: "/pro" },
+      { label: "Become a partner agent", href: "/pro" },
       { label: "For landlords", href: "/landlord" },
     ],
   },
@@ -36,8 +35,8 @@ export const footerNav: { title: string; links: NavLink[] }[] = [
     links: [
       { label: "Homes for sale", href: "/search?type=sale" },
       { label: "Homes for rent", href: "/search?type=rent" },
-      { label: "Mortgage calculator", href: "/mortgage" },
-      { label: "List your home", href: "/sell" },
+      { label: "Home values", href: "/home-value" },
+      { label: "Selling with an agent", href: "/sell" },
     ],
   },
 ];

@@ -7,7 +7,7 @@ import { SaveButton } from "@/components/listing/saved-homes";
 import { Button } from "@/components/ui/button";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PAGE_SIZE, SORTS, type SearchParams, type SearchResult } from "@/types/search";
+import { MAX_PAGE, PAGE_SIZE, SORTS, type SearchParams, type SearchResult } from "@/types/search";
 import { SORT_LABELS } from "./filter-options";
 import { useHover } from "./search-state";
 
@@ -38,7 +38,8 @@ export function ResultsList({
   useEffect(() => setHydrated(true), []);
   const { hoveredId, setHoveredId } = useHover();
   const total = result?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pages = Math.min(MAX_PAGE, Math.max(1, Math.ceil(total / PAGE_SIZE)));
+  const capped = total > MAX_PAGE * PAGE_SIZE;
   const noun = params.type === "rent" ? (total === 1 ? "rental" : "rentals") : total === 1 ? "home" : "homes";
 
   return (
@@ -107,12 +108,17 @@ export function ResultsList({
                 <ChevronLeft aria-hidden />
               </Button>
               <span className="px-3 text-body text-neutral-700">
-                Page {params.page} of {formatNumber(pages)}
+                Page {Math.min(params.page, pages)} of {formatNumber(pages)}
               </span>
               <Button variant="secondary" size="icon" aria-label="Next page" disabled={params.page >= pages} onClick={() => onPage(params.page + 1)}>
                 <ChevronRight aria-hidden />
               </Button>
             </nav>
+          )}
+          {capped && (
+            <p className="mt-3 text-center text-small text-neutral-600" data-testid="results-capped">
+              Showing the first {formatNumber(pages * PAGE_SIZE)} homes. Narrow your search to see the rest.
+            </p>
           )}
         </>
       )}

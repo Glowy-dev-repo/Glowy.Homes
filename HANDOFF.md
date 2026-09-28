@@ -9,11 +9,11 @@ Not deployed yet. The code has not left this computer: pushing and deploying wai
 Hosting is set up for Render. `render.yaml` defines the web service, a Render Postgres 16 database with PostGIS, and `/api/health` as the health check. To go live:
 
 1. Push the repository (`git push`), then in Render choose New, Blueprint, and pick the Glowy.Homes repository.
-2. In the Render dashboard, fill the secrets marked `sync: false`: at least `RESEND_API_KEY` and `AUTH_SECRET`; optionally Google OAuth, MapTiler, Inngest, R2, Sentry, Turnstile and Anthropic.
+2. In the Render dashboard, fill the secrets marked `sync: false`: at least `RESEND_API_KEY`, `AUTH_SECRET` and the broker details (`BROKERAGE_NAME`, `BROKER_NAME`, `BROKER_DRE_LICENSE`); optionally Google OAuth, MapTiler, Inngest, R2, Sentry, Turnstile and Anthropic.
 3. Load the demo data once from the Render shell: `ALLOW_REMOTE_SEED=1 npm run db:seed`.
 4. Verify glowy.homes in Resend and add the DNS records it gives you in Squarespace, keeping the existing email security records.
 5. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
-6. Run Lighthouse on the preview URL for `/search?city=toronto` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
+6. Run Lighthouse on the preview URL for `/search?city=los-angeles` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
 
 The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowy.homes.
 
@@ -30,13 +30,13 @@ To make another existing account an admin, add `admin` to its `roles` column in 
 
 Only switch once a data agreement is signed. Never scrape (CLAUDE.md rule 1).
 
-1. Get credentials: for California, a RESO Web API feed from an MLS such as CRMLS (`RESO_BASE_URL`, `RESO_ACCESS_TOKEN`), usually through a participating brokerage. For Canada it would be CREA DDF (`CREA_DDF_CLIENT_ID`, `CREA_DDF_CLIENT_SECRET`).
+1. Get credentials: the broker applies for IDX with CSMAR (Flexmls). Once approved, the Spark API (RESO Web API) gives `RESO_BASE_URL` and `RESO_ACCESS_TOKEN`. For Canada it would be CREA DDF (`CREA_DDF_CLIENT_ID`, `CREA_DDF_CLIENT_SECRET`).
 2. Write the adapter in `src/lib/ingestion/adapters/` by implementing `ListingFeedAdapter` from `src/lib/ingestion/types.ts`:
    `fetchChanged(cursor, pageSize)` pages through listings changed since the cursor, and `normalize(raw)` maps one record to `NormalizedListing`. `synthetic.ts` is the reference implementation.
 3. Return the new adapter from `getAdapter()` in `src/lib/ingestion/adapters/index.ts`, where the `reso` and `crea_ddf` cases currently throw a clear error.
 4. Set `LISTING_FEED=reso` (or `crea_ddf`) in the environment and `listing_feed` in the CLAUDE.md brand config, then run `npm run brand:sync`.
 5. The `ingest_feed` Inngest job runs the adapter on its schedule. Everything downstream (upserts, price history, media processing, region stats, valuations, alerts) already works on normalized listings.
-6. Before switching, clear the synthetic data. Show the brokerage attribution and disclaimers the agreement requires; the listing page already shows "Listing courtesy of" and a reliability disclaimer.
+6. Before switching, clear the synthetic data. The CSMAR display rules are already built (assumption 121); the MLS disclaimer replaces the demo note automatically once `listing_feed` is not synthetic.
 
 `csv` is accepted as a value but no CSV importer is built.
 
@@ -161,6 +161,12 @@ Every choice made where the spec was silent, copied from PROGRESS.md.
 115. Market: fair housing wording and moderation follow the federal Fair Housing Act and California law (including source of income, so "no Section 8" is flagged), the privacy page adds California privacy rights and says Social Security number, and lead consent is noted as CAN-SPAM and TCPA. These still need a lawyer's review before launch (assumption 105).
 116. Map: without a MapTiler key the map uses OpenFreeMap (free, no key, OpenStreetMap data, commercial use allowed with the attribution shown on the map). NEXT_PUBLIC_MAP_STYLE_URL can point elsewhere, and NEXT_PUBLIC_MAP_STYLE=outline draws only our region outlines for offline runs. Searches without a place open on the whole market, and clusters are sized for that view.
 117. Photos: demo listings use original illustrations drawn per home type (detached, semi, townhouse row, condo tower, multi unit) and per room caption (kitchen, living room, bedroom, bathroom, yard, balcony view and so on), labelled "Demo image". Real photos arrive only with a licensed MLS feed or from owners and landlords who upload their own.
+118. Business model: Glowy Homes is a lead generation site for partner real estate agents (owner's decision). It does not sell homes itself. Mortgage pages, affordability and monthly cost calculators, preapproval leads, lender accounts and owner self listing for sale are removed; this replaces assumptions 47, 79, 81 and 114. Homes for sale come only from the MLS feed; owners and landlords can still post rentals.
+119. Lead routing: a lead goes to a partner agent who serves the home's ZIP code (the first five digits of the property's postal code), replacing neighborhood and city service areas (assumption 71 still applies to an agent the consumer picks by name). Among agents covering the ZIP code, the most suitable wins: the home's price inside the agent's price range scores 2 (outside scores minus 2, no range scores 0), and a matching home type scores 1 (a mismatch scores minus 1). Ties go to fewest leads today, then fastest response, then highest rating. Daily caps, pending and paused agents, and reassignment after 30 minutes work as before. A lead in a ZIP code no agent serves stays unassigned for an admin, with the reason "no agent covers ZIP".
+120. Partner signup: agents give a California DRE license number, choose 1 to 30 ZIP codes (by city, with an "All ZIP codes" shortcut), and may set a price range and home types. Only agents and landlords can sign up.
+121. MLS display rules (CSMAR Rules and Regulations, section 12.16, November 2025): each listing shows "Listed by agent of brokerage" next to the key facts, the listing office phone and any co listing agent; pages with MLS data show the source MLS, the last feed update, the MLS disclaimer and the personal, non commercial use notice; search returns at most 500 results (12 pages of 40); listings a seller keeps off the internet are never shown, withheld addresses read "Address not disclosed" and drop off the map, and a seller can ask for the estimate to be hidden (admin, Seller requests). Every contact button says the request goes to a Glowy Homes partner agent for that ZIP code, not to the listing agent. Demo data shows a demo note instead of the MLS disclaimer.
+122. Brokerage identity: the footer shows the brokerage name, broker and DRE license number once BROKERAGE_NAME, BROKER_NAME and BROKER_DRE_LICENSE are set (plus optional BROKER_PHONE, BROKER_EMAIL, MLS_NAME, MLS_SHORT_NAME). The admin overview warns while they are missing. The broker, not Glowy Homes, signs the IDX agreement and notifies the MLS of the site.
+123. Licensed feed: the MLS is CSMAR on Flexmls; the feed will come through the Spark API (RESO Web API) once the broker's IDX application is approved. Until then the site runs on synthetic data.
 
 ## 5. Top ten things to build next
 

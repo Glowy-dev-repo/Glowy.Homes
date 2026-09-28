@@ -14,7 +14,7 @@ export default function TermsPage() {
       <h2>Estimates</h2>
       <p>{ESTIMATE_DISCLAIMER} Estimates show a range and a confidence level. Do not rely on an estimate alone when you buy, sell, rent, borrow or insure a home.</p>
       <h2>Professionals</h2>
-      <p>Agents, lenders and landlords on {brand.name} are independent. We do not employ them and do not guarantee their services, availability, response times, approvals or outcomes.</p>
+      <p>Agents and landlords on {brand.name} are independent. We do not employ them and do not guarantee their services, availability, response times, approvals or outcomes.</p>
       <h2>Your account and content</h2>
       <ul>
         <li>Keep your account secure and your information accurate.</li>

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 type Inquiry = { id: string; leadType: string; status: string; createdAt: string; address: string | null; listingId: string | null; proName: string | null; proSlug: string | null; brokerage: string | null; reviewed: boolean };
 type Msg = { id: string; body: string; mine: boolean; senderName: string | null; createdAt: string };
 
-const TYPE: Record<string, string> = { tour: "Tour request", contact: "Question", sell: "Selling", preapproval: "Preapproval", rental_inquiry: "Rental inquiry", rental_application: "Rental application" };
+const TYPE: Record<string, string> = { tour: "Tour request", contact: "Question", sell: "Selling", rental_inquiry: "Rental inquiry", rental_application: "Rental application" };
 const STATUS: Record<string, string> = { new: "Sent", contacted: "In touch", qualified: "In touch", touring: "Touring", under_contract: "Under contract", closed: "Closed", lost: "Closed", unassigned: "Matching you with a professional" };
 
 /** One inquiry: who has it, its status, the message thread, and a review once closed (docs/01 P6, P8). */

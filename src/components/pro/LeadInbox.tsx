@@ -21,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = {
   lost: "Lost",
   unassigned: "Unassigned",
 };
-const TYPE_LABEL: Record<string, string> = { tour: "Tour", contact: "Question", sell: "Seller", preapproval: "Preapproval", rental_inquiry: "Rental", rental_application: "Application" };
+const TYPE_LABEL: Record<string, string> = { tour: "Tour", contact: "Question", sell: "Seller", rental_inquiry: "Rental", rental_application: "Application" };
 
 type InboxData = { items: InboxLead[]; stats: { newToday: number; thisMonth: number; medianResponse: number | null; capRemaining: number } };
 type Detail = { lead: LeadDetail; activity: { viewed: { id: string; address: string; price: number; at: string }[]; saved: { id: string; address: string; price: number; at: string }[]; searches: { name: string; at: string }[] }; messages: Message[] };

@@ -22,12 +22,16 @@ test.describe("listing detail page", () => {
     const { path } = await sampleListingPath();
     await page.goto(path);
     const headings = await page.locator("main h2").allTextContents();
-    const order = ["Our estimate", "Key facts", "About this home", "Facts and features", "Price history", "Monthly cost", "Neighborhood", "Similar homes", "Listing agent"];
+    const order = ["Our estimate", "Key facts", "About this home", "Facts and features", "Price history", "Neighborhood", "Similar homes", "Listing information"];
     const positions = order.map((h) => headings.findIndex((t) => t.toLowerCase().startsWith(h.toLowerCase())));
     expect(positions.every((p) => p >= 0), JSON.stringify(headings)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
     await expect(page.getByTestId("similar-homes").getByTestId("listing-card")).toHaveCount(6);
     await expect(page.getByTestId("estimate-disclaimer")).toContainText("not an appraisal");
+    // MLS display rules: "Listed by" near the facts, who a request reaches, and the disclaimer.
+    await expect(page.getByTestId("listed-by")).toContainText(/^Listed by .+ of .+/);
+    await expect(page.getByTestId("cta-note")).toContainText("not to the listing agent");
+    await expect(page.getByTestId("mls-disclaimer")).toBeVisible();
   });
 
   test("gallery opens full screen and moves with the keyboard", async ({ page }) => {
@@ -43,19 +47,6 @@ test.describe("listing detail page", () => {
     await expect(dialog.getByRole("heading")).not.toContainText(/^1 of/);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
-  });
-
-  test("monthly cost inputs persist across listings", async ({ page, isMobile }) => {
-    test.skip(isMobile, "local storage behaviour is viewport independent");
-    // Below 20% down, US lenders typically require private mortgage insurance.
-    const { path } = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.price < 900000");
-    await page.goto(path);
-    const calc = page.locator("#monthly-cost");
-    await calc.getByLabel("Down payment (%)").fill("10");
-    await expect(calc.getByTestId("monthly-cost")).toContainText("private mortgage insurance");
-    const other = await sampleListingPath("l.listing_type = 'sale' and l.status = 'active' and l.property_type = 'condo' and l.price < 900000");
-    await page.goto(other.path);
-    await expect(page.locator("#monthly-cost").getByLabel("Down payment (%)")).toHaveValue("10");
   });
 
   test("slug mismatch redirects to the canonical URL", async ({ page }) => {

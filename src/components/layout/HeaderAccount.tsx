@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 export function HeaderAccount() {
   const { data, status } = useSession();
   const roles = data?.user?.roles ?? [];
-  const isPro = roles.includes("agent") || roles.includes("lender");
+  const isPro = roles.includes("agent");
 
   if (status === "loading") return <div className="h-11 w-40" aria-hidden />;
 
@@ -31,7 +31,7 @@ export function HeaderAccount() {
         </Button>
       )}
       <Button asChild>
-        {isPro ? <Link href="/pro/leads">Pro</Link> : <Link href="/sell">List your home</Link>}
+        {isPro ? <Link href="/pro/leads">My leads</Link> : <Link href="/pro">For agents</Link>}
       </Button>
     </div>
   );

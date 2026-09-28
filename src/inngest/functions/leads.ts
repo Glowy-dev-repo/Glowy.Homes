@@ -32,7 +32,7 @@ export const routeLeadFn = inngest.createFunction(
       const [pro] = await step.run(`pro-type-${i}`, () => sqlClient<{ proType: string }[]>`select pro_type as "proType" from pros where id = ${proId}`);
       // Owners and landlords answer about their own listing; there is nobody to reassign to.
       if (["landlord", "owner", "property_manager"].includes(pro?.proType ?? "")) break;
-      await step.sleep(`response-window-${i}`, responseWindowMs(pro?.proType ?? "agent"));
+      await step.sleep(`response-window-${i}`, responseWindowMs());
       const checked = await step.run(`check-response-${i}`, () => checkFirstResponse(sqlClient, leadId, proId));
       if (checked.status === "responded") break;
       outcome = checked;

@@ -25,9 +25,9 @@ services:
         fromDatabase:
           name: glowy-homes-db
           property: connectionString
-      # The Render address until glowy.homes points here; then change it to https://glowy.homes and redeploy.
+      # The live domain. Sign in links always use the address the visitor came in on.
       - key: NEXT_PUBLIC_APP_URL
-        value: https://glowy-homes.onrender.com
+        value: https://glowy.homes
       - key: AUTH_SECRET
         generateValue: true
       - key: EMAIL_FROM
@@ -64,3 +64,17 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: BROKERAGE_NAME
+        sync: false
+      - key: BROKER_NAME
+        sync: false
+      - key: BROKER_DRE_LICENSE
+        sync: false
+      - key: BROKER_PHONE
+        sync: false
+      - key: BROKER_EMAIL
+        sync: false
+      - key: MLS_NAME
+        value: Conejo Simi Moorpark Association of REALTORS®
+      - key: MLS_SHORT_NAME
+        value: CSMAR MLS

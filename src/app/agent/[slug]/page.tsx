@@ -1,6 +1,7 @@
 import { BadgeCheck, Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { brand } from "@/config/brand";
 import { notFound } from "next/navigation";
 import { LeadDialog } from "@/components/lead/LeadDialog";
 import { ListingCard } from "@/components/listing/ListingCard";
@@ -21,10 +22,10 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pro = await proBySlug((await params).slug);
   if (!pro) return { title: "Profile not found" };
-  const role = pro.proType === "lender" ? "Mortgage professional" : "Real estate agent";
+  const role = "Real estate agent";
   return {
     title: `${pro.displayName}, ${role}`,
-    description: `${pro.displayName}${pro.brokerageName ? ` of ${pro.brokerageName}` : ""}. ${role} serving ${pro.areas.slice(0, 3).map((a) => a.name).join(", ")}.`,
+    description: `${pro.displayName}${pro.brokerageName ? ` of ${pro.brokerageName}` : ""}. ${role} serving ${[...new Set(pro.zips.map((z) => z.cityName).filter(Boolean))].slice(0, 3).join(", ") || brand.market.region}.`,
     alternates: { canonical: `/agent/${pro.slug}` },
   };
 }
@@ -45,7 +46,7 @@ export default async function AgentProfilePage({ params }: Props) {
       where l.listing_agent_id = ${pro.id} and l.status in ('sold', 'leased') order by l.sold_date desc nulls last limit 6`,
     approvedReviews(pro.id),
   ]);
-  const role = pro.proType === "lender" ? "Mortgage professional" : "Real estate agent";
+  const role = "Real estate agent";
 
   return (
     <div className="container-page py-10">
@@ -88,18 +89,20 @@ export default async function AgentProfilePage({ params }: Props) {
 
       {pro.bio && <p className="mt-6 max-w-prose whitespace-pre-line text-body text-neutral-800">{pro.bio}</p>}
 
-      <section aria-labelledby="areas-h" className="mt-8">
-        <h2 id="areas-h" className="text-h2">Areas served</h2>
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {pro.areas.map((a) => (
-            <li key={a.slug}>
-              <Link href={a.type === "city" ? `/homes/${a.slug}` : `/homes/${a.citySlug}/${a.slug}`} className="inline-flex min-h-11 items-center rounded-pill border border-neutral-300 px-4 text-small hover:border-neutral-400">
-                {a.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {pro.zips.length > 0 && (
+        <section aria-labelledby="areas-h" className="mt-8">
+          <h2 id="areas-h" className="text-h2">ZIP codes served</h2>
+          <ul className="mt-2 flex flex-wrap gap-2" data-testid="agent-zips">
+            {pro.zips.map((z) => (
+              <li key={z.zip}>
+                <Link href={z.citySlug ? `/search?city=${z.citySlug}&q=${z.zip}` : `/search?q=${z.zip}`} className="tabular inline-flex min-h-11 items-center rounded-pill border border-neutral-300 px-4 text-small hover:border-neutral-400">
+                  {z.zip}{z.cityName ? `, ${z.cityName}` : ""}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {active.length > 0 && (
         <section aria-labelledby="active-h" className="mt-10">

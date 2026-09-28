@@ -74,8 +74,14 @@ export const NormalizedListingSchema = z.object({
       phone: z.string().optional(),
       licenseNumber: z.string().optional(),
       brokerage: z.string(),
+      /** Listing office phone (MLS ListOfficePhone). */
+      officePhone: z.string().optional(),
+      coAgentName: z.string().optional(),
+      coBrokerage: z.string().optional(),
     })
     .optional(),
+  /** Seller display choices from the MLS (RESO InternetEntireListingDisplayYN, InternetAddressDisplayYN). */
+  display: z.object({ internet: z.boolean().optional(), address: z.boolean().optional() }).optional(),
   /**
    * Past events for this listing when the feed provides them (RESO history resources do).
    * Used only when the listing is first created; later changes are detected by diffing.

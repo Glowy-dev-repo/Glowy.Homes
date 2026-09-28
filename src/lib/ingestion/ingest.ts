@@ -276,20 +276,34 @@ async function ingestPage(
     virtual_tour_url: rec.virtualTourUrl ?? null,
     agent_license: rec.agent?.licenseNumber ?? null,
     brokerage_name: rec.agent?.brokerage ?? null,
+    list_agent_name: rec.agent?.name ?? null,
+    list_agent_phone: rec.agent?.phone ?? null,
+    list_agent_email: rec.agent?.email ?? null,
+    list_office_phone: rec.agent?.officePhone ?? null,
+    co_list_agent_name: rec.agent?.coAgentName ?? null,
+    co_list_office_name: rec.agent?.coBrokerage ?? null,
+    internet_display: rec.display?.internet ?? true,
+    address_display: rec.display?.address ?? true,
   }));
 
   const written = await sql.unsafe<{ id: string; source_listing_id: string; inserted: boolean }[]>(
     `insert into listings (property_id, listing_type, status, source, source_listing_id, source_updated_at, price,
        price_currency, original_price, sold_price, list_date, status_date, sold_date, available_date, description,
-       features, rental_terms, hoa_fee, tax_annual, virtual_tour_url, listing_agent_id, brokerage_name)
+       features, rental_terms, hoa_fee, tax_annual, virtual_tour_url, listing_agent_id, brokerage_name,
+       list_agent_name, list_agent_phone, list_agent_email, list_office_phone, co_list_agent_name, co_list_office_name,
+       internet_display, address_display)
      select x.property_id, x.listing_type, x.status, $2, x.source_listing_id, x.source_updated_at, x.price, $3,
        x.original_price, x.sold_price, x.list_date, x.status_date, x.sold_date, x.available_date, x.description,
        coalesce(x.features, '{}'::jsonb), x.rental_terms, x.hoa_fee, x.tax_annual, x.virtual_tour_url,
-       (select p.id from pros p where p.license_number = x.agent_license limit 1), x.brokerage_name
+       (select p.id from pros p where p.license_number = x.agent_license limit 1), x.brokerage_name,
+       x.list_agent_name, x.list_agent_phone, x.list_agent_email, x.list_office_phone, x.co_list_agent_name, x.co_list_office_name,
+       coalesce(x.internet_display, true), coalesce(x.address_display, true)
      from jsonb_to_recordset($1::jsonb) as x(property_id uuid, listing_type text, status text, source_listing_id text,
        source_updated_at timestamptz, price int, original_price int, sold_price int, list_date date, status_date date,
        sold_date date, available_date date, description text, features jsonb, rental_terms jsonb, hoa_fee int,
-       tax_annual int, virtual_tour_url text, agent_license text, brokerage_name text)
+       tax_annual int, virtual_tour_url text, agent_license text, brokerage_name text, list_agent_name text,
+       list_agent_phone text, list_agent_email text, list_office_phone text, co_list_agent_name text, co_list_office_name text,
+       internet_display boolean, address_display boolean)
      on conflict (source, source_listing_id) do update set
        property_id = excluded.property_id, listing_type = excluded.listing_type, status = excluded.status,
        source_updated_at = excluded.source_updated_at, price = excluded.price, original_price = excluded.original_price,
@@ -297,7 +311,11 @@ async function ingestPage(
        sold_date = excluded.sold_date, available_date = excluded.available_date, description = excluded.description,
        features = excluded.features, rental_terms = excluded.rental_terms, hoa_fee = excluded.hoa_fee,
        tax_annual = excluded.tax_annual, virtual_tour_url = excluded.virtual_tour_url,
-       listing_agent_id = excluded.listing_agent_id, brokerage_name = excluded.brokerage_name, updated_at = now()
+       listing_agent_id = excluded.listing_agent_id, brokerage_name = excluded.brokerage_name,
+       list_agent_name = excluded.list_agent_name, list_agent_phone = excluded.list_agent_phone, list_agent_email = excluded.list_agent_email,
+       list_office_phone = excluded.list_office_phone, co_list_agent_name = excluded.co_list_agent_name,
+       co_list_office_name = excluded.co_list_office_name, internet_display = excluded.internet_display,
+       address_display = excluded.address_display, updated_at = now()
      returning id, source_listing_id, (xmax = 0) as inserted`,
     [json(sql, listingRows), adapter.source, brand.currency],
   );

@@ -3,6 +3,8 @@ import { sqlClient } from "@/db";
 import { formatDate, formatNumber } from "@/lib/format";
 import { feedHealth, leadStats } from "@/server/data/admin";
 import { market } from "@/config/market";
+import { HideEstimateForm } from "@/components/admin/HideEstimateForm";
+import { brokerConfigured } from "@/config/broker";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -30,6 +32,12 @@ export default async function AdminOverview() {
   return (
     <div className="space-y-10">
       <h1 className="text-h1">Operations</h1>
+
+      {!brokerConfigured && (
+        <p role="status" className="rounded-md border border-warning/40 bg-warning/10 p-4 text-body" data-testid="broker-missing">
+          Broker details are not set. Before showing MLS listings, set BROKERAGE_NAME, BROKER_NAME, BROKER_DRE_LICENSE, BROKER_PHONE and BROKER_EMAIL so the site identifies the broker as the MLS requires.
+        </p>
+      )}
 
       {feed.signals.length > 0 && (
         <div role="alert" className="rounded-md border border-danger/40 bg-danger/5 p-4 text-body" data-testid="feed-alert">
@@ -106,6 +114,11 @@ export default async function AdminOverview() {
             </tbody>
           </table>
         </div>
+      </section>
+      <section aria-labelledby="estimate-h">
+        <h2 id="estimate-h" className="mb-2 text-h2">Seller requests</h2>
+        <p className="mb-3 max-w-2xl text-small text-neutral-600">When a listing broker tells the MLS that their seller does not want an automated estimate shown, hide it here (CSMAR Rule 12.16.15).</p>
+        <HideEstimateForm />
       </section>
     </div>
   );

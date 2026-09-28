@@ -47,6 +47,8 @@ function postalCode(hood: { postalArea: string }, street: { ldu: string }): stri
   return brand.market.country === "US" ? hood.postalArea : `${hood.postalArea} ${street.ldu}`;
 }
 
+const CO_AGENTS = ["Jordan Ellis", "Morgan Reyes", "Casey Nguyen", "Riley Patel", "Avery Brooks", "Quinn Alvarez"] as const;
+
 // ---------- types ----------
 
 export type NeighborhoodSeed = {
@@ -77,7 +79,7 @@ export type SyntheticCity = CityDef & {
 
 export type SyntheticPro = {
   key: string;
-  proType: "agent" | "lender" | "landlord" | "property_manager";
+  proType: "agent" | "landlord" | "property_manager";
   displayName: string;
   email: string;
   phone: string;
@@ -88,8 +90,12 @@ export type SyntheticPro = {
   reviewCount: number;
   responseTimeMinutes: number;
   bio: string;
-  /** City slugs, or "city/neighborhood" slugs for neighborhood coverage. */
-  serviceAreas: string[];
+  /** ZIP codes the agent receives leads for. */
+  zipCodes: string[];
+  /** Price range and home types that suit the agent (null or empty: no preference). */
+  priceMin: number | null;
+  priceMax: number | null;
+  homeTypes: string[];
   languages: string[];
 };
 
@@ -211,18 +217,21 @@ const LAST = ["Anders", "Bishop", "Chen", "Dubois", "Ellis", "Fraser", "Grant", 
 
 function buildPros(rng: Rng, cities: SyntheticCity[]): SyntheticPro[] {
   const pros: SyntheticPro[] = [];
-  const plan: [SyntheticPro["proType"], number][] = [["agent", 150], ["lender", 30], ["landlord", 12], ["property_manager", 8]];
+  const plan: [SyntheticPro["proType"], number][] = [["agent", 180], ["landlord", 12], ["property_manager", 8]];
   let n = 0;
   for (const [proType, count] of plan) {
     for (let i = 0; i < count; i++, n++) {
       const name = `${rng.pick(FIRST)} ${rng.pick(LAST)}`;
       const city = rng.weighted(Object.fromEntries(cities.map((c) => [c.slug, c.share])) as Record<string, number>);
       const cityDef = cities.find((c) => c.slug === city)!;
-      // Agents cover either a whole city or a few neighborhoods; one in twenty has no area yet.
-      let serviceAreas: string[];
-      if (proType === "agent" && i % 20 === 19) serviceAreas = [];
-      else if (rng.bool(0.4)) serviceAreas = [city];
-      else serviceAreas = sampleSubset(rng, cityDef.hoods, 2, 6).map((h) => `${city}/${h.slug}`);
+      // Agents serve a few ZIP codes in their city; one in twenty has not chosen any yet.
+      const zipCodes = proType === "agent" && i % 20 !== 19 ? sampleSubset(rng, cityDef.postalAreas, 2, 6) : [];
+      // Price bands around a typical home in the city; some agents take anything.
+      const typical = cityDef.ppsf * 1500;
+      const band = rng.pick(["any", "any", "entry", "middle", "upper"] as const);
+      const priceMin = band === "middle" ? Math.round((typical * 0.7) / 50_000) * 50_000 : band === "upper" ? Math.round((typical * 1.3) / 50_000) * 50_000 : null;
+      const priceMax = band === "entry" ? Math.round((typical * 1.1) / 50_000) * 50_000 : band === "middle" ? Math.round((typical * 1.8) / 50_000) * 50_000 : null;
+      const homeTypes = proType === "agent" && rng.bool(0.5) ? sampleSubset(rng, ["detached", "condo", "townhouse", "multi"], 1, 3) : [];
       const years = rng.int(1, 30);
       pros.push({
         key: `pro${String(n + 1).padStart(3, "0")}`,
@@ -230,14 +239,17 @@ function buildPros(rng: Rng, cities: SyntheticCity[]): SyntheticPro[] {
         displayName: name,
         email: `pro${String(n + 1).padStart(3, "0")}@example.com`,
         phone: `(${brand.market.country === "US" ? 213 : 416}) 555 01${String(n % 100).padStart(2, "0")}`,
-        brokerageName: proType === "agent" ? rng.pick(BROKERAGES) : proType === "lender" ? "Northstar Mortgage Group" : null,
-        licenseNumber: proType === "agent" || proType === "lender" ? String(4_000_000 + n * 37) : null,
+        brokerageName: proType === "agent" ? rng.pick(BROKERAGES) : null,
+        licenseNumber: proType === "agent" ? String(2_000_000 + n * 37) : null,
         yearsExperience: years,
         rating: Number(clamp(rng.normal(4.5, 0.35), 3, 5).toFixed(1)),
         reviewCount: rng.int(0, 120),
         responseTimeMinutes: rng.int(3, 90),
         bio: `${name} has helped clients in ${cityDef.name} for ${years} ${years === 1 ? "year" : "years"}.`,
-        serviceAreas,
+        zipCodes,
+        priceMin,
+        priceMax,
+        homeTypes,
         languages: rng.bool(0.3) ? ["en", rng.pick(["fr", "zh", "pa", "es", "ar", "tl"])] : ["en"],
       });
     }
@@ -512,7 +524,7 @@ function buildListing(
             furnished: r.bool(0.15),
             laundry: isCondo ? "In suite" : r.pick(["In suite", "Shared", "None"]),
             parking: (d.parking ?? 0) > 0,
-            utilities_included: sampleSubset(r, ["Water", "Heat", "Hydro", "Internet"], 0, 2),
+            utilities_included: sampleSubset(r, ["Water", "Trash", "Gas", "Electric", "Internet"], 0, 2),
             lease_min_months: 12,
             deposit: price,
           }
@@ -532,7 +544,11 @@ function buildListing(
       phone: agent.phone,
       licenseNumber: agent.licenseNumber ?? undefined,
       brokerage: agent.brokerageName ?? BROKERAGES[0],
+      officePhone: `(${brand.market.country === "US" ? 213 : 416}) 555 02${String(r.int(0, 99)).padStart(2, "0")}`,
+      ...(r.bool(0.06) ? { coAgentName: r.pick(CO_AGENTS), coBrokerage: r.pick(BROKERAGES) } : {}),
     },
+    // A few sellers withhold the address from the internet (CSMAR Rule 12.16.11).
+    display: { internet: true, address: !r.bool(0.01) },
     history,
   };
   listing.description = describe(d, features, listingType);

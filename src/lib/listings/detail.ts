@@ -60,7 +60,21 @@ export type ListingDetail = {
   agent: ListingAgent | null;
   /** Set for listings posted by owners and landlords (source fsbo or landlord). */
   contactPrefs: { preferred: "email" | "phone"; phone: string | null; showPhone: boolean } | null;
+  /** Listing attribution from the MLS (CSMAR Rule 12.16.5). */
+  listAgentName: string | null;
+  listAgentPhone: string | null;
+  listAgentEmail: string | null;
+  listOfficePhone: string | null;
+  coListAgentName: string | null;
+  coListOfficeName: string | null;
+  /** The seller asked for no automated estimate on this listing (CSMAR Rule 12.16.15). */
+  hideEstimate: boolean;
+  /** The seller withheld the street address from the internet (CSMAR Rule 12.16.11). */
+  addressDisplay: boolean;
+  sourceUpdatedAt: string | null;
 };
+
+export const ADDRESS_WITHHELD = "Address not disclosed";
 
 export function isOwnerListing(l: Pick<ListingDetail, "source">): boolean {
   return l.source === "fsbo" || l.source === "landlord";
@@ -82,19 +96,23 @@ export async function getListingDetail(id: string): Promise<ListingDetail | null
       l.hoa_fee as "hoaFee", l.tax_annual as "taxAnnual", l.virtual_tour_url as "virtualTourUrl",
       l.brokerage_name as "brokerageName", l.is_featured as "isFeatured", l.save_count as "saveCount",
       l.updated_at::text as "updatedAt", l.listing_agent_id as "agentId", l.contact_prefs as "contactPrefs",
-      json_build_object('line1', p.address_line1, 'line2', p.address_line2, 'city', p.city, 'regionCode', p.region_code,
+      l.list_agent_name as "listAgentName", l.list_agent_phone as "listAgentPhone", l.list_agent_email as "listAgentEmail",
+      l.list_office_phone as "listOfficePhone", l.co_list_agent_name as "coListAgentName", l.co_list_office_name as "coListOfficeName",
+      l.hide_estimate as "hideEstimate", l.address_display as "addressDisplay", l.source_updated_at::text as "sourceUpdatedAt",
+      json_build_object('line1', case when l.address_display then p.address_line1 else ${ADDRESS_WITHHELD} end,
+        'line2', case when l.address_display then p.address_line2 end, 'city', p.city, 'regionCode', p.region_code,
         'postalCode', p.postal_code, 'country', p.country) as address,
       ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng,
       l.property_type as "propertyType", l.beds::float8 as beds, l.baths::float8 as baths, l.sqft,
       p.lot_sqft as "lotSqft", p.year_built as "yearBuilt", p.stories, p.parking_spaces as "parkingSpaces",
-      p.facts || coalesce(p.owner_facts_override, '{}'::jsonb) as facts,
+      case when l.source in ('fsbo', 'landlord') then p.facts || coalesce(p.owner_facts_override, '{}'::jsonb) else p.facts end as facts,
       case when c.id is null then null else json_build_object('id', c.id, 'name', c.name, 'slug', c.slug, 'stats', c.stats) end as city,
       case when n.id is null then null else json_build_object('id', n.id, 'name', n.name, 'slug', n.slug, 'stats', n.stats, 'summary', n.summary) end as neighborhood
     from listings l
     join properties p on p.id = l.property_id
     left join regions c on c.id = l.city_region_id
     left join regions n on n.id = l.neighborhood_region_id
-    where l.id = ${id} and l.status not in ('draft', 'in_review', 'rejected')`;
+    where l.id = ${id} and l.status not in ('draft', 'in_review', 'rejected') and l.internet_display`;
   if (!row) return null;
 
   const [media, priceHistory, agents] = await Promise.all([
