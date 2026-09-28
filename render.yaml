@@ -74,6 +74,9 @@ services:
         sync: false
       - key: BROKER_EMAIL
         sync: false
+      # Private preview password; delete it to open the site to the public.
+      - key: PREVIEW_PASSWORD
+        sync: false
       - key: MLS_NAME
         value: Conejo Simi Moorpark Association of REALTORS®
       - key: MLS_SHORT_NAME

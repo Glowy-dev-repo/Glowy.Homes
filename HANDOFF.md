@@ -4,16 +4,17 @@ The MVP described in `docs/` is built through Phase 6. Every phase gate passes l
 
 ## 1. Deployed URL
 
-Not deployed yet. The code has not left this computer: pushing and deploying wait for the owner's go ahead (PROGRESS.md, BLOCKED 1).
+Not deployed yet. The code is on GitHub (Glowy-dev-repo/Glowy.Homes); the Render setup below is the next step (PROGRESS.md, BLOCKED 1).
 
 Hosting is set up for Render. `render.yaml` defines the web service, a Render Postgres 16 database with PostGIS, and `/api/health` as the health check. To go live:
 
 1. Push the repository (`git push`), then in Render choose New, Blueprint, and pick the Glowy.Homes repository.
 2. In the Render dashboard, fill the secrets marked `sync: false`: at least `RESEND_API_KEY`, `AUTH_SECRET` and the broker details (`BROKERAGE_NAME`, `BROKER_NAME`, `BROKER_DRE_LICENSE`); optionally Google OAuth, MapTiler, Inngest, R2, Sentry, Turnstile and Anthropic.
-3. Load the demo data once from the Render shell: `ALLOW_REMOTE_SEED=1 npm run db:seed`.
-4. Verify glowy.homes in Resend and add the DNS records it gives you in Squarespace, keeping the existing email security records.
-5. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
-6. Run Lighthouse on the preview URL for `/search?city=los-angeles` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
+3. Set `PREVIEW_PASSWORD` so the demo site stays private until the MLS feed is approved (assumption 125).
+4. Load the demo data once from this computer against the External Database URL: `DATABASE_URL=<external url> ALLOW_REMOTE_SEED=1 SEED_ADMIN_EMAIL=<your email> npm run db:seed`.
+5. Verify glowy.homes in Resend and add the DNS records it gives you in Squarespace, keeping the existing email security records.
+6. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
+7. Run Lighthouse on the preview URL for `/search?city=los-angeles` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
 
 The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowy.homes.
 
@@ -168,6 +169,8 @@ Every choice made where the spec was silent, copied from PROGRESS.md.
 122. Brokerage identity: the footer shows the brokerage name, broker and DRE license number once BROKERAGE_NAME, BROKER_NAME and BROKER_DRE_LICENSE are set (plus optional BROKER_PHONE, BROKER_EMAIL, MLS_NAME, MLS_SHORT_NAME). The admin overview warns while they are missing. The broker, not GlowHomes, signs the IDX agreement and notifies the MLS of the site.
 123. Licensed feed: the MLS is CSMAR on Flexmls; the feed will come through the Spark API (RESO Web API) once the broker's IDX application is approved. Until then the site runs on synthetic data.
 124. Brand: the name is GlowHomes (owner's decision; the domain stays glowy.homes). The logo is the owner's file set (public/brand): the house mark from the logo is drawn beside the GlowHomes name in bold Jost, in the logo blue #118DF0 on white and in white on dark; browser and phone icons are the owner's favicon files. The logo blue is used for the logo only; buttons and links keep the royal blue accent, which passes text contrast on white.
+125. Private preview: while PREVIEW_PASSWORD is set, every page and API route asks for that password first (a 30 day cookie; changing the password locks everyone out again), wrong guesses are capped at 5 a minute per address, and the whole site is hidden from search engines (X-Robots-Tag and robots.txt). Health checks, Inngest and the password page stay open. Deleting the variable opens the site; no rebuild needed. A "Demo data" banner shows on every page while listing_feed is synthetic.
+126. Sessions last a fixed 30 days from sign in. Reading the session no longer re-issues the cookie, and the middleware only reads it, because a read in flight during sign out could land afterwards and sign the user back in (seen as an intermittent sign out test failure; it existed before and is now fixed).
 
 ## 5. Top ten things to build next
 

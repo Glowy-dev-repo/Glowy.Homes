@@ -5,6 +5,7 @@ test.describe("home page shell", () => {
     await page.goto("/");
 
     await expect(page).toHaveTitle(/GlowHomes/);
+    await expect(page.getByTestId("demo-banner")).toContainText("Demo data");
     await expect(page.getByRole("banner").getByRole("link", { name: /GlowHomes home/ })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
