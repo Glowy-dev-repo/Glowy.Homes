@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <Prose title={`About ${brand.name}`}>
-      <p>{brand.name} is a home search site for {brand.market.region}. You can search homes for sale and for rent on a map, see what a home is likely worth, save homes and searches, and reach a local agent, lender or landlord when you are ready.</p>
+      <p>{brand.name} is a home search site for {brand.market.region}. You can search homes for sale and for rent on a map, see what a home is likely worth, save homes and searches, and reach a local partner agent or landlord when you are ready.</p>
       <h2>What we believe</h2>
       <ul>
         <li>Estimates should be honest. Every estimate shows a range and a confidence level, and our <Link href="/methodology" className="text-accent hover:underline">methodology page</Link> publishes how accurate we are.</li>

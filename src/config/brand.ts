@@ -2,7 +2,7 @@
 // Do not edit by hand. Run: npm run brand:sync
 
 export const brand = {
-  name: "Glowy Homes",
+  name: "GlowHomes",
   short: "GH",
   domain: "glowy.homes",
   tagline: "Find your place.",

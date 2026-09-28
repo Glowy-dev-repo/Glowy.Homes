@@ -63,7 +63,7 @@ export function MobileNav() {
             )}
             <Button asChild>
               <Link href="/sell" onClick={close}>
-                List your home
+                Thinking of selling?
               </Link>
             </Button>
           </div>

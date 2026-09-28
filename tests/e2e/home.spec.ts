@@ -4,8 +4,8 @@ test.describe("home page shell", () => {
   test("renders header, hero search and footer", async ({ page, isMobile }) => {
     await page.goto("/");
 
-    await expect(page).toHaveTitle(/Glowy Homes/);
-    await expect(page.getByRole("banner").getByRole("link", { name: /Glowy Homes home/ })).toBeVisible();
+    await expect(page).toHaveTitle(/GlowHomes/);
+    await expect(page.getByRole("banner").getByRole("link", { name: /GlowHomes home/ })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     const tabs = page.getByRole("tablist", { name: "Search type" });

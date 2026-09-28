@@ -11,14 +11,12 @@ import { Sparkline } from "./Sparkline";
  */
 export function EstimateCard({
   estimate,
-  payment,
   methodologyHref,
   agentOpinionHref,
   size = "default",
   className,
 }: {
   estimate: PropertyEstimate | null;
-  payment?: { low: number; high: number } | null;
   methodologyHref: string;
   agentOpinionHref: string;
   size?: "default" | "large";
@@ -57,32 +55,15 @@ export function EstimateCard({
         </div>
       )}
 
-      {(estimate?.rent || payment) && (
+      {estimate?.rent && (
         <dl className="mt-3 space-y-1 border-t border-neutral-200 pt-3 text-small">
-          {estimate?.rent && (
-            <div className="flex justify-between gap-3">
-              <dt className="text-neutral-600">Rent estimate</dt>
-              <dd className="tabular text-right text-neutral-900" data-testid="rent-estimate">
-                {formatPrice(estimate.rent.low, { listingType: "rent" })} to {formatPrice(estimate.rent.high, { listingType: "rent" })}
-              </dd>
-            </div>
-          )}
-          {payment && (
-            <div className="flex justify-between gap-3">
-              <dt className="text-neutral-600">Estimated payment</dt>
-              <dd className="tabular text-right text-neutral-900">
-                <a href="#monthly-cost" className="hover:underline">
-                  {formatPrice(Math.round(payment.low))} to {formatPrice(Math.round(payment.high))}/mo
-                </a>
-              </dd>
-            </div>
-          )}
+          <div className="flex justify-between gap-3">
+            <dt className="text-neutral-600">Rent estimate</dt>
+            <dd className="tabular text-right text-neutral-900" data-testid="rent-estimate">
+              {formatPrice(estimate.rent.low, { listingType: "rent" })} to {formatPrice(estimate.rent.high, { listingType: "rent" })}
+            </dd>
+          </div>
         </dl>
-      )}
-      {payment && (
-        <p className="mt-1 text-small text-neutral-600">
-          Payment confidence: <span className="font-semibold text-neutral-800">Medium</span>. Assumes 20% down and a typical rate; not a loan offer.
-        </p>
       )}
 
       {value && (

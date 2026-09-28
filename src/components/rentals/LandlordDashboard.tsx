@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatPrice } from "@/lib/format";
 import type { RentalApplicationProfile } from "@/lib/listings/user-listing-schema";
 import { cn } from "@/lib/utils";
+
+const PUBLIC_STATUSES = new Set(["active", "sold", "leased"]);
 
 type Listing = { id: string; listingType: string; status: string; price: number; address: string; createdAt: string; inquiries: number; applications: number; isFeatured: boolean };
 type Inquiry = { id: string; leadType: string; consumerName: string; consumerEmail: string; consumerPhone: string | null; message: string | null; createdAt: string; address: string };
@@ -53,7 +56,12 @@ export function LandlordDashboard({ listings, inquiries, applications }: { listi
           {listings.map((l) => (
             <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 p-4" data-testid="owner-listing" data-status={l.status}>
               <div>
-                <a href={`/listing/${l.id}`} className="text-h3 hover:underline">{l.address}</a>
+                {/* Listings waiting for review or rejected have no public page yet. */}
+                {PUBLIC_STATUSES.has(l.status) ? (
+                  <Link href={`/listing/${l.id}`} className="text-h3 hover:underline">{l.address}</Link>
+                ) : (
+                  <p className="text-h3">{l.address}</p>
+                )}
                 <p className="text-small text-neutral-600">
                   {STATUS_LABEL[l.status] ?? l.status} · {formatPrice(l.price, { listingType: l.listingType as "sale" | "rent" })} · {l.inquiries} inquiries{l.listingType === "rent" ? ` · ${l.applications} applications` : ""}
                 </p>

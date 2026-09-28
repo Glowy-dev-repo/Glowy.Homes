@@ -1,4 +1,4 @@
-# Glowy Homes
+# GlowHomes
 
 A real estate marketplace for California: search homes for sale and for rent on a map, see an estimate for any address, and connect with local agents, lenders and landlords. Build status lives in `PROGRESS.md`.
 

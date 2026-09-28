@@ -1,6 +1,6 @@
 import type { LeadType } from "@/db/schema/leads";
 
-// route_lead decision logic. Glowy Homes is a lead generation business for real estate agents:
+// route_lead decision logic. GlowHomes is a lead generation business for real estate agents:
 // a lead goes to the partner agent covering the home's ZIP code who suits it best. Pure functions:
 // the database layer gathers candidates and signals, these decide. Unit tested with fixed scenarios.
 
@@ -88,7 +88,7 @@ export function decideRoute(input: RouteInput): RouteDecision {
   const exclude = new Set(input.exclude);
   const byId = new Map(input.candidates.map((c) => [c.proId, c]));
 
-  // Rentals posted by their landlord on Glowy Homes: inquiries go to the landlord.
+  // Rentals posted by their landlord on GlowHomes: inquiries go to the landlord.
   const ownerTypes: LeadType[] = ["tour", "contact", "rental_inquiry", "rental_application"];
   if (ownerTypes.includes(input.leadType) && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
     return { assign: input.listingOwnerProId, reason: "listing owner", considered: [input.listingOwnerProId] };

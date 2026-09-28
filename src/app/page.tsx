@@ -31,7 +31,7 @@ const ENTRY_POINTS = [
   },
   {
     title: "Sell your home",
-    body: "See an estimate of what your home is worth, then list it yourself or talk to a local agent.",
+    body: "See an estimate of what your home is worth, then talk to a local partner agent.",
     href: "/sell",
     cta: "Explore selling",
     icon: Building2,

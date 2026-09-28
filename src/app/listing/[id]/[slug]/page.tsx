@@ -85,7 +85,6 @@ export default async function ListingPage({ params }: Props) {
   const facts = [formatBeds(l.beds), formatBaths(l.baths), formatArea(l.sqft)].filter(Boolean);
   const jsonLd = listingJsonLd(l, appUrl(), l.media.slice(0, 6).map((m) => `${appUrl()}${mediaUrl(m.storageKey, 1600)}`));
   const hoodStats = l.neighborhood?.stats ?? {};
-  const sellHref = `/sell?property=${l.propertyId}`;
   const recipientNote = owner ? undefined : `This goes to a ${brand.name} partner agent who serves this ZIP code, not to the listing agent.`;
 
   return (
@@ -188,7 +187,7 @@ export default async function ListingPage({ params }: Props) {
             <EstimateCard
               estimate={estimate}
               methodologyHref={`/home-value/${l.propertyId}/${slug}`}
-              agentOpinionHref={sellHref}
+              agentOpinionHref={`/home-value/${l.propertyId}/${slug}#sell`}
             />
             )}
           </div>

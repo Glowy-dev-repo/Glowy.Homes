@@ -17,7 +17,7 @@ export const PhotoRef = z
 
 export const UserListingInput = z
   .object({
-    // Only landlords post on Glowy Homes; homes for sale come from the MLS.
+    // Only landlords post on GlowHomes; homes for sale come from the MLS.
     listingType: z.enum(["rent"]),
     propertyId: z.string().uuid("Choose the address first."),
     propertyType: z.enum(PROPERTY_TYPES).exclude(["land"]),
