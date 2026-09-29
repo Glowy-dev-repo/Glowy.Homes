@@ -16,7 +16,7 @@ You are the lead full stack engineer for this repository. Your job is to build t
 ## 2. BRAND CONFIG (the human fills this in before Phase 0)
 
 ```yaml
-brand_name: "GlowHomes"           # replace with your brand
+brand_name: "Glowy Homes"           # replace with your brand
 brand_short: "GH"                   # 2 to 3 letters for favicons and logos
 domain: "glowy.homes"               # production domain
 tagline: "Find your place."

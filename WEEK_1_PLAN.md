@@ -1,8 +1,8 @@
-# GlowHomes: Week 1 plan
+# Glowy Homes: Week 1 plan
 
 Monday September 28 to Friday October 2, 2026.
 
-The goal for the week: by Friday, GlowHomes runs live on the internet at glowy.homes with demo data, sign in emails work, and you know exactly what is needed to put real California listings on it.
+The goal for the week: by Friday, Glowy Homes runs live on the internet at glowy.homes with demo data, sign in emails work, and you know exactly what is needed to put real California listings on it.
 
 Each day has a goal, the steps in order, and how you know the day is done. The list of everything you need is at the end.
 
@@ -37,7 +37,7 @@ Each day has a goal, the steps in order, and how you know the day is done. The l
 
 **Goal:** every service the live site needs has an account and its keys are saved safely.
 
-1. Create a password manager entry called "GlowHomes keys". Every key goes there. Never paste keys into chat, email or the code.
+1. Create a password manager entry called "Glowy Homes keys". Every key goes there. Never paste keys into chat, email or the code.
 2. Create or set up each account in this order (details in the list at the end):
    1. Render: add a payment method.
    2. Resend: the service that sends sign in and alert emails.
@@ -87,7 +87,7 @@ Each day has a goal, the steps in order, and how you know the day is done. The l
    2. If yes, ask the MLS (for example CRMLS in Southern California) about a data license for a website (IDX or VOW feed through the RESO Web API), the monthly cost, and the display rules.
    3. If no, list local brokerages to approach for a partnership.
 2. **Legal.** Book a California real estate lawyer to review the Terms, the Privacy page, the fair housing wording and the rules for listings posted by owners and landlords.
-3. **Logo.** Decide whether to keep the current GlowHomes mark or brief a designer for a final logo.
+3. **Logo.** Decide whether to keep the current Glowy Homes mark or brief a designer for a final logo.
 4. **First users.** Write a short list of 10 agents and 10 landlords in one city (Los Angeles is the biggest) you could invite to try the site.
 5. **Payments.** Decide whether to charge for featured listings or agent subscriptions now or later. If now, open a Stripe account.
 6. Review your Day 1 change list with Claude and pick what goes into next week.

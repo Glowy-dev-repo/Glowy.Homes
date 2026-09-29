@@ -1,21 +1,36 @@
 import Link from "next/link";
 import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
-import { LogoMark } from "./LogoMark";
 
-/** Logo blue from the brand files (public/brand/logo-color.svg). Used for the logo only, at large bold sizes. */
+/** Logo blue from the brand files (public/brand/logo-color.svg). */
 const LOGO_BLUE = "#118DF0";
+
+// The owner's logo (public/brand/logo-color.svg) as inline vector paths: the house and the "glowy" wordmark.
+// The view box is cropped to the drawing; the original file has wide empty margins.
+function LogoArt({ className }: { className?: string }) {
+  return (
+    <svg viewBox="80 120 3000 767" aria-hidden focusable="false" className={className} fill="currentColor">
+      <g transform="scale(8) translate(10, 10)">
+        <g transform="matrix(1.0004702680451527,0,0,1.0004702680451527,-0.02201065884927142,5.265963027817872)">
+          <path d="M99.975,59.486c0,1.768-1.429,3.198-3.196,3.198H58.779c-0.901,0-1.714-0.371-2.296-0.975 l-25.08-25.901L5.478,61.748c-0.58,0.58-1.378,0.937-2.261,0.937c-1.766,0-3.195-1.431-3.195-3.198c0-0.883,0.358-1.682,0.935-2.259 L29.18,28.989c0.579-0.577,1.379-0.937,2.261-0.937c0.901,0,1.715,0.373,2.295,0.973l7.348,7.592h19.7v-8.896h8.479v8.896H79.55 c0.957,0,1.818,0.423,2.405,1.089l17.229,19.673C99.677,57.943,99.975,58.683,99.975,59.486z M22.589,58.375h6.974v-6.978h-6.974 V58.375z M33.104,58.375h6.973v-6.978h-6.973V58.375z M22.589,68.361h6.974v-6.978h-6.974V68.361z M33.104,68.397h6.973v-6.979 h-6.973V68.397z" />
+        </g>
+        <g transform="matrix(4.830840244520008,0,0,4.830840244520008,121.90826058496982,-19.73390149909665)">
+          <path d="M7.7 10.12 l2.96 0 l0 9.58 c0 2.92 -2.14 5.28 -5.22 5.28 c-1.7 0 -2.98 -0.78 -4.1 -2.02 l2.1 -1.9 c0.62 0.92 1.18 1.48 2 1.48 c1.4 0 2.24 -1.54 2.24 -3.22 c-0.36 0.48 -1.42 0.82 -2.04 0.82 c-2.88 0 -5 -2.16 -5 -5.08 s2.12 -5.1 5 -5.1 c0.68 0 1.74 0.36 2.06 0.82 l0 -0.66 z M5.84 17.92 c1.34 0 2.26 -1.54 2.26 -2.86 c0 -1.34 -0.9 -2.86 -2.26 -2.86 c-1.22 0 -2.24 1.28 -2.24 2.86 c0 1.56 1.02 2.86 2.24 2.86 z M15.187708333333331 5.119999999999999 l0 14.88 l-2.98 0 l0 -14.88 l2.98 0 z M21.655416666666664 12.42 c-1.22 0 -2.24 1.08 -2.24 2.66 c0 1.56 1.02 2.64 2.24 2.64 c1.24 0 2.26 -1.08 2.26 -2.64 c0 -1.58 -1.02 -2.66 -2.26 -2.66 z M21.655416666666664 9.98 c2.9 0 5.22 2.18 5.22 5.1 s-2.32 5.08 -5.22 5.08 c-2.88 0 -5.2 -2.16 -5.2 -5.08 s2.32 -5.1 5.2 -5.1 z M38.923125 10.12 l3.02 0 l-3.76 9.88 l-1.94 0 l-1.84 -4.78 c-0.62 1.66 -1.22 3.22 -1.8 4.78 l-1.96 0 l-3.78 -9.88 l3.04 0 l1.72 5.44 l1.7 -5.44 l2.18 0 l1.7 5.46 z M49.31083333333332 10.12 l3.08 0 s-2.56 6.02 -4.06 9.6 c-1.34 3.18 -2.32 5.1 -4.46 5.1 c-0.88 0 -1.94 -0.86 -2.24 -1.1 l0.86 -2.44 c0.4 0.38 0.92 0.62 1.34 0.62 c1.02 0 1.56 -2.06 1.9 -3.26 l-3.62 -8.52 l3.08 0 l2.06 4.94 c0.66 -1.6 1.42 -3.42 2.06 -4.94 z" />
+        </g>
+      </g>
+    </svg>
+  );
+}
 
 export function Logo({ className, tone = "dark" }: { className?: string; tone?: "dark" | "light" }) {
   return (
     <Link
       href="/"
-      className={cn("flex min-h-11 items-center gap-2 rounded-sm", className)}
+      className={cn("flex min-h-11 items-center rounded-sm", className)}
       style={{ color: tone === "dark" ? LOGO_BLUE : "#FFFFFF" }}
       aria-label={`${brand.name} home`}
     >
-      <LogoMark className="h-6 w-auto shrink-0" />
-      <span className="font-sans text-[24px] font-bold leading-none tracking-[-0.02em]">{brand.name}</span>
+      <LogoArt className="h-8 w-auto" />
     </Link>
   );
 }

@@ -1,10 +1,10 @@
-# GlowHomes: first week plan and what I need
+# Glowy Homes: first week plan and what I need
 
 Prepared September 28, 2026.
 
 ## What we are building
 
-GlowHomes is a home search website for California. People will be able to search homes for sale and for rent on a map, see an estimated value for any home, save homes and get alerts, and contact local agents, owners and landlords. Agents receive those requests in their own inbox. We start with Los Angeles, San Diego, San Jose, San Francisco and Sacramento.
+Glowy Homes is a home search website for California. People will be able to search homes for sale and for rent on a map, see an estimated value for any home, save homes and get alerts, and contact local agents, owners and landlords. Agents receive those requests in their own inbox. We start with Los Angeles, San Diego, San Jose, San Francisco and Sacramento.
 
 ## Where the listings come from
 
@@ -24,7 +24,7 @@ This is the most important item to settle early.
    3. Technical access, usually through the MLS's RESO Web API or a data vendor the MLS works with (for example Bridge Interactive, Trestle or Spark).
    4. Fees, typically a setup fee plus a monthly fee, which vary by MLS and vendor.
    5. Following the MLS display rules: showing the listing brokerage's name, required disclaimers, and keeping data fresh.
-4. **Until the feed is approved,** we build and test with realistic sample data, clearly marked as sample data. When the feed is switched on, real listings and photos replace it. Owners and landlords can also post their own homes with their own photos directly on GlowHomes, which does not need the MLS.
+4. **Until the feed is approved,** we build and test with realistic sample data, clearly marked as sample data. When the feed is switched on, real listings and photos replace it. Owners and landlords can also post their own homes with their own photos directly on Glowy Homes, which does not need the MLS.
 
 ## This week
 
@@ -58,7 +58,7 @@ This is the most important item to settle early.
 
 ### Brand
 
-1. **The final logo files for GlowHomes.** The logo folder I received contains a different brand's logo ("TidyUp"). Until we have the right files I will use a simple placeholder mark.
+1. **The final logo files for Glowy Homes.** The logo folder I received contains a different brand's logo ("TidyUp"). Until we have the right files I will use a simple placeholder mark.
 
 ### Legal and policy
 
@@ -79,5 +79,5 @@ This is the most important item to settle early.
 1. Do we have a licensed broker, or should I look for a partner brokerage?
 2. What monthly budget can I work within for the first three months?
 3. Who can give me DNS access for glowy.homes?
-4. Can you send the correct GlowHomes logo files?
+4. Can you send the correct Glowy Homes logo files?
 5. Which city do you want to launch first?

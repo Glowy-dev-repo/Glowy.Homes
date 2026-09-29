@@ -19,7 +19,7 @@ const EnvSchema = z.object({
   AUTH_GOOGLE_ID: optional,
   AUTH_GOOGLE_SECRET: optional,
   RESEND_API_KEY: optional,
-  EMAIL_FROM: z.string().default("GlowHomes <no-reply@glowy.homes>"),
+  EMAIL_FROM: z.string().default("Glowy Homes <no-reply@glowy.homes>"),
   /** "log" writes emails to .dev-mail and the console instead of sending. Defaults to log when Resend is not configured. */
   EMAIL_TRANSPORT: z.enum(["resend", "log"]).optional(),
   INNGEST_EVENT_KEY: optional,

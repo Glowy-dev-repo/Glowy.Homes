@@ -7,12 +7,10 @@ export const alt = `${brand.name}: ${brand.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Default Open Graph image for every page that does not define its own: the logo mark on navy.
+// Default Open Graph image for every page that does not define its own: the logo on navy.
 export default function OpengraphImage() {
-  // The house from the brand logo, in white. The logo file is wider than the house, so it is cropped to the mark.
-  const logo = readFileSync(join(process.cwd(), "public/brand/logo-white.svg"), "utf8");
-  const house = logo.match(/<path[^>]*d="([^"]+)"/)?.[1] ?? "";
-  const mark = `data:image/svg+xml;base64,${Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 27 100 42"><path fill="#FFFFFF" d="${house}"/></svg>`).toString("base64")}`;
+  // The owner's logo in white (public/brand/logo-white.svg).
+  const logo = `data:image/svg+xml;base64,${readFileSync(join(process.cwd(), "public/brand/logo-white.svg")).toString("base64")}`;
   return new ImageResponse(
     (
       <div
@@ -29,11 +27,8 @@ export default function OpengraphImage() {
           fontFamily: "serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain img only */}
-          <img src={mark} width={114} height={48} alt="" />
-          <div style={{ fontSize: 48, fontWeight: 700, fontFamily: "sans-serif" }}>{brand.name}</div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain img only */}
+        <img src={logo} width={360} height={110} alt="" style={{ marginLeft: -9 }} />
         <div style={{ fontSize: 96, fontWeight: 600, letterSpacing: -2 }}>{brand.tagline}</div>
         <div style={{ fontSize: 30, color: "#BFDBFE", fontFamily: "sans-serif" }}>
           {`Homes for sale and rent in ${brand.market.region}, with an estimate for every address.`}
