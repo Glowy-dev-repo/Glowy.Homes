@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { estimateLabel } from "@/config/copy";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ESTIMATE_DISCLAIMER, type PropertyEstimate } from "@/types/valuation";
@@ -30,7 +31,7 @@ export function EstimateCard({
       className={cn("rounded-lg border border-neutral-200 bg-white p-5", className)}
     >
       <h2 id="estimate-heading" className="text-label uppercase text-neutral-600">
-        Our estimate
+        {estimateLabel}
       </h2>
 
       {value ? (

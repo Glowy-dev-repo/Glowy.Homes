@@ -1,17 +1,15 @@
-import { brand } from "./brand";
-
 export type NavLink = { label: string; href: string };
 
-const firstCity = brand.market.cities[0].slug;
-
-// Header order from docs/04 section 4 (Home).
+// Our own words and order: homes first, then the local partner agents the site is built around.
 export const primaryNav: NavLink[] = [
-  { label: "Buy", href: "/search?type=sale" },
-  { label: "Rent", href: "/search?type=rent" },
-  { label: "Sell", href: "/sell" },
-  { label: "Home value", href: "/home-value" },
-  { label: "Find an agent", href: `/agents/${firstCity}` },
+  { label: "Homes", href: "/search?type=sale" },
+  { label: "Rentals", href: "/search?type=rent" },
+  { label: "Home worth", href: "/home-value" },
+  { label: "Local agents", href: "/agents" },
 ];
+
+/** The main call to action in the header: find the partner agent for a ZIP code. */
+export const agentCta: NavLink = { label: "Talk to an agent", href: "/agents" };
 
 export const footerNav: { title: string; links: NavLink[] }[] = [
   {

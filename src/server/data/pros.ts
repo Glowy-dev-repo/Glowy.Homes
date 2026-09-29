@@ -2,6 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { market } from "@/config/market";
 import { sqlClient } from "@/db";
+import { rankCandidates, type Candidate } from "@/lib/leads/routing";
 import type { ProProfileUpdate, ProSignup, ReviewInput } from "@/lib/pros/schema";
 import { slugify } from "@/lib/slug";
 
@@ -144,4 +145,46 @@ export async function agentsInCity(citySlug: string) {
     join (${sql.unsafe(ZIP_CITY)}) zc on zc.zip = z.zip
     where p.status = 'active' and p.pro_type = 'agent' and zc."citySlug" = ${citySlug}
     order by p.id`;
+}
+
+export type LocalAgent = {
+  id: string;
+  slug: string;
+  displayName: string;
+  brokerageName: string | null;
+  photoUrl: string | null;
+  rating: number | null;
+  reviewCount: number;
+  yearsExperience: number | null;
+  responseTimeMinutes: number | null;
+};
+
+/**
+ * Partner agents taking leads in a ZIP code, most suitable first, ranked exactly as lead routing ranks
+ * them (lib/leads/routing.ts), so the agent shown for a home is the one a question about it reaches.
+ * Agents who are paused or at today's lead cap are left out.
+ */
+export async function localAgents(zip: string, home: { price?: number | null; propertyType?: string | null } = {}): Promise<LocalAgent[]> {
+  if (!/^\d{5}$/.test(zip)) return [];
+  const rows = await sql<(Candidate & LocalAgent)[]>`
+    select pr.id, pr.id as "proId", pr.slug, pr.display_name as "displayName", pr.brokerage_name as "brokerageName", pr.photo_url as "photoUrl",
+      pr.rating::float8 as rating, pr.review_count as "reviewCount", pr.years_experience as "yearsExperience",
+      pr.response_time_minutes as "responseTimeMinutes", pr.pro_type as "proType", pr.status, pr.is_accepting_leads as "isAccepting",
+      pr.lead_cap_per_day as "capPerDay", true as "zipMatch",
+      (select count(*)::int from leads x where x.assigned_pro_id = pr.id
+        and x.assigned_at >= (date_trunc('day', now() at time zone ${market.timezone}) at time zone ${market.timezone})) as "assignedToday",
+      case when ${home.price ?? null}::int is null or (pr.price_min is null and pr.price_max is null) then null
+        else ${home.price ?? null}::int between coalesce(pr.price_min, 0) and coalesce(pr.price_max, 2147483647) end as "priceFit",
+      case when ${home.propertyType ?? null}::text is null or coalesce(cardinality(pr.specialties), 0) = 0 then null
+        else ${home.propertyType ?? null}::text = any(pr.specialties) end as "typeFit"
+    from pros pr
+    join pro_zip_codes z on z.pro_id = pr.id and z.zip = ${zip} and (z.active_until is null or z.active_until > now())
+    where pr.pro_type = 'agent' and pr.status = 'active' and pr.is_accepting_leads`;
+  return rankCandidates(rows.filter((r) => r.assignedToday < r.capPerDay)).map((c) => {
+    const r = c as Candidate & LocalAgent;
+    return {
+      id: r.id, slug: r.slug, displayName: r.displayName, brokerageName: r.brokerageName, photoUrl: r.photoUrl,
+      rating: r.rating, reviewCount: r.reviewCount, yearsExperience: r.yearsExperience, responseTimeMinutes: r.responseTimeMinutes,
+    };
+  });
 }

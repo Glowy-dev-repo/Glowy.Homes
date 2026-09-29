@@ -40,9 +40,11 @@ test.describe("lead routing", () => {
     test.setTimeout(150_000);
     const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
-    await page.getByRole("button", { name: "Request a tour" }).first().click();
+    // The card names the partner agent for this ZIP code; the tour request goes to them.
+    const shown = (await page.getByTestId("local-agent-name").textContent())?.trim();
+    await page.getByTestId("local-agent").getByRole("button", { name: "Request a tour" }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByTestId("lead-recipient")).toContainText("partner agent who serves this ZIP code, not to the listing agent");
+    await expect(dialog.getByTestId("lead-recipient")).toContainText(/partner agent for ZIP \d{5}, not to the listing agent/);
     const email = uniqueEmail("tour");
     await dialog.getByLabel("Name").fill("Taylor Buyer");
     await dialog.getByLabel("Email").fill(email);
@@ -61,6 +63,8 @@ test.describe("lead routing", () => {
       select exists (select 1 from pro_zip_codes z join leads ld on ld.id = ${lead.id} join listings l on l.id = ld.listing_id
         join properties p on p.id = l.property_id where z.pro_id = ${lead.pro} and z.zip = left(p.postal_code, 5)) as ok`;
     expect(covers.ok).toBe(true);
+    const [assigned] = await db()`select display_name from pros where id = ${lead.pro}`;
+    expect(assigned.display_name).toBe(shown);
     const [consent] = await db()`select payload->'consent'->>'version' as v, payload->'tour'->>'mode' as mode from leads where id = ${lead.id}`;
     expect(consent).toMatchObject({ mode: "video" });
     expect(consent.v).toBeTruthy();
@@ -106,7 +110,7 @@ test.describe("lead routing", () => {
     const email = await signIn(page, "inquirer", "/");
     const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-diego' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
-    await page.getByRole("button", { name: "Ask a local agent" }).first().click();
+    await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Name").fill("Casey Signedin");
     await dialog.getByRole("checkbox").check();
@@ -143,7 +147,8 @@ test.describe("lead routing", () => {
       order by l.list_date desc limit 1`;
     const { path } = await sampleListingPath(`l.id = '${home.id}'`);
     await page.goto(path);
-    await page.getByRole("button", { name: "Ask a local agent" }).first().click();
+    const shown = (await page.getByTestId("local-agent-name").textContent())?.trim();
+    await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
     const dialog = page.getByRole("dialog");
     const email = uniqueEmail("zipmatch");
     await dialog.getByLabel("Name").fill("Alex Asker");
@@ -157,6 +162,8 @@ test.describe("lead routing", () => {
         pr.pro_type as type
       from pros pr where pr.id = ${lead.pro}`;
     expect(pro).toMatchObject({ zip: true, fits: true, type: "agent" });
+    // The agent on the listing's card is the one the question reached.
+    expect((await db()`select display_name from pros where id = ${lead.pro}`)[0].display_name).toBe(shown);
   });
 });
 
@@ -166,7 +173,7 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   const email = await signIn(page, "reviewer", "/");
   const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-francisco' and type = 'city') and ${COVERED_ZIP}`);
   await page.goto(path);
-  await page.getByRole("button", { name: "Ask a local agent" }).first().click();
+  await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Name").fill("Robin Reviewer");
   await dialog.getByRole("checkbox").check();

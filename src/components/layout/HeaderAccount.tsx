@@ -4,6 +4,7 @@ import { UserRound } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { agentCta } from "@/config/nav";
 
 /**
  * Session aware part of the header. Client side so pages that include the header can stay
@@ -14,7 +15,7 @@ export function HeaderAccount() {
   const roles = data?.user?.roles ?? [];
   const isPro = roles.includes("agent");
 
-  if (status === "loading") return <div className="h-11 w-40" aria-hidden />;
+  if (status === "loading") return <div className="h-11 w-80" aria-hidden />;
 
   return (
     <div className="flex items-center gap-2">
@@ -30,9 +31,20 @@ export function HeaderAccount() {
           <Link href="/signin">Sign in</Link>
         </Button>
       )}
-      <Button asChild>
-        {isPro ? <Link href="/pro/leads">My leads</Link> : <Link href="/pro">For agents</Link>}
-      </Button>
+      {isPro ? (
+        <Button asChild>
+          <Link href="/pro/leads">My leads</Link>
+        </Button>
+      ) : (
+        <>
+          <Button asChild variant="ghost">
+            <Link href="/pro">For agents</Link>
+          </Button>
+          <Button asChild>
+            <Link href={agentCta.href}>{agentCta.label}</Link>
+          </Button>
+        </>
+      )}
     </div>
   );
 }

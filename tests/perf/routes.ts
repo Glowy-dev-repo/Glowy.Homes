@@ -38,6 +38,8 @@ async function main() {
     { path: "/home-value", status: 200 },
     { path: `/home-value/${s.prop.id}/${s.prop.slug}`, status: 200 },
     { path: "/sell", status: 200 },
+    { path: "/agents", status: 200 },
+    { path: "/agents?zip=90027", status: 200 },
     { path: "/agents/los-angeles", status: 200 },
     { path: `/agent/${s.agent}`, status: 200 },
     { path: "/account", redirectTo: signin },

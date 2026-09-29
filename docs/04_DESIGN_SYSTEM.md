@@ -88,7 +88,7 @@ Section order is fixed in docs/01 section 4.2. Do not reorder.
 
 ### EstimateCard
 ```
-Our estimate                       label
+Glowy value range                  label
 $1,210,000                         price style
 $1,160,000 to $1,265,000           small, muted
 Confidence: High  [i]              small, tooltip explains

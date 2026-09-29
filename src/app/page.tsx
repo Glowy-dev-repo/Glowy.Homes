@@ -1,9 +1,10 @@
-import { ArrowRight, Building2, House, KeyRound } from "lucide-react";
+import { ArrowRight, MessageSquare, Search, UserRoundCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RecentlyViewed } from "@/components/listing/RecentlyViewed";
 import { HeroSearch } from "@/components/search/HeroSearch";
 import { brand } from "@/config/brand";
+import { market } from "@/config/market";
 import { formatNumber, formatPrice } from "@/lib/format";
 import { allRegions } from "@/lib/search/regions";
 
@@ -14,28 +15,11 @@ export const metadata: Metadata = {
 // Static, refreshed hourly so city counts track region stats.
 export const revalidate = 3600;
 
-const ENTRY_POINTS = [
-  {
-    title: "Buy a home",
-    body: "Search every home for sale on a map, save your favorites and get alerts when new ones appear.",
-    href: "/search?type=sale",
-    cta: "Browse homes",
-    icon: House,
-  },
-  {
-    title: "Rent a home",
-    body: "Filter by pets, parking, laundry and move in date, then apply once for every rental you like.",
-    href: "/search?type=rent",
-    cta: "Find rentals",
-    icon: KeyRound,
-  },
-  {
-    title: "Sell your home",
-    body: "See an estimate of what your home is worth, then talk to a local partner agent.",
-    href: "/sell",
-    cta: "Explore selling",
-    icon: Building2,
-  },
+// How the site works, in the order a visitor meets it. The third step is what sets it apart.
+const STEPS = [
+  { icon: Search, title: "Search homes", body: "Every home for sale and for rent on a map, by city, neighborhood, address or ZIP code." },
+  { icon: MessageSquare, title: "Ask about a home", body: "Request a tour or send a question from any listing, in a minute." },
+  { icon: UserRoundCheck, title: "Your local agent replies", body: "A partner agent who serves that ZIP code, matched to the home's price and type." },
 ];
 
 export default async function HomePage() {
@@ -47,59 +31,73 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-navy text-white">
-        {/* The glow: two soft radial lights, pure CSS so the hero costs no image download. */}
+      <section className="relative isolate overflow-hidden border-b border-neutral-200 bg-white">
+        {/* Soft glow in the logo blue, pure CSS so the hero costs no image download. */}
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 bg-[radial-gradient(60%_70%_at_80%_20%,rgba(59,130,246,0.35),transparent_70%),radial-gradient(45%_55%_at_10%_90%,rgba(96,165,250,0.18),transparent_70%)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(55%_65%_at_85%_10%,rgba(17,141,240,0.14),transparent_70%),radial-gradient(40%_50%_at_0%_100%,rgba(17,141,240,0.08),transparent_70%)]"
         />
-        <div className="container-page flex flex-col items-start gap-6 pb-16 pt-14 md:pb-24 md:pt-24">
-          <p className="text-label uppercase tracking-[0.18em] text-blue-100">{brand.market.region} real estate</p>
-          <h1 className="max-w-3xl text-[40px] leading-[1.05] md:text-display lg:text-[64px]">{brand.tagline}</h1>
-          <p className="max-w-xl text-[17px] leading-relaxed text-blue-100">
-            Homes for sale and for rent across {brand.market.region}, with a value estimate for every address.
-          </p>
-          <div className="w-full max-w-2xl rounded-lg bg-white p-3 text-neutral-900 shadow-raised md:p-4">
-            <HeroSearch />
-          </div>
-          {forSale > 0 && (
-            <ul className="flex flex-wrap gap-x-8 gap-y-2 pt-2 text-small text-blue-100" aria-label="At a glance">
-              <li>
-                <span className="tabular font-semibold text-white">{formatNumber(forSale)}</span> homes for sale
-              </li>
-              <li>
-                <span className="tabular font-semibold text-white">{formatNumber(forRent)}</span> rentals
-              </li>
-              <li>A value estimate for every address</li>
-            </ul>
-          )}
-        </div>
-      </section>
-
-      <section aria-labelledby="entry-heading" className="container-page py-14 md:py-20">
-        <h2 id="entry-heading" className="text-h2 md:text-[32px]">
-          Everything you need to move
-        </h2>
-        <ul className="mt-8 grid gap-5 md:grid-cols-3">
-          {ENTRY_POINTS.map(({ title, body, href, cta, icon: Icon }) => (
-            <li key={title}>
+        <div className="container-page grid items-center gap-10 pb-14 pt-10 md:pb-20 md:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+          <div className="flex flex-col items-start gap-5">
+            <p className="text-label uppercase tracking-[0.18em] text-accent">{brand.market.region} homes and local agents</p>
+            <h1 className="max-w-2xl font-display text-[36px] leading-[1.08] text-navy md:text-[52px]">
+              Find a home, and a local agent who knows your {market.postalLabel}.
+            </h1>
+            <p className="max-w-xl text-[17px] leading-relaxed text-neutral-700">
+              Search homes for sale and for rent across {brand.market.region}. Ask about any home and your question goes to a {brand.name} partner agent who serves that {market.postalLabel}.
+            </p>
+            <div className="w-full max-w-2xl">
+              <HeroSearch />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
               <Link
-                href={href}
-                className="group flex h-full flex-col gap-4 rounded-lg border border-neutral-200 bg-white p-7 shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-raised"
+                href="/agents"
+                className="inline-flex min-h-12 items-center gap-2 rounded-md bg-navy px-5 font-semibold text-white transition-colors duration-150 hover:bg-navy/90"
               >
-                <span className="grid size-12 place-items-center rounded-full bg-accent/10 text-accent">
-                  <Icon className="size-6" aria-hidden />
-                </span>
-                <h3 className="text-h3 font-semibold">{title}</h3>
-                <p className="flex-1 text-body text-neutral-600">{body}</p>
-                <span className="inline-flex items-center gap-1.5 font-medium text-accent">
-                  {cta}
-                  <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
-                </span>
+                <UserRoundCheck className="size-5" aria-hidden />
+                Match me with a local agent
               </Link>
-            </li>
-          ))}
-        </ul>
+              <Link href="/search?type=rent" className="inline-flex min-h-11 items-center font-medium text-accent hover:underline">
+                Search rentals
+              </Link>
+              <Link href="/home-value" className="inline-flex min-h-11 items-center font-medium text-accent hover:underline">
+                What is my home worth?
+              </Link>
+            </div>
+            {forSale > 0 && (
+              <ul className="flex flex-wrap gap-x-8 gap-y-2 text-small text-neutral-600" aria-label="At a glance">
+                <li>
+                  <span className="tabular font-semibold text-neutral-900">{formatNumber(forSale)}</span> homes for sale
+                </li>
+                <li>
+                  <span className="tabular font-semibold text-neutral-900">{formatNumber(forRent)}</span> rentals
+                </li>
+              </ul>
+            )}
+          </div>
+
+          <section aria-labelledby="how-heading" className="rounded-lg border border-neutral-200 bg-white/90 p-6 shadow-raised md:p-8">
+            <h2 id="how-heading" className="text-h2">
+              How {brand.name} works
+            </h2>
+            <ol className="mt-6 space-y-6">
+              {STEPS.map(({ icon: Icon, title, body }, i) => (
+                <li key={title} className="flex gap-4">
+                  <span className="relative grid size-12 shrink-0 place-items-center rounded-full bg-accent/10 text-accent">
+                    <Icon className="size-6" aria-hidden />
+                    <span aria-hidden className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-navy text-[12px] font-semibold text-white">
+                      {i + 1}
+                    </span>
+                  </span>
+                  <div>
+                    <h3 className="text-h3 font-semibold">{title}</h3>
+                    <p className="mt-1 text-body text-neutral-600">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
       </section>
 
       <section aria-labelledby="cities-heading" className="border-y border-neutral-200 bg-white">
@@ -131,6 +129,26 @@ export default async function HomePage() {
               );
             })}
           </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="agents-heading" className="container-page pt-14 md:pt-20">
+        <div className="grid gap-6 rounded-lg border border-neutral-200 bg-neutral-50 p-6 md:grid-cols-[1fr_auto] md:items-center md:p-10">
+          <div>
+            <h2 id="agents-heading" className="text-h2 md:text-[32px]">
+              Are you a real estate agent?
+            </h2>
+            <p className="mt-2 max-w-2xl text-body text-neutral-700">
+              Choose the {market.postalLabel}s you serve and receive questions and tour requests from buyers and renters looking at homes there.
+            </p>
+          </div>
+          <Link
+            href="/pro"
+            className="inline-flex min-h-12 items-center gap-2 justify-self-start rounded-md border border-navy px-5 font-semibold text-navy transition-colors duration-150 hover:bg-navy hover:text-white"
+          >
+            Become a partner agent
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
         </div>
       </section>
 

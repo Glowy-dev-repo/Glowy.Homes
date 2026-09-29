@@ -22,7 +22,7 @@ test.describe("listing detail page", () => {
     const { path } = await sampleListingPath();
     await page.goto(path);
     const headings = await page.locator("main h2").allTextContents();
-    const order = ["Our estimate", "Key facts", "About this home", "Facts and features", "Price history", "Neighborhood", "Similar homes", "Listing information"];
+    const order = ["Glowy value range", "Key facts", "About this home", "Facts and features", "Price history", "Neighborhood", "Similar homes", "Listing information"];
     const positions = order.map((h) => headings.findIndex((t) => t.toLowerCase().startsWith(h.toLowerCase())));
     expect(positions.every((p) => p >= 0), JSON.stringify(headings)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);

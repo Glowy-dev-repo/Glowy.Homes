@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { primaryNav } from "@/config/nav";
+import { agentCta, primaryNav } from "@/config/nav";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -62,8 +62,8 @@ export function MobileNav() {
               </Button>
             )}
             <Button asChild>
-              <Link href="/sell" onClick={close}>
-                Thinking of selling?
+              <Link href={agentCta.href} onClick={close}>
+                {agentCta.label}
               </Link>
             </Button>
           </div>

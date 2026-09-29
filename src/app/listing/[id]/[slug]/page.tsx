@@ -1,8 +1,9 @@
-import { CalendarDays, MessageSquare, Phone } from "lucide-react";
+import { MessageSquare, Phone } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { LeadDialog } from "@/components/lead/LeadDialog";
+import { LocalAgentCard } from "@/components/lead/LocalAgentCard";
 import { CommuteEstimator } from "@/components/listing/CommuteEstimator";
 import { FactsGrid } from "@/components/listing/FactsGrid";
 import { ListingCard } from "@/components/listing/ListingCard";
@@ -24,6 +25,7 @@ import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listing
 import { similarListings } from "@/lib/listings/similar";
 import { mediaUrl } from "@/lib/media/urls";
 import { getOrComputeEstimate } from "@/lib/valuation/read";
+import { localAgents } from "@/server/data/pros";
 
 // ISR: rendered on first request, cached, refreshed hourly and on listing change (docs/02 section 7).
 export const revalidate = 3600;
@@ -74,7 +76,15 @@ export default async function ListingPage({ params }: Props) {
   const canonical = listingPath(l);
   if (!canonical.endsWith(`/${slug}`)) permanentRedirect(canonical);
 
-  const [estimate, similar, density] = await Promise.all([getOrComputeEstimate(l.propertyId), similarListings(l.id), homesWithin1Km(l)]);
+  const zip = /^\d{5}/.test(l.address.postalCode) ? l.address.postalCode.slice(0, 5) : null;
+  const [estimate, similar, density, agents] = await Promise.all([
+    getOrComputeEstimate(l.propertyId),
+    similarListings(l.id),
+    homesWithin1Km(l),
+    // The partner agent a question about this home reaches: the most suitable one for its ZIP code.
+    zip && !isOwnerListing(l) ? localAgents(zip, { price: l.price, propertyType: l.propertyType }) : Promise.resolve([]),
+  ]);
+  const localAgent = agents[0] ?? null;
 
   const sale = l.listingType === "sale";
   const closed = l.status === "sold" || l.status === "leased";
@@ -85,7 +95,11 @@ export default async function ListingPage({ params }: Props) {
   const facts = [formatBeds(l.beds), formatBaths(l.baths), formatArea(l.sqft)].filter(Boolean);
   const jsonLd = listingJsonLd(l, appUrl(), l.media.slice(0, 6).map((m) => `${appUrl()}${mediaUrl(m.storageKey, 1600)}`));
   const hoodStats = l.neighborhood?.stats ?? {};
-  const recipientNote = owner ? undefined : `This goes to a ${brand.name} partner agent who serves this ZIP code, not to the listing agent.`;
+  const recipientNote = owner
+    ? undefined
+    : localAgent
+      ? `This goes to ${localAgent.displayName}, a ${brand.name} partner agent for ZIP ${zip}, not to the listing agent.`
+      : `This goes to a ${brand.name} partner agent who serves this ZIP code, not to the listing agent.`;
 
   return (
     <div className="pb-24 lg:pb-12">
@@ -133,36 +147,24 @@ export default async function ListingPage({ params }: Props) {
               )}
             </div>
 
+            {!closed && !owner && (
+              <LocalAgentCard agent={localAgent} zip={zip} listingId={l.id} address={address} questionType={sale ? "contact" : "rental_inquiry"} />
+            )}
+
             <div className="grid grid-cols-2 gap-2">
-              {!closed && (
-                <>
-                  <LeadDialog
-                    leadType="tour"
-                    listingId={l.id}
-                    address={address}
-                    recipientNote={recipientNote}
-                    triggerClassName="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover"
-                    trigger={
-                      <>
-                        <CalendarDays className="size-5" aria-hidden />
-                        Request a tour
-                      </>
-                    }
-                  />
-                  <LeadDialog
-                    leadType={sale ? "contact" : "rental_inquiry"}
-                    listingId={l.id}
-                    address={address}
-                    recipientNote={recipientNote}
-                    triggerClassName="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5"
-                    trigger={
-                      <>
-                        <MessageSquare className="size-5" aria-hidden />
-                        {owner ? (sale ? "Contact the owner" : "Ask the landlord") : "Ask a local agent"}
-                      </>
-                    }
-                  />
-                </>
+              {!closed && owner && (
+                <LeadDialog
+                  leadType={sale ? "contact" : "rental_inquiry"}
+                  listingId={l.id}
+                  address={address}
+                  triggerClassName="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover"
+                  trigger={
+                    <>
+                      <MessageSquare className="size-5" aria-hidden />
+                      {sale ? "Contact the owner" : "Ask the landlord"}
+                    </>
+                  }
+                />
               )}
               {!closed && !sale && (
                 <ApplyButton
@@ -172,11 +174,6 @@ export default async function ListingPage({ params }: Props) {
               )}
               <SaveButton listingId={l.id} variant="button" />
               <ShareButton title={address} />
-              {!closed && !owner && (
-                <p className="col-span-2 text-small text-neutral-600" data-testid="cta-note">
-                  Tour requests and questions go to a {brand.name} partner agent who serves this ZIP code, not to the listing agent.
-                </p>
-              )}
             </div>
 
             {l.hideEstimate ? (
@@ -367,6 +364,7 @@ export default async function ListingPage({ params }: Props) {
               leadType={sale ? "contact" : "rental_inquiry"}
               listingId={l.id}
               address={address}
+              proId={localAgent?.id}
               recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent"
               trigger={owner ? "Contact" : "Ask an agent"}
@@ -375,6 +373,7 @@ export default async function ListingPage({ params }: Props) {
               leadType="tour"
               listingId={l.id}
               address={address}
+              proId={localAgent?.id}
               recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md bg-accent px-3 font-semibold text-white"
               trigger="Request tour"
