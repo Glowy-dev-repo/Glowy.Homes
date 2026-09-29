@@ -31,16 +31,21 @@ export async function downloadImage(url: string, fetchImpl: typeof fetch = fetch
   return Buffer.concat(chunks);
 }
 
+// A 10 MB file can claim billions of pixels; decoding it would exhaust memory. 40 megapixels covers
+// any real camera photo. Only photo formats are decoded, whatever the upload claimed to be.
+const MAX_INPUT_PIXELS = 40_000_000;
+const PHOTO_FORMATS = new Set(["jpeg", "png", "webp", "avif", "heif"]);
+
 /** Auto orients, strips metadata (sharp drops it unless asked to keep it) and encodes WebP variants. */
 export async function encodeVariants(input: Buffer) {
-  const base = sharp(input, { failOn: "error" }).rotate();
+  const base = sharp(input, { failOn: "error", limitInputPixels: MAX_INPUT_PIXELS }).rotate();
   const meta = await base.metadata();
-  const variants = await Promise.all(
-    MEDIA_WIDTHS.map(async (width) => ({
-      width,
-      body: await base.clone().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
-    })),
-  );
+  if (!meta.format || !PHOTO_FORMATS.has(meta.format)) throw new Error(`Unsupported image format: ${meta.format ?? "unknown"}`);
+  // One variant at a time keeps peak memory to a single decode.
+  const variants: { width: number; body: Buffer }[] = [];
+  for (const width of MEDIA_WIDTHS) {
+    variants.push({ width, body: await base.clone().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer() });
+  }
   const blur = await base.clone().resize(16).png().toBuffer();
   const oriented = meta.orientation && meta.orientation >= 5;
   return {

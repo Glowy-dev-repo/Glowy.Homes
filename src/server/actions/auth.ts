@@ -5,11 +5,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/lib/auth";
-import { createRateLimiter, rateLimitWrite } from "@/server/api/rate-limit";
-
-// Sign in links per address: stops anyone flooding someone else's inbox with sign in emails.
-const perHour = Number(process.env.SIGNIN_EMAILS_PER_HOUR ?? 10);
-const emailLimiter = createRateLimiter(perHour / 60, Date.now, Math.min(perHour, 5));
+import { safeNext } from "@/lib/preview";
+import { rateLimitWrite } from "@/server/api/rate-limit";
+import { signInEmailAllowed } from "@/server/api/signin-limit";
 
 export type SignInState = { status: "idle" | "error"; message?: string; fieldError?: string; email?: string };
 
@@ -19,7 +17,7 @@ const SignInInput = z.object({
     .string()
     .optional()
     // Only same site paths: never redirect to another origin.
-    .transform((v) => (v && v.startsWith("/") && !v.startsWith("//") ? v : "/account")),
+    .transform((v) => (v ? safeNext(v) : "/account")),
 });
 
 export async function signInWithEmail(_prev: SignInState, formData: FormData): Promise<SignInState> {
@@ -37,7 +35,7 @@ export async function signInWithEmail(_prev: SignInState, formData: FormData): P
   }
 
   const req = new Request("http://local", { headers: await headers() });
-  if (rateLimitWrite(req) || !emailLimiter(parsed.data.email)) {
+  if (rateLimitWrite(req) || !signInEmailAllowed(parsed.data.email)) {
     return { status: "error", message: "Too many sign in emails were requested. Wait a few minutes and try again.", email: parsed.data.email };
   }
 

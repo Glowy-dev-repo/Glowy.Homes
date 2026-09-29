@@ -45,7 +45,15 @@ export function env(): Env {
   return cached;
 }
 
+/**
+ * Resend when configured. The log transport (emails written to .dev-mail and the console) is only
+ * chosen automatically outside production: in production a missing RESEND_API_KEY must not turn every
+ * sign in link into a line in the server log. Set EMAIL_TRANSPORT=log explicitly to allow it (local gate).
+ */
 export function emailTransport(): "resend" | "log" {
   const e = env();
-  return e.EMAIL_TRANSPORT ?? (e.RESEND_API_KEY ? "resend" : "log");
+  if (e.EMAIL_TRANSPORT) return e.EMAIL_TRANSPORT;
+  if (e.RESEND_API_KEY) return "resend";
+  if (e.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set; refusing to log emails in production.");
+  return "log";
 }

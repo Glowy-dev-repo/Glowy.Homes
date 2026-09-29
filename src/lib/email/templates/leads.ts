@@ -1,4 +1,5 @@
 import { brand } from "@/config/brand";
+import { nameForEmail } from "../safe-name";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -47,10 +48,12 @@ export function consumerConfirmationEmail(opts: { appUrl: string; consumerName: 
     ? `${opts.proName}${opts.brokerage ? ` of ${opts.brokerage}` : ""} received your ${kind}${opts.address ? ` about ${opts.address}` : ""} and will typically reply within a few hours.`
     : `We received your ${kind}${opts.address ? ` about ${opts.address}` : ""} and are matching you with a local professional.`;
   const href = `${opts.appUrl}/account/inquiries`;
+  // Sent to whatever address was typed into the form, so the typed name is cleaned first.
+  const name = nameForEmail(opts.consumerName, "there");
   return {
     subject,
-    text: `Hi ${opts.consumerName},\n\n${who}\n\nSee your inquiries: ${href}`,
-    html: layout(subject, `<p style="font-size:15px;line-height:1.6;color:#3f3f46">Hi ${esc(opts.consumerName)},</p><p style="font-size:15px;line-height:1.6;color:#3f3f46">${esc(who)}</p>`, { href, label: "See your inquiries" }),
+    text: `Hi ${name},\n\n${who}\n\nSee your inquiries: ${href}`,
+    html: layout(subject, `<p style="font-size:15px;line-height:1.6;color:#3f3f46">Hi ${esc(name)},</p><p style="font-size:15px;line-height:1.6;color:#3f3f46">${esc(who)}</p>`, { href, label: "See your inquiries" }),
     link: href,
   };
 }

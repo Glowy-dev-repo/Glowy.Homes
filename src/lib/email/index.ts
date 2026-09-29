@@ -26,7 +26,9 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
   if (emailTransport() === "log") {
     await mkdir(DEV_MAIL_DIR, { recursive: true });
     await writeFile(devMailFile(email.to), JSON.stringify({ ...email, sentAt: new Date().toISOString() }, null, 2));
-    console.info(`[email:log] to=${email.to} subject="${email.subject}"${email.link ? ` link=${email.link}` : ""}`);
+    // Links (sign in links included) only reach the console outside production.
+    const showLink = email.link && process.env.NODE_ENV !== "production";
+    console.info(`[email:log] to=${email.to} subject="${email.subject}"${showLink ? ` link=${email.link}` : ""}`);
     return;
   }
 

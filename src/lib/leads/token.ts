@@ -1,9 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { signingSecret } from "@/lib/secret";
 
 // A lead's status token lets the person who submitted a form (possibly signed out) see who it was
 // assigned to, and nobody else (docs/05 Phase 4 criterion 5).
 
-const secret = () => process.env.AUTH_SECRET ?? "dev-secret";
+const secret = signingSecret;
 
 export function leadViewToken(leadId: string): string {
   return createHmac("sha256", secret()).update(`lead:${leadId}`).digest("base64url").slice(0, 32);

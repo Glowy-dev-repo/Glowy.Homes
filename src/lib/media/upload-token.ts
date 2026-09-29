@@ -1,9 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { signingSecret } from "@/lib/secret";
 
 // Signed, short lived permission to upload one image directly to the app (used when R2 is not
 // configured). Binds the user, the storage key and an expiry.
 
-const secret = () => process.env.AUTH_SECRET ?? "dev-secret";
+const secret = signingSecret;
 
 export function signUpload(userId: string, key: string, ttlSeconds = 600): string {
   const exp = Math.floor(Date.now() / 1000) + ttlSeconds;

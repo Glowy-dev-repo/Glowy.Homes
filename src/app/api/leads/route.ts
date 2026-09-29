@@ -4,7 +4,7 @@ import { leadViewToken } from "@/lib/leads/token";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { fail, invalid, ok } from "@/server/api/respond";
 import { clientIp, rateLimit, rateLimitWrite } from "@/server/api/rate-limit";
-import { createLead } from "@/server/data/leads";
+import { createLead, leadGuard } from "@/server/data/leads";
 import { trackServer } from "@/lib/analytics/server";
 import { sqlClient } from "@/db";
 
@@ -19,7 +19,20 @@ export async function POST(req: Request) {
   if (!(await verifyTurnstile(parsed.data.turnstileToken, clientIp(req)))) {
     return fail(400, { code: "captcha_failed", message: "Please complete the check that you are not a robot." });
   }
+  const guard = await leadGuard(parsed.data);
+  if (guard && "limited" in guard) {
+    return fail(429, { code: "too_many_leads", message: "You have sent a lot of requests today. Try again tomorrow, or reply to the agent who contacted you." });
+  }
   const session = await auth();
+  // The same request again: confirm it without sending the agent a second lead. The status token (who
+  // the lead went to) is only handed back to the signed in person who sent it, not to anyone who knows
+  // their email address.
+  if (guard) {
+    const [own] = session?.user?.id
+      ? await sqlClient<{ id: string }[]>`select id from leads where id = ${guard.duplicateOf} and consumer_user_id = ${session.user.id}`
+      : [];
+    return ok({ leadId: guard.duplicateOf, statusToken: own ? leadViewToken(own.id) : "", duplicate: true }, {}, { status: 200 });
+  }
   const lead = await createLead(parsed.data, session?.user?.id ?? null);
   const [place] = parsed.data.listingId
     ? await sqlClient<{ city: string | null }[]>`select r.slug as city from listings l left join regions r on r.id = l.city_region_id where l.id = ${parsed.data.listingId}`

@@ -23,6 +23,10 @@ const host = new URL(url).hostname;
 if (!["localhost", "127.0.0.1"].includes(host) && process.env.ALLOW_REMOTE_SEED !== "1") {
   throw new Error(`Refusing to seed non local database at ${host}. Set ALLOW_REMOTE_SEED=1 to override.`);
 }
+// A hosted database gets a real admin: the default admin@example.com is nobody's mailbox.
+if (!["localhost", "127.0.0.1"].includes(host) && !process.env.SEED_ADMIN_EMAIL) {
+  throw new Error("Set SEED_ADMIN_EMAIL to your own email address when seeding a hosted database.");
+}
 
 const SEED = Number(process.env.SEED ?? 42);
 const TOTAL = Number(process.env.SEED_LISTINGS ?? 50_000);

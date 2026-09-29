@@ -1,7 +1,22 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { handlers } from "@/lib/auth";
+import { rateLimitWrite } from "@/server/api/rate-limit";
+import { signInEmailAllowed } from "@/server/api/signin-limit";
 
-export const { POST } = handlers;
+/**
+ * Sign in emails requested straight from this endpoint (not through the sign in form) get the same
+ * limits as the form: per caller and per email address.
+ */
+export async function POST(req: NextRequest) {
+  if (req.nextUrl.pathname.endsWith("/signin/resend")) {
+    const form = await req.clone().formData().catch(() => null);
+    const email = String(form?.get("email") ?? "");
+    if (rateLimitWrite(req) || (email && !signInEmailAllowed(email))) {
+      return NextResponse.redirect(new URL("/signin?error=TooMany", req.nextUrl), 303);
+    }
+  }
+  return handlers.POST(req);
+}
 
 /**
  * Reading the session never writes the session cookie. Auth.js re-issues it on every read, so a read

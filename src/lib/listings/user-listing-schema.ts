@@ -8,7 +8,8 @@ export const PhotoRef = z
   .object({
     storageKey: z.string().regex(/^(local\/)?uploads\/[0-9a-f-]+\/[0-9a-f-]+$/).optional(),
     sourceUrl: z.string().url().optional(),
-    blurDataUrl: z.string().max(4000).nullable().optional(),
+    // Only the tiny base64 placeholder our own upload route produces; never a remote or CSS value.
+    blurDataUrl: z.string().max(4000).regex(/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/).nullable().optional(),
     width: z.number().int().positive().nullable().optional(),
     height: z.number().int().positive().nullable().optional(),
     caption: z.string().trim().max(80).optional(),

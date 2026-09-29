@@ -21,6 +21,8 @@ export async function PUT(req: Request) {
   if (!(UPLOAD_CONTENT_TYPES as readonly string[]).includes(type)) {
     return fail(415, { code: "unsupported_type", message: "Use a JPEG, PNG, WebP or AVIF image." });
   }
+  // Refuse oversized uploads before reading them into memory.
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_UPLOAD_BYTES) return fail(413, { code: "too_large", message: "Images must be 10 MB or smaller." });
   const body = Buffer.from(await req.arrayBuffer());
   if (body.byteLength > MAX_UPLOAD_BYTES) return fail(413, { code: "too_large", message: "Images must be 10 MB or smaller." });
 

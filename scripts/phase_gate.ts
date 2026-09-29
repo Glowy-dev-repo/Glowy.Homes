@@ -367,6 +367,8 @@ async function main() {
         ...process.env,
         EMAIL_TRANSPORT: "log",
         NODE_ENV: "production",
+        // The production build talks to the local Inngest dev server only when told to (src/inngest/client.ts).
+        INNGEST_DEV: "1",
         // Tests and the perf script send far more than 60 requests a minute from one IP.
         RATE_LIMIT_PER_MINUTE: "100000",
         SIGNIN_EMAILS_PER_HOUR: "100000",

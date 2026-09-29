@@ -40,3 +40,27 @@ export async function createLead(input: LeadInput, consumerUserId: string | null
   }
   return lead;
 }
+
+const LEADS_PER_EMAIL_PER_DAY = Number(process.env.LEADS_PER_EMAIL_PER_DAY ?? 10);
+
+/**
+ * Spam guards for the public lead form, checked before a lead is created. The same request repeated
+ * within a day (same email, type, home and requested agent) returns the existing lead instead of
+ * sending agents another one, and one email address can send at most LEADS_PER_EMAIL_PER_DAY leads.
+ */
+export async function leadGuard(input: LeadInput): Promise<{ duplicateOf: string } | { limited: true } | null> {
+  const email = input.email.trim().toLowerCase();
+  const [row] = await sql<{ duplicate: string | null; today: number }[]>`
+    select
+      (select id from leads
+        where lower(consumer_email) = ${email} and lead_type = ${input.leadType}
+          and listing_id is not distinct from ${input.listingId ?? null}::uuid
+          and property_id is not distinct from coalesce(${input.propertyId ?? null}::uuid, (select property_id from listings where id = ${input.listingId ?? null}::uuid))
+          and (payload->>'requested_pro_id') is not distinct from ${input.proId ?? null}
+          and created_at > now() - interval '1 day'
+        order by created_at desc limit 1) as duplicate,
+      (select count(*)::int from leads where lower(consumer_email) = ${email} and created_at > now() - interval '1 day') as today`;
+  if (row.duplicate) return { duplicateOf: row.duplicate };
+  if (row.today >= LEADS_PER_EMAIL_PER_DAY) return { limited: true };
+  return null;
+}

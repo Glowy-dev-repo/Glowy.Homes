@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return invalid(parsed.error);
   const result = await createUserListing(userId, parsed.data);
   if (result.status === "not_found") return fail(404, { code: "not_found", message: "We could not find that address. Look it up again." });
+  if (result.status === "bad_photos") return fail(400, { code: "bad_photos", message: "Add your photos again, then submit." });
   if (result.status === "claimed_by_other") return fail(403, { code: "claimed", message: "This home has been claimed by someone else." });
   return ok(result, {}, { status: 201 });
 }

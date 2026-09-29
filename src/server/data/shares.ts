@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { brand } from "@/config/brand";
 import { sqlClient } from "@/db";
 import { sendEmail } from "@/lib/email";
+import { createRateLimiter } from "@/server/api/rate-limit";
 import { shareInviteEmail } from "@/lib/email/templates/share";
 import { coverJoin, summaryColumns } from "@/lib/search/postgres";
 import type { ListingSummary } from "@/types/search";
@@ -17,7 +18,11 @@ export const MAX_SHARES = 3;
 
 export type ShareRow = { id: string; direction: "sent" | "received"; email: string; name: string | null; accepted: boolean; createdAt: string };
 
-export type InviteResult = "sent" | "self" | "limit" | "already_shared";
+export type InviteResult = "sent" | "self" | "limit" | "already_shared" | "too_soon" | "daily_limit";
+
+// Invitation emails per account per day, however invites are added, removed or re-sent: stops the
+// share feature being used to mail strangers.
+const invitesPerDay = createRateLimiter(10 / (24 * 60), Date.now, 10);
 
 export async function inviteCobuyer(ownerId: string, rawEmail: string): Promise<InviteResult> {
   const email = rawEmail.trim().toLowerCase();
@@ -26,17 +31,22 @@ export async function inviteCobuyer(ownerId: string, rawEmail: string): Promise<
   const [existing] = await sql<{ id: string; accepted: boolean }[]>`
     select id, accepted_at is not null as accepted from saved_home_shares where owner_user_id = ${ownerId} and invitee_email = ${email}`;
   if (existing?.accepted) return "already_shared";
+  if (existing) {
+    const [{ recent }] = await sql<{ recent: boolean }[]>`select created_at > now() - interval '1 hour' as recent from saved_home_shares where id = ${existing.id}`;
+    if (recent) return "too_soon";
+  }
   if (!existing) {
     const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from saved_home_shares where owner_user_id = ${ownerId}`;
     if (n >= MAX_SHARES) return "limit";
   }
+  if (!invitesPerDay(ownerId)) return "daily_limit";
   // A fresh token on every (re)invite; only its hash is stored.
   const token = randomBytes(24).toString("base64url");
   await sql`
     insert into saved_home_shares (owner_user_id, invitee_email, token_hash) values (${ownerId}, ${email}, ${hash(token)})
     on conflict (owner_user_id, invitee_email) do update set token_hash = excluded.token_hash, created_at = now()`;
   const href = `${appUrl()}/account/shared/accept?token=${token}`;
-  await sendEmail({ to: email, ...shareInviteEmail({ inviterName: owner.name ?? owner.email, href }) });
+  await sendEmail({ to: email, ...shareInviteEmail({ inviterName: owner.name ?? owner.email.split("@")[0], href }) });
   return "sent";
 }
 

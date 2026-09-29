@@ -1,11 +1,13 @@
 import { brand } from "@/config/brand";
+import { nameForEmail } from "../safe-name";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /** Invitation to a shared saved homes list (docs/05 Phase 6 task 4). */
 export function shareInviteEmail(opts: { inviterName: string; href: string }) {
-  const subject = `${opts.inviterName} wants to share saved homes with you on ${brand.name}`;
-  const body = `${opts.inviterName} invited you to a shared list of saved homes. You will see the homes they save, and they will see yours. The invitation works for 14 days.`;
+  const inviter = nameForEmail(opts.inviterName);
+  const subject = `${inviter} wants to share saved homes with you on ${brand.name}`;
+  const body = `${inviter} invited you to a shared list of saved homes. You will see the homes they save, and they will see yours. The invitation works for 14 days.`;
   return {
     subject,
     text: `${subject}\n\n${body}\n\nAccept: ${opts.href}`,

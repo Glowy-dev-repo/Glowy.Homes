@@ -12,6 +12,7 @@ import { allRegions, regionOutline, type RegionRef } from "@/lib/search/regions"
 import { toQueryString } from "@/lib/search/url";
 import { MAX_PAGE, PAGE_SIZE, SearchParams } from "@/types/search";
 import { MiniMap } from "./MiniMap";
+import { jsonLdHtml } from "@/lib/json-ld";
 
 type Props = { type: "sale" | "rent"; city: RegionRef; neighborhood?: RegionRef };
 
@@ -59,7 +60,7 @@ export async function BrowsePage(props: Props) {
 
   return (
     <div className="container-page py-6 md:py-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       <nav aria-label="Breadcrumb" className="mb-3 text-small text-neutral-600">
         <ol className="flex flex-wrap items-center gap-1">
           {crumbs.map((c, i) => (

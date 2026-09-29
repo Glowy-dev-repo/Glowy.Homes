@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/server/api/pro";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Second check behind middleware (docs/02 section 8.5).
+  // Checked against the database too: the role in the session cookie can be up to 30 days old.
   const session = await auth();
-  if (!session?.user.roles.includes("admin")) notFound();
+  if (!session?.user.roles.includes("admin") || !(await isAdmin(session.user.id))) notFound();
   return (
     <div className="container-page py-8">
       <nav aria-label="Admin" className="mb-6 flex flex-wrap gap-2 border-b border-neutral-200 pb-3">

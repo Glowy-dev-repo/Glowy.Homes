@@ -8,7 +8,7 @@ import { rateLimitWrite } from "@/server/api/rate-limit";
 export async function PATCH(req: Request) {
   const writeLimited = rateLimitWrite(req);
   if (writeLimited) return writeLimited;
-  const who = await requirePro();
+  const who = await requirePro({ allowInactive: true });
   if ("response" in who) return who.response;
   const parsed = ProProfileUpdate.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);

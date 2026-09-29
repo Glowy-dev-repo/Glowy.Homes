@@ -58,7 +58,8 @@ export const NormalizedListingSchema = z.object({
   description: z.string().optional(),
   hoaFee: z.number().int().min(0).optional(),
   taxAnnual: z.number().int().min(0).optional(),
-  virtualTourUrl: z.string().url().optional(),
+  // Web links only: a feed must not be able to put a javascript: link on a listing page.
+  virtualTourUrl: z.string().url().refine((u) => /^https?:\/\//i.test(u), "Use an http or https link").optional(),
   media: z.array(
     z.object({
       url: z.string().min(1),

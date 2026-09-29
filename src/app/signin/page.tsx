@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 const ERRORS: Record<string, string> = {
   Verification: "That sign in link has expired or was already used. Request a new one below.",
   OAuthAccountNotLinked: "That email is already linked to another sign in method. Use the email link instead.",
+  TooMany: "Too many sign in emails were requested. Wait a few minutes and try again.",
 };
 
 export default async function SignInPage({

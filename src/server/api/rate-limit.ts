@@ -15,7 +15,15 @@ export function createRateLimiter(perMinute: number, now: () => number = Date.no
     const b = buckets.get(key) ?? { tokens: burst, updated: t };
     b.tokens = Math.min(burst, b.tokens + (t - b.updated) * refillPerMs);
     b.updated = t;
-    if (buckets.size > 10_000) buckets.clear();
+    // Bounded memory without resetting everyone: drop the least recently used keys (a Map keeps
+    // insertion order, and every use re-inserts its key at the end).
+    buckets.delete(key);
+    if (buckets.size >= 10_000) {
+      for (const k of buckets.keys()) {
+        buckets.delete(k);
+        if (buckets.size < 9_000) break;
+      }
+    }
     if (b.tokens < 1) {
       buckets.set(key, b);
       return false;
@@ -32,8 +40,15 @@ const limiter = createRateLimiter(perMinute);
 // the map never eats into saving and posting, and scripted abuse of write routes is capped.
 const writeLimiter = createRateLimiter(Number(process.env.RATE_LIMIT_WRITES_PER_MINUTE ?? Math.max(1, Math.floor(perMinute / 2))));
 
+/**
+ * The caller's address. The left of X-Forwarded-For is whatever the client sent, so it cannot be
+ * trusted; each proxy in front of the app appends the address it saw. The entry TRUSTED_PROXY_HOPS
+ * from the right (default 1: the one added by the host's own proxy) is the real client.
+ */
 export function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
+  const hops = Math.max(1, Number(process.env.TRUSTED_PROXY_HOPS ?? 1));
+  const chain = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return chain[chain.length - hops] ?? chain[0] ?? req.headers.get("x-real-ip") ?? "local";
 }
 
 /** Returns a 429 response when the caller is over the limit, otherwise null. */

@@ -20,6 +20,7 @@ import { EstimateCard } from "@/components/valuation/EstimateCard";
 import { brand } from "@/config/brand";
 import { sqlClient } from "@/db";
 import { formatArea, formatBaths, formatBeds, formatNumber, formatPrice } from "@/lib/format";
+import { jsonLdHtml } from "@/lib/json-ld";
 import { getListingDetail, isOwnerListing, type ListingDetail } from "@/lib/listings/detail";
 import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription, toSummary } from "@/lib/listings/ldp";
 import { similarListings } from "@/lib/listings/similar";
@@ -103,7 +104,7 @@ export default async function ListingPage({ params }: Props) {
 
   return (
     <div className="pb-24 lg:pb-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       <RecordView listing={toSummary(l)} />
       <Track name="listing_view" props={{ listingId: l.id, city: l.city?.slug, type: l.listingType }} />
 

@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { signingSecret } from "@/lib/secret";
 
 // One click unsubscribe from a single saved search (docs/03 section 6), without signing in.
 
-const secret = () => process.env.AUTH_SECRET ?? "dev-secret";
+const secret = signingSecret;
 
 export function unsubscribeToken(savedSearchId: string): string {
   return createHmac("sha256", secret()).update(`unsubscribe:${savedSearchId}`).digest("base64url").slice(0, 32);

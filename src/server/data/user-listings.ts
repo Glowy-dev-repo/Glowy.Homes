@@ -5,6 +5,9 @@ import { sqlClient } from "@/db";
 import { sendEmail } from "@/lib/email";
 import { inngest } from "@/inngest/client";
 import { runListingChecks } from "@/lib/listings/moderation-checks";
+import { photosBelongTo } from "@/lib/listings/photo-ownership";
+import { env } from "@/lib/env";
+import { r2Configured } from "@/lib/media/r2";
 import type { UserListingInput } from "@/lib/listings/user-listing-schema";
 import { addressSlug } from "@/lib/slug";
 import { getOrComputeEstimate } from "@/lib/valuation/read";
@@ -31,9 +34,10 @@ async function ensureOwnerPro(userId: string, kind: "landlord" | "owner", phone:
 
 export type CreateResult =
   | { status: "created"; listingId: string; failedChecks: string[] }
-  | { status: "not_found" | "claimed_by_other" };
+  | { status: "not_found" | "claimed_by_other" | "bad_photos" };
 
 export async function createUserListing(userId: string, input: UserListingInput): Promise<CreateResult> {
+  if (!photosBelongTo(userId, input.photos, r2Configured() ? env().NEXT_PUBLIC_MEDIA_BASE_URL : "")) return { status: "bad_photos" };
   const [property] = await sql<{ id: string; owner: string | null; hasLocation: boolean; line1: string; line2: string | null; city: string }[]>`
     select id, owner_user_id as owner, (location is not null and city_region_id is not null) as "hasLocation",
       address_line1 as line1, address_line2 as line2, city
