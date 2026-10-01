@@ -19,8 +19,9 @@ services:
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
+      # Same Node (and npm 11) as development: npm 10 rejects this lock file in npm ci.
       - key: NODE_VERSION
-        value: "22"
+        value: "24"
       - key: DATABASE_URL
         fromDatabase:
           name: glowy-homes-db
