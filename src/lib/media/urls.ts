@@ -2,7 +2,7 @@
 // own /media route; everything else comes from the R2 public bucket (NEXT_PUBLIC_MEDIA_BASE_URL).
 
 /** Bump when the synthetic photo design changes (src/lib/media/synthetic.ts). */
-export const SYNTHETIC_STYLE_VERSION = 4;
+export const SYNTHETIC_STYLE_VERSION = 5;
 
 export const MEDIA_WIDTHS = [400, 800, 1600] as const;
 
@@ -12,8 +12,10 @@ export function snapWidth(width: number): (typeof MEDIA_WIDTHS)[number] {
 
 export function mediaUrl(storageKey: string, width: number): string {
   const w = snapWidth(width);
-  // Synthetic photos carry a style version, so browsers holding the year long immutable copy refetch after a restyle.
-  if (storageKey.startsWith("synthetic/")) return `/media/${storageKey}/${w}.webp?v=${SYNTHETIC_STYLE_VERSION}`;
+  // Demo photos are vector illustrations: one SVG per photo, drawn by the browser at any size, so the
+  // server never rasterizes them. The style version makes browsers holding the year long immutable copy
+  // refetch after a restyle.
+  if (storageKey.startsWith("synthetic/")) return `/media/${storageKey}/photo.svg?v=${SYNTHETIC_STYLE_VERSION}`;
   if (storageKey.startsWith("local/")) return `/media/${storageKey}/${w}.webp`;
   const base = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "").replace(/\/+$/, "");
   return `${base}/${storageKey}/${w}.webp`;

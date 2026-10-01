@@ -54,7 +54,7 @@ describe("media URLs", () => {
   it("snaps widths and routes synthetic and local keys to the app", () => {
     expect(snapWidth(300)).toBe(400);
     expect(snapWidth(3000)).toBe(1600);
-    expect(mediaUrl("synthetic/GH0000001/0", 640)).toBe(`/media/synthetic/GH0000001/0/800.webp?v=${SYNTHETIC_STYLE_VERSION}`);
+    expect(mediaUrl("synthetic/GH0000001/0", 640)).toBe(`/media/synthetic/GH0000001/0/photo.svg?v=${SYNTHETIC_STYLE_VERSION}`);
     expect(mediaUrl("local/listings/a/b", 400)).toBe("/media/local/listings/a/b/400.webp");
   });
 
