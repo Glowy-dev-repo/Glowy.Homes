@@ -34,7 +34,9 @@ const AS_OF = process.env.SEED_AS_OF ? new Date(`${process.env.SEED_AS_OF}T00:00
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
 export const TRUTH_PATH = resolve(process.cwd(), "scripts/data/generated/truth.jsonl");
 
-const sql = postgres(url, { max: 10, onnotice: () => {} });
+// A hosted database over the internet takes smaller batches and fewer connections (SEED_DB_CONNECTIONS,
+// SEED_PAGE_SIZE); the defaults suit a local database.
+const sql = postgres(url, { max: Number(process.env.SEED_DB_CONNECTIONS ?? 10), onnotice: () => {} });
 const started = Date.now();
 const lap = (label: string) => console.log(`[${((Date.now() - started) / 1000).toFixed(1)}s] ${label}`);
 
@@ -142,7 +144,7 @@ async function main() {
   writeFeed(market);
   lap(`wrote ${SYNTHETIC_FEED_PATH}`);
 
-  const result = await runIngest(sql, syntheticAdapter(), { cursor: null, pageSize: 1000 });
+  const result = await runIngest(sql, syntheticAdapter(), { cursor: null, pageSize: Number(process.env.SEED_PAGE_SIZE ?? 1000) });
   lap(`ingest ${result.status}: ${JSON.stringify(result.stats)}`);
 
   await refreshRegionStats(sql);
