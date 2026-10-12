@@ -25,6 +25,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const result = await startClaim(session.user.id, session.user.email, id);
   if (result.status === "not_found") return notFound();
   if (result.status === "taken") return fail(409, { code: "already_claimed", message: "Someone has already claimed this home. Contact support if this is your home." });
+  if (result.status === "limited") return fail(429, { code: "too_many_claims", message: "You have started several claims today. Try again tomorrow, or contact support." });
   if (result.status === "claimed") await trackServer("claim_home", { propertyId: id }, session.user.id);
   return ok(result);
 }

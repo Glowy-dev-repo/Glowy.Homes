@@ -30,7 +30,7 @@ export const feedRuns = pgTable("feed_runs", {
 
 export const moderationItems = pgTable("moderation_items", {
   id: id(),
-  itemType: text("item_type").$type<"listing" | "review" | "pro">().notNull(),
+  itemType: text("item_type").$type<"listing" | "review" | "pro" | "claim">().notNull(),
   itemId: uuid("item_id").notNull(),
   reason: text("reason").$type<"new_submission" | "flagged" | "edited">().notNull(),
   status: text("status").notNull().default("open"),

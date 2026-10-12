@@ -1,9 +1,10 @@
 import "server-only";
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { sqlClient } from "@/db";
 import { sendEmail } from "@/lib/email";
+import { signingSecret } from "@/lib/secret";
 import { getPropertyDetail } from "@/lib/properties/detail";
 import { addressSlug } from "@/lib/slug";
 import { refreshValuations } from "@/lib/valuation/engine";
@@ -15,17 +16,27 @@ const sql = sqlClient;
 const CODE_TTL_DAYS = 14;
 const MAX_ATTEMPTS = 5;
 
-/** Dev claims are instant; production asks for a code (mailed in the real product, see PROGRESS.md). */
-export function claimMode(): "instant" | "code" {
+export type ClaimMode = "instant" | "code" | "review";
+
+/**
+ * How a claim is verified. Development: instant. Production: an admin reviews each claim, because the
+ * code is meant to be posted to the property address and no mail vendor is wired yet; emailing it to the
+ * person asking would let anyone claim any home. "code" (emailed) is for tests only; set it in production
+ * only once codes go by post (PROGRESS.md, BLOCKED 2).
+ */
+export function claimMode(): ClaimMode {
   const v = process.env.CLAIM_VERIFICATION;
-  if (v === "instant" || v === "code") return v;
-  return process.env.NODE_ENV === "production" ? "code" : "instant";
+  if (v === "instant" || v === "code" || v === "review") return v;
+  return process.env.NODE_ENV === "production" ? "review" : "instant";
 }
 
 const hashCode = (propertyId: string, code: string) =>
-  createHash("sha256").update(`${process.env.AUTH_SECRET ?? "dev"}:${propertyId}:${code}`).digest("hex");
+  createHash("sha256").update(`${signingSecret()}:${propertyId}:${code}`).digest("hex");
 
-export type ClaimState = { claimedByMe: boolean; claimedByOther: boolean; pendingVerification: boolean; mode: "instant" | "code" };
+// Claims a user can start per day, so nobody can file claims on every home.
+const CLAIMS_PER_DAY = 3;
+
+export type ClaimState = { claimedByMe: boolean; claimedByOther: boolean; pendingVerification: boolean; mode: ClaimMode };
 
 export async function claimState(userId: string | null, propertyId: string): Promise<ClaimState> {
   const [row] = await sql<{ owner: string | null; pending: boolean }[]>`
@@ -53,9 +64,28 @@ export async function startClaim(userId: string, email: string, propertyId: stri
   if (p.ownerUserId === userId) return { status: "claimed" as const };
   if (p.ownerUserId) return { status: "taken" as const };
 
-  if (claimMode() === "instant") {
+  const mode = claimMode();
+  if (mode === "instant") {
     await setOwner(userId, propertyId);
     return { status: "claimed" as const };
+  }
+
+  // One open claim per home and user; a few new claims per user per day.
+  const [open] = await sql<{ pending: boolean; today: number }[]>`
+    select exists (select 1 from property_claims where property_id = ${propertyId} and user_id = ${userId}
+        and verified_at is null and expires_at > now() and attempts < ${MAX_ATTEMPTS}) as pending,
+      (select count(*)::int from property_claims where user_id = ${userId} and created_at > now() - interval '1 day') as today`;
+  if (open.pending) return { status: mode === "review" ? ("review_pending" as const) : ("verification_required" as const) };
+  if (open.today >= CLAIMS_PER_DAY) return { status: "limited" as const };
+
+  if (mode === "review") {
+    // No usable code exists; the claim waits for an admin decision in the moderation queue.
+    const [claim] = await sql<{ id: string }[]>`
+      insert into property_claims (property_id, user_id, code_hash, expires_at)
+      values (${propertyId}, ${userId}, ${hashCode(propertyId, randomBytes(16).toString("hex"))}, now() + ${`${CODE_TTL_DAYS} days`}::interval)
+      returning id`;
+    await sql`insert into moderation_items (item_type, item_id, reason) values ('claim', ${claim.id}, 'new_submission')`;
+    return { status: "review_pending" as const };
   }
 
   const code = String(randomInt(100000, 1000000));
@@ -75,7 +105,22 @@ export async function startClaim(userId: string, email: string, propertyId: stri
   return { status: "verification_required" as const };
 }
 
+/** Admin decision on a claim under review: approve makes the claimant the owner if the home is still unclaimed. */
+export async function decideClaim(claimId: string, decision: "approve" | "reject") {
+  const [claim] = await sql<{ propertyId: string; userId: string }[]>`
+    select property_id as "propertyId", user_id as "userId" from property_claims where id = ${claimId} and verified_at is null`;
+  if (!claim) return;
+  if (decision === "approve") {
+    await sql`update property_claims set verified_at = now() where id = ${claimId}`;
+    await setOwner(claim.userId, claim.propertyId);
+  } else {
+    await sql`update property_claims set expires_at = now() where id = ${claimId}`;
+  }
+}
+
 export async function verifyClaim(userId: string, propertyId: string, code: string) {
+  // Claims under admin review have no code to enter.
+  if (claimMode() === "review") return { status: "no_claim" as const };
   const [claim] = await sql<{ id: string; code_hash: string; attempts: number }[]>`
     select id, code_hash, attempts from property_claims
     where property_id = ${propertyId} and user_id = ${userId} and verified_at is null and expires_at > now()

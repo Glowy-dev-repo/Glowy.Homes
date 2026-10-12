@@ -75,7 +75,7 @@ export async function activeProsForRegion(leadId: string) {
 
 export type ModerationRow = {
   id: string;
-  itemType: "listing" | "review" | "pro";
+  itemType: "listing" | "review" | "pro" | "claim";
   itemId: string;
   reason: string;
   createdAt: string;
@@ -94,11 +94,15 @@ export async function moderationQueue(): Promise<ModerationRow[]> {
         when 'review' then (select rv.rating || ' star review for ' || p.display_name from pro_reviews rv join pros p on p.id = rv.pro_id where rv.id = m.item_id)
         when 'listing' then (select concat_ws(', ', concat_ws(' ', pp.address_line2, pp.address_line1), pp.city) || ' (' || l.listing_type || ')'
           from listings l join properties pp on pp.id = l.property_id where l.id = m.item_id)
+        when 'claim' then (select 'Home claim: ' || concat_ws(', ', concat_ws(' ', pp.address_line2, pp.address_line1), pp.city)
+          from property_claims c join properties pp on pp.id = c.property_id where c.id = m.item_id)
       end as title,
       case m.item_type
         when 'pro' then (select 'License ' || coalesce(p.license_number, 'not given') || coalesce(', ' || p.brokerage_name, '') from pros p where p.id = m.item_id)
         when 'review' then (select coalesce(rv.body, '') from pro_reviews rv where rv.id = m.item_id)
         when 'listing' then (select left(coalesce(l.description, ''), 240) from listings l where l.id = m.item_id)
+        when 'claim' then (select 'Claimed by ' || coalesce(u.name || ' ', '') || '(' || u.email || '). Check proof of ownership, such as a tax bill or deed, before approving.'
+          from property_claims c join users u on u.id = c.user_id where c.id = m.item_id)
       end as detail,
       case when jsonb_array_length(m.failed_checks) > 0 then 'high' else 'low' end as priority,
       coalesce(array(select jsonb_array_elements_text(m.failed_checks)), '{}') as "failedChecks"

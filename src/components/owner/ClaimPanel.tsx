@@ -9,7 +9,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type State = { claimedByMe: boolean; claimedByOther: boolean; pendingVerification: boolean; mode: "instant" | "code" };
+type State = { claimedByMe: boolean; claimedByOther: boolean; pendingVerification: boolean; mode: "instant" | "code" | "review" };
 const INTENT = "claim";
 
 /** "Is this your home? Claim it" (docs/04 property value page, docs/01 US5). */
@@ -86,6 +86,10 @@ export function ClaimPanel({ propertyId }: { propertyId: string }) {
         </div>
       ) : data?.claimedByOther ? (
         <p className="mt-2 text-body text-neutral-700">This home has already been claimed by its owner.</p>
+      ) : data?.pendingVerification && data.mode === "review" ? (
+        <p className="mt-2 text-body text-neutral-700" role="status" data-testid="claim-review">
+          Thanks! Our team will check that you own this home and email you once your claim is approved, typically within 2 business days.
+        </p>
       ) : data?.pendingVerification ? (
         <form onSubmit={verify} className="mt-2 grid gap-2" noValidate>
           <p className="text-body text-neutral-700">

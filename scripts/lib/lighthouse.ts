@@ -37,7 +37,13 @@ export async function runLighthouse(url: string, categories = ["performance", "a
     } catch {
       // Process already gone.
     }
-    setTimeout(() => rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5 }), 1000).unref();
+    setTimeout(() => {
+      try {
+        rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5 });
+      } catch {
+        // Windows can keep Chrome's profile locked a little longer; a leftover temp folder is harmless.
+      }
+    }, 1000).unref();
   }
 }
 

@@ -45,5 +45,10 @@ describe("private preview", () => {
     expect(safeNext("//evil.example")).toBe("/");
     expect(safeNext("/\\evil.example")).toBe("/");
     expect(safeNext(undefined)).toBe("/");
+    // Browsers drop tabs and line breaks, so these would otherwise become "//evil.example".
+    expect(safeNext(`/${String.fromCharCode(9)}/evil.example`)).toBe("/");
+    expect(safeNext(`/${String.fromCharCode(10)}/evil.example`)).toBe("/");
+    expect(safeNext("/%09/evil.example")).toBe("/%09/evil.example");
+    expect(safeNext("/listing/1?x=2#top")).toBe("/listing/1?x=2#top");
   });
 });

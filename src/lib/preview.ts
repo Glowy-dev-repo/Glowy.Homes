@@ -1,3 +1,5 @@
+import { signingSecret } from "@/lib/secret";
+
 // Private preview (before the MLS feed is approved): when PREVIEW_PASSWORD is set, every page asks
 // for that password first and the whole site is hidden from search engines. Delete the variable to launch.
 
@@ -12,7 +14,7 @@ export function previewPassword(): string | null {
 
 /** Cookie value proving the password was entered. Changing the password signs everyone out of the preview. */
 export async function previewToken(password: string): Promise<string> {
-  const data = new TextEncoder().encode(`glowhomes-preview:${password}:${process.env.AUTH_SECRET ?? ""}`);
+  const data = new TextEncoder().encode(`glowhomes-preview:${password}:${signingSecret()}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -34,6 +36,11 @@ export function isPreviewExempt(path: string): boolean {
 
 /** Only same site paths may be returned to after the password, never another host. */
 export function safeNext(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/";
-  return next;
+  if (!next || !next.startsWith("/")) return "/";
+  // Browsers drop tabs and line breaks and read "\\" as "/", so "/<tab>/evil.com" would leave the site.
+  if (/[\u0000-\u001f\u007f\\]/.test(next)) return "/";
+  // Resolve against a placeholder origin: anything that lands on another origin is rejected.
+  const url = new URL(next, "http://same.invalid");
+  if (url.origin !== "http://same.invalid") return "/";
+  return `${url.pathname}${url.search}${url.hash}`;
 }

@@ -25,7 +25,8 @@ async function syntheticRow(sourceListingId: string, sourceUrl: string) {
     select concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address, m.caption, l.property_type as "propertyType"
     from listings l
     join properties p on p.id = l.property_id
-    left join listing_media m on m.listing_id = l.id and m.source_url = ${sourceUrl}
+    -- Only photos that exist: an unknown photo number must not make the server draw a new image.
+    join listing_media m on m.listing_id = l.id and m.source_url = ${sourceUrl}
     where l.source = 'synthetic' and l.source_listing_id = ${sourceListingId}
     limit 1`;
   return row ?? null;
@@ -35,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
   const { path } = await params;
   const file = path.at(-1) ?? "";
   if (file === "photo.svg") {
-    const synthetic = path.slice(0, -1).join("/").match(/^synthetic\/([A-Za-z0-9]{1,20})\/(\d{1,3})$/);
+    const synthetic = path.slice(0, -1).join("/").match(/^synthetic\/([A-Za-z0-9]{1,20})\/(0|[1-9]\d{0,2})$/);
     if (!synthetic) return new Response("Not found", { status: 404 });
     const sourceUrl = `synthetic://${synthetic[1]}/${synthetic[2]}`;
     const row = await syntheticRow(synthetic[1], sourceUrl);
@@ -50,7 +51,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
   const cached = await readLocal(key, width).catch(() => null);
   if (cached) return new Response(new Uint8Array(cached), { headers: IMMUTABLE });
 
-  const synthetic = key.match(/^synthetic\/([A-Za-z0-9]{1,20})\/(\d{1,3})$/);
+  const synthetic = key.match(/^synthetic\/([A-Za-z0-9]{1,20})\/(0|[1-9]\d{0,2})$/);
   if (!synthetic) return new Response("Not found", { status: 404 });
 
   const sourceUrl = `synthetic://${synthetic[1]}/${synthetic[2]}`;
