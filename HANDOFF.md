@@ -16,7 +16,7 @@ Hosting is set up for Render. `render.yaml` defines the web service, a Render Po
 6. Add glowy.homes as a custom domain in Render and replace the Squarespace default records with the ones Render shows.
 7. Run Lighthouse on the preview URL for `/search?city=los-angeles` and a listing page (targets: 85 and 90 mobile performance). Locally the medians are 91 and 95.
 
-The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowy.homes.
+The preview URL is whatever Render assigns (`https://<service>.onrender.com`) until the domain is connected; after that it is https://glowyhomes.com (the website named on the IDX Broker account and the MLS paperwork; www redirects to it).
 
 ## 2. Admin login
 

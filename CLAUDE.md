@@ -18,7 +18,7 @@ You are the lead full stack engineer for this repository. Your job is to build t
 ```yaml
 brand_name: "Glowy Homes"           # replace with your brand
 brand_short: "GH"                   # 2 to 3 letters for favicons and logos
-domain: "glowy.homes"               # production domain
+domain: "glowyhomes.com"            # production domain
 tagline: "Find your place."
 primary_market_country: "US"        # CA or US
 primary_market_region: "California" # province or state to seed first
@@ -30,7 +30,7 @@ brand_color: "#1D4ED8"              # one accent color only (royal blue, 6.7:1 o
 neutral_scale: "slate"              # tailwind neutral family
 font_sans: "Jost"
 font_display: "Bodoni Moda"         # headings
-support_email: "support@glowy.homes"
+support_email: "support@glowyhomes.com"
 ```
 
 Rules for the config: never hardcode brand values in components. Everything reads from `src/config/brand.ts`, which is generated from this block in Phase 0.

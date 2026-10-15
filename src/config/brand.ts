@@ -4,7 +4,7 @@
 export const brand = {
   name: "Glowy Homes",
   short: "GH",
-  domain: "glowy.homes",
+  domain: "glowyhomes.com",
   tagline: "Find your place.",
   market: {
     country: "US",
@@ -19,7 +19,7 @@ export const brand = {
   neutralScale: "slate",
   fontSans: "Jost",
   fontDisplay: "Bodoni Moda",
-  supportEmail: "support@glowy.homes",
+  supportEmail: "support@glowyhomes.com",
 } as const;
 
 export type Brand = typeof brand;

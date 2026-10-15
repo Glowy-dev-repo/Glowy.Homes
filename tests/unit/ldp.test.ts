@@ -83,7 +83,7 @@ describe("LDP helpers", () => {
   });
 
   it("emits RealEstateListing JSON LD with price and address", () => {
-    const ld = listingJsonLd(listing, "https://glowy.homes", ["https://glowy.homes/a.webp"]);
+    const ld = listingJsonLd(listing, "https://glowyhomes.com", ["https://glowyhomes.com/a.webp"]);
     expect(ld["@type"]).toBe("RealEstateListing");
     expect(ld.offers.price).toBe(1_249_000);
     expect(ld.offers.priceCurrency).toBe("USD");

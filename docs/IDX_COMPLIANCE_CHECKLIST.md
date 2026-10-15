@@ -2,7 +2,7 @@
 
 Prepared for the Conejo Simi Moorpark Association of REALTORS® MLS staff, to accompany the IDX Approval Form.
 
-**Website:** https://glowy.homes (preview address until the domain is connected: https://glowy-homes.onrender.com)
+**Website:** https://glowyhomes.com (www.glowyhomes.com redirects to it)
 **Access:** the site is private while it awaits approval. The preview password is sent in a separate message.
 **Current data:** the site shows clearly labeled demo listings. No CSMAR data is displayed until approval is granted (Rule 12.16.19).
 

@@ -28,11 +28,11 @@ services:
           property: connectionString
       # The live domain. Sign in links always use the address the visitor came in on.
       - key: NEXT_PUBLIC_APP_URL
-        value: https://glowy.homes
+        value: https://glowyhomes.com
       - key: AUTH_SECRET
         generateValue: true
       - key: EMAIL_FROM
-        value: Glowy Homes <no-reply@glowy.homes>
+        value: Glowy Homes <no-reply@glowyhomes.com>
       - key: LISTING_FEED
         value: synthetic
       - key: RESEND_API_KEY

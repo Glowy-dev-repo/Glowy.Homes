@@ -2,7 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
-const mediaOrigin = new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "https://media.glowy.homes").origin;
+const mediaOrigin = new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "https://media.glowyhomes.com").origin;
 
 // Hash or nonce based script CSP is part of the Phase 6 security review; inline scripts are
 // needed by Next's hydration payload until then.

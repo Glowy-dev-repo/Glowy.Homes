@@ -20,7 +20,7 @@ export function HideEstimateForm() {
   return (
     <div className="grid max-w-xl gap-2">
       <label htmlFor={`${id}-listing`} className="text-small font-medium text-neutral-800">Listing link or ID</label>
-      <Input id={`${id}-listing`} value={listingId} onChange={(e) => setListingId(e.target.value)} placeholder="https://glowy.homes/listing/..." />
+      <Input id={`${id}-listing`} value={listingId} onChange={(e) => setListingId(e.target.value)} placeholder="https://glowyhomes.com/listing/..." />
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => send(true)} disabled={state.busy}>{state.busy && <Loader2 className="animate-spin" aria-hidden />}Hide estimate</Button>
         <Button type="button" variant="secondary" onClick={() => send(false)} disabled={state.busy}>Show estimate</Button>
