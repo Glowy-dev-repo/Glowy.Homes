@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import postgres from "postgres";
 
 // Phase gate (docs/05): lint, typecheck, unit tests, build, e2e against a production server,
@@ -354,9 +357,30 @@ async function runPhaseChecks(ctx: Ctx) {
   for (const c of checks) await step(`phase ${phase}: ${c.name}`, () => c.fn(ctx));
 }
 
+/**
+ * The hosting server installs with `npm ci` on Linux, which refuses a lock file that is missing any
+ * package (a Windows `npm install` can drop Linux only optional packages). Checked in a clean temp folder
+ * with npm 10 and 11, without touching node_modules.
+ */
+async function lockFileInstalls() {
+  const dir = mkdtempSync(join(tmpdir(), "glowy-ci-"));
+  try {
+    copyFileSync("package.json", join(dir, "package.json"));
+    copyFileSync("package-lock.json", join(dir, "package-lock.json"));
+    for (const v of ["10", "11"]) {
+      const { ok, output } = await run(`npx --yes npm@${v} ci --dry-run --ignore-scripts --prefix "${dir}"`);
+      if (!ok) return { ok: false, note: `npm ${v}: ${(output.match(/Missing: .*/) ?? ["lock file out of sync"])[0]}; run npm install --package-lock-only` };
+    }
+    return { ok: true, note: "npm ci accepts the lock file (npm 10 and 11)" };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // ---------- main ----------
 
 async function main() {
+  await step("lock file installs on the host", lockFileInstalls);
   await step("lint", cmd("npm run lint"));
   await step("typecheck", cmd("npm run typecheck"));
   await step("unit tests", cmd("npm run test"));
