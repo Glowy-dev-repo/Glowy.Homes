@@ -61,7 +61,7 @@ export function Footer() {
       <div className="container-page space-y-3 border-t border-white/10 py-6 text-small text-blue-200">
         {brokerConfigured && (
           <p data-testid="broker-identity">
-            <strong className="font-medium text-white">{brand.name} is operated by {broker.brokerageName}</strong>, a {brand.market.region} licensed real estate broker, DRE #{broker.dreLicense}.
+            <strong className="font-medium text-white">{brand.name} is brokered by {broker.brokerageName}</strong>, a {brand.market.region} licensed real estate broker, DRE #{broker.dreLicense}.
             {broker.brokerName ? ` Broker of record: ${broker.brokerName}.` : ""}
             {broker.phone ? ` ${broker.phone}.` : ""}
             {broker.email ? ` ${broker.email}.` : ""}
