@@ -18,6 +18,7 @@ import { ApplyButton } from "@/components/rentals/ApplyButton";
 import { Track } from "@/components/layout/Track";
 import { EstimateCard } from "@/components/valuation/EstimateCard";
 import { brand } from "@/config/brand";
+import { broker } from "@/config/broker";
 import { sqlClient } from "@/db";
 import { formatArea, formatBaths, formatBeds, formatNumber, formatPrice } from "@/lib/format";
 import { jsonLdHtml } from "@/lib/json-ld";
@@ -347,6 +348,16 @@ export default async function ListingPage({ params }: Props) {
                 </dl>
               </div>
               <MlsDisclaimer className="mt-4" demo={l.source === "synthetic"} updatedAt={l.sourceUpdatedAt ?? l.updatedAt} />
+              {/* CSMAR Rule 12.16.17: a way to report wrong information we add (estimates, neighborhood facts). */}
+              <p className="mt-3 text-small text-neutral-600" data-testid="report-incorrect">
+                See something wrong on this page?{" "}
+                <a
+                  href={`mailto:${broker.email ?? brand.supportEmail}?subject=${encodeURIComponent(`Correction for ${address} (MLS ${l.sourceListingId ?? l.id})`)}`}
+                  className="font-medium text-accent underline underline-offset-2"
+                >
+                  Report incorrect information
+                </a>
+              </p>
             </Section>
           )}
         </div>

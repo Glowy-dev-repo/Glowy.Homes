@@ -32,6 +32,8 @@ test.describe("listing detail page", () => {
     await expect(page.getByTestId("listed-by")).toContainText(/^Listed by .+ of .+/);
     await expect(page.getByTestId("cta-note")).toContainText("not to the listing agent");
     await expect(page.getByTestId("mls-disclaimer")).toBeVisible();
+    // Rule 12.16.17: a way to report wrong information, addressed to the brokerage or support.
+    await expect(page.getByTestId("report-incorrect").getByRole("link", { name: "Report incorrect information" })).toHaveAttribute("href", /^mailto:/);
   });
 
   test("gallery opens full screen and moves with the keyboard", async ({ page }) => {

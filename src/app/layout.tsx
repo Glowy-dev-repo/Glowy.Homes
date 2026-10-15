@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Footer } from "@/components/layout/Footer";
+import { BrokerBar } from "@/components/layout/BrokerBar";
 import { DemoBanner } from "@/components/layout/DemoBanner";
 import { Header } from "@/components/layout/Header";
 import { Providers } from "@/components/layout/Providers";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <Providers>
           <DemoBanner />
+          <BrokerBar />
           <Header />
           <main id="main" className="flex-1">
             {children}
