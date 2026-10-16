@@ -34,6 +34,7 @@ describe("private preview", () => {
     expect(isPreviewExempt("/api/preview")).toBe(true);
     expect(isPreviewExempt("/api/health")).toBe(true);
     expect(isPreviewExempt("/api/inngest")).toBe(true);
+    expect(isPreviewExempt("/idx-wrapper")).toBe(true);
     expect(isPreviewExempt("/")).toBe(false);
     expect(isPreviewExempt("/previews")).toBe(false);
     expect(isPreviewExempt("/api/search")).toBe(false);

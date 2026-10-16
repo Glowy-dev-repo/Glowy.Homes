@@ -27,4 +27,4 @@ Prepared for the Conejo Simi Moorpark Association of REALTORS® MLS staff, to ac
 | 12.20 Use of "MLS" | No suggestion that the site is an MLS or gives direct MLS access | The site never presents itself as an MLS; "CSMAR MLS" appears only as the data source. |
 | 11.13 Compensation | No platform for offers of compensation | No compensation information is collected or displayed. |
 
-**Contact for compliance questions or corrections:** [broker email], [office phone]
+**Contact for compliance questions or corrections:** [broker email], (805) 777-7777 (Keller Williams World Class, 2475 Townsgate Rd, Suite 160, Westlake Village, CA 91361)

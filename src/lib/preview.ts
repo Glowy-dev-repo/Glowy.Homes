@@ -27,8 +27,9 @@ export function sameString(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// The password page itself, health checks for the host, background jobs (signed by Inngest) and robots.txt.
-const EXEMPT = ["/preview", "/api/preview", "/api/health", "/api/inngest", "/robots.txt"];
+// The password page itself, health checks for the host, background jobs (signed by Inngest), robots.txt,
+// and the header and footer shell that IDX Broker fetches to wrap its listing pages.
+const EXEMPT = ["/preview", "/api/preview", "/api/health", "/api/inngest", "/robots.txt", "/idx-wrapper"];
 
 export function isPreviewExempt(path: string): boolean {
   return EXEMPT.some((p) => path === p || path.startsWith(`${p}/`));
