@@ -49,10 +49,14 @@ async function loadLead(sql: Sql, leadId: string): Promise<LeadRow | null> {
       r.name as "regionName",
       l.listing_agent_id as "listingAgentId",
       (select pr.id from pros pr where pr.user_id = l.owner_user_id and pr.status = 'active') as "listingOwnerProId",
-      l.price as "listingPrice", l.listing_type as "listingType",
+      -- Leads imported from IDX Broker are about MLS homes that are not in our database; the import
+      -- stores that home's ZIP code, price and address on the lead instead.
+      coalesce(l.price, case when ld.payload->>'price' ~ '^[0-9]{1,9}$' then (ld.payload->>'price')::int end) as "listingPrice",
+      l.listing_type as "listingType",
       coalesce(l.property_type, p.property_type) as "propertyType",
-      nullif(left(p.postal_code, 5), '') as zip,
-      coalesce(concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city), null) as address
+      coalesce(nullif(left(p.postal_code, 5), ''), case when ld.payload->>'zip' ~ '^[0-9]{5}$' then ld.payload->>'zip' end) as zip,
+      coalesce(case when p.id is not null then concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) end,
+        nullif(ld.payload->>'address', '')) as address
     from leads ld
     left join regions r on r.id = ld.region_id
     left join listings l on l.id = ld.listing_id

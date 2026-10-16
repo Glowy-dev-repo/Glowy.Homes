@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, updatedAt } from "./columns";
 import { pros } from "./agents";
 import { regions } from "./geo";
@@ -59,12 +59,15 @@ export const leads = pgTable(
     score: integer("score").notNull().default(0),
     sourcePage: text("source_page"),
     utm: jsonb("utm").$type<Record<string, string>>(),
+    /** Id of the lead in an outside system it was imported from, e.g. "idx:123" for IDX Broker. */
+    externalRef: text("external_ref"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     index("leads_pro_idx").on(t.assignedProId, t.status, sql`${t.createdAt} desc`),
     index("leads_consumer_idx").on(t.consumerUserId, sql`${t.createdAt} desc`),
+    uniqueIndex("leads_external_ref_key").on(t.externalRef).where(sql`${t.externalRef} is not null`),
   ],
 );
 

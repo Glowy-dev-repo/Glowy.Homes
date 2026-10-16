@@ -42,7 +42,8 @@ export async function leadStats() {
       where ld.created_at >= now() - interval '30 days'
       group by 1 order by total desc`,
     sql<{ id: string; leadType: string; consumerName: string; createdAt: string; region: string | null; reason: string | null }[]>`
-      select ld.id, ld.lead_type as "leadType", ld.consumer_name as "consumerName", ld.created_at::text as "createdAt", r.name as region,
+      select ld.id, ld.lead_type as "leadType", ld.consumer_name as "consumerName", ld.created_at::text as "createdAt",
+        coalesce(r.name, 'ZIP ' || (ld.payload->>'zip')) as region,
         (ld.routing_log -> -1 ->> 'reason') as reason
       from leads ld left join regions r on r.id = ld.region_id
       where ld.assigned_pro_id is null and ld.status in ('new', 'unassigned')
@@ -57,7 +58,7 @@ export async function leadStats() {
 export async function recentLeads(limit = 30) {
   return sql<{ id: string; leadType: string; status: string; consumerName: string; createdAt: string; proName: string | null; proId: string | null; region: string | null }[]>`
     select ld.id, ld.lead_type as "leadType", ld.status, ld.consumer_name as "consumerName", ld.created_at::text as "createdAt",
-      pr.display_name as "proName", pr.id as "proId", r.name as region
+      pr.display_name as "proName", pr.id as "proId", coalesce(r.name, 'ZIP ' || (ld.payload->>'zip')) as region
     from leads ld left join pros pr on pr.id = ld.assigned_pro_id left join regions r on r.id = ld.region_id
     order by ld.created_at desc limit ${limit}`;
 }
@@ -67,8 +68,8 @@ export async function activeProsForRegion(leadId: string) {
     select p.id, p.display_name as "displayName", p.pro_type as "proType",
       exists (select 1 from pro_zip_codes z join leads ld on ld.id = ${leadId}
         left join listings l on l.id = ld.listing_id
-        join properties pp on pp.id = coalesce(ld.property_id, l.property_id)
-        where z.pro_id = p.id and z.zip = left(pp.postal_code, 5)) as covers
+        left join properties pp on pp.id = coalesce(ld.property_id, l.property_id)
+        where z.pro_id = p.id and z.zip = coalesce(left(pp.postal_code, 5), ld.payload->>'zip')) as covers
     from pros p where p.status = 'active' and p.pro_type = 'agent'
     order by covers desc, p.display_name limit 200`;
 }

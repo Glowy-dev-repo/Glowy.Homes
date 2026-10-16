@@ -1,6 +1,7 @@
 import { dailyAlertsFn, instantAlertsFn, weeklyAlertsFn } from "./alerts";
 import { eventsRetentionFn } from "./events-retention";
 import { hello } from "./hello";
+import { syncIdxLeadsFn } from "./idx-leads";
 import { ingestFeed } from "./ingest-feed";
 import { proResponseTimesFn, routeLeadFn, sweepLeadsFn } from "./leads";
 import { processMediaFn } from "./process-media";
@@ -19,6 +20,7 @@ export const functions = [
   routeLeadFn,
   sweepLeadsFn,
   proResponseTimesFn,
+  syncIdxLeadsFn,
   instantAlertsFn,
   dailyAlertsFn,
   weeklyAlertsFn,
