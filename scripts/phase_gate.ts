@@ -410,6 +410,9 @@ async function main() {
         // defaults to admin reviewed claims and requires Turnstile once public (src/server/data/owner.ts, src/lib/turnstile.ts).
         CLAIM_VERIFICATION: "code",
         TURNSTILE_OPTIONAL: "1",
+        // The routing suites test automatic assignment by ZIP code; the live site defaults to Glowy Homes
+        // choosing every agent (src/lib/leads/assignment.ts), which tests/e2e/lead-assignment.spec.ts covers.
+        LEAD_ASSIGNMENT: "auto",
         // Tests and the perf script send far more than 60 requests a minute from one IP.
         RATE_LIMIT_PER_MINUTE: "100000",
         SIGNIN_EMAILS_PER_HOUR: "100000",

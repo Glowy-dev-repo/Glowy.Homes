@@ -41,11 +41,17 @@ export async function leadStats() {
       left join regions c on c.id = case when r.type = 'neighborhood' then r.parent_id else r.id end
       where ld.created_at >= now() - interval '30 days'
       group by 1 order by total desc`,
-    sql<{ id: string; leadType: string; consumerName: string; createdAt: string; region: string | null; reason: string | null }[]>`
+    sql<{ id: string; leadType: string; consumerName: string; createdAt: string; region: string | null; reason: string | null; suggestedProId: string | null; suggestedName: string | null }[]>`
       select ld.id, ld.lead_type as "leadType", ld.consumer_name as "consumerName", ld.created_at::text as "createdAt",
         coalesce(r.name, 'ZIP ' || (ld.payload->>'zip')) as region,
-        (ld.routing_log -> -1 ->> 'reason') as reason
+        (ld.routing_log -> -1 ->> 'reason') as reason,
+        sp.id as "suggestedProId", sp.display_name as "suggestedName"
       from leads ld left join regions r on r.id = ld.region_id
+      left join lateral (
+        select p.id, p.display_name from jsonb_array_elements(ld.routing_log) e
+        join pros p on p.id::text = e->>'suggested_pro_id' and p.status = 'active'
+        where e->>'action' = 'awaiting_admin' order by e->>'at' desc limit 1
+      ) sp on true
       where ld.assigned_pro_id is null and ld.status in ('new', 'unassigned')
       order by ld.created_at desc limit 50`,
     sql<{ today: number; month: number }[]>`

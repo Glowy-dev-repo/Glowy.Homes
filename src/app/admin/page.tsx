@@ -50,7 +50,7 @@ export default async function AdminOverview() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard label="Active listings" value={feed.counts.active} testId="stat-active" />
           <StatCard label="Leads today" value={leads.totals.today} />
-          <StatCard label="Unassigned leads" value={leads.unassigned.length} testId="stat-unassigned" />
+          <StatCard label="Leads waiting for an agent" value={leads.unassigned.length} testId="stat-unassigned" />
           <StatCard label="Moderation queue" value={`${moderation.open}${moderation.stale ? ` (${moderation.stale} over 24h)` : ""}`} />
           <StatCard label="For sale" value={feed.counts.sale} />
           <StatCard label="For rent" value={feed.counts.rent} />

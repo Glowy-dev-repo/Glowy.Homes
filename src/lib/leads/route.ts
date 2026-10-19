@@ -2,7 +2,8 @@ import type postgres from "postgres";
 import { brand } from "@/config/brand";
 import type { LeadType, RoutingLogEntry } from "@/db/schema/leads";
 import { sendEmail } from "@/lib/email";
-import { adminUnassignedEmail, consumerConfirmationEmail, proNewLeadEmail } from "@/lib/email/templates/leads";
+import { adminNewLeadEmail, adminUnassignedEmail, consumerConfirmationEmail, proNewLeadEmail } from "@/lib/email/templates/leads";
+import { leadAssignmentMode } from "./assignment";
 import { decideRoute, scoreLead, type Candidate } from "./routing";
 import { market } from "@/config/market";
 
@@ -101,7 +102,58 @@ async function loadCandidates(sql: Sql, lead: LeadRow, extraIds: string[]): Prom
        or pr.id = any(${extraIds}::uuid[])`;
 }
 
-export type RouteOutcome = { status: "assigned"; proId: string } | { status: "unassigned"; reason: string } | { status: "skipped"; reason: string };
+export type RouteOutcome =
+  | { status: "assigned"; proId: string }
+  | { status: "unassigned"; reason: string }
+  | { status: "awaiting_admin"; suggestedProId: string | null }
+  | { status: "skipped"; reason: string };
+
+/**
+ * Admin assignment (src/lib/leads/assignment.ts): the lead waits for Glowy Homes to choose the agent.
+ * The best match is recorded as the suggestion, admins are emailed and the customer is told a local
+ * agent will be in touch. Runs once per lead; later retries and sweeps leave it waiting.
+ */
+async function holdForAdmin(sql: Sql, lead: LeadRow, extra: string[], requestedProId: string | null): Promise<RouteOutcome> {
+  if (lead.routingLog.some((e) => e.action === "awaiting_admin")) return { status: "skipped", reason: "waiting for Glowy Homes to choose an agent" };
+  const score = await scoreFor(sql, lead);
+  const decision = decideRoute({
+    leadType: lead.leadType,
+    zip: lead.zip,
+    requestedProId,
+    listingAgentId: lead.listingAgentId,
+    listingOwnerProId: lead.listingOwnerProId,
+    routeToListingAgent: ROUTE_TO_LISTING_AGENT,
+    exclude: [],
+    candidates: await loadCandidates(sql, lead, extra),
+  });
+  const suggestedProId = decision.assign ?? null;
+  const entry: RoutingLogEntry = {
+    at: new Date().toISOString(),
+    action: "awaiting_admin",
+    reason: suggestedProId ? `waiting for Glowy Homes to choose; suggested by ${decision.reason}` : `waiting for Glowy Homes to choose; ${decision.reason}`,
+    suggested_pro_id: suggestedProId ?? undefined,
+    candidates: decision.considered,
+  };
+  await sql`
+    update leads set score = ${score}, routing_log = routing_log || ${sql.json([entry] as never)}, updated_at = now()
+    where id = ${lead.id}`;
+
+  const [suggested] = suggestedProId
+    ? await sql<{ name: string }[]>`select display_name as name from pros where id = ${suggestedProId}`
+    : [];
+  const admins = await sql<{ email: string }[]>`select email from users where 'admin' = any(roles)`;
+  for (const a of admins) {
+    await sendEmail({
+      to: a.email,
+      ...adminNewLeadEmail({ appUrl: appUrl(), leadId: lead.id, leadType: lead.leadType, region: lead.regionName ?? (lead.zip ? `ZIP ${lead.zip}` : null), address: lead.address, suggestedAgent: suggested?.name ?? null }),
+    }).catch(() => {});
+  }
+  await sendEmail({
+    to: lead.consumerEmail,
+    ...consumerConfirmationEmail({ appUrl: appUrl(), consumerName: lead.consumerName, leadType: lead.leadType, proName: null, brokerage: null, address: lead.address }),
+  }).catch(() => {});
+  return { status: "awaiting_admin", suggestedProId };
+}
 
 const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? `https://${brand.domain}`;
 
@@ -118,6 +170,9 @@ export async function routeLead(sql: Sql, leadId: string, mode: "initial" | "ret
   const previous = [...new Set(lead.routingLog.map((e) => e.pro_id).filter((x): x is string => !!x))];
   const requestedProId = typeof lead.payload.requested_pro_id === "string" ? lead.payload.requested_pro_id : null;
   const extra = [requestedProId, lead.listingAgentId, lead.listingOwnerProId].filter((x): x is string => !!x);
+  // Inquiries on a listing posted on our site by its landlord or owner go to them directly (they answer
+  // about their own home); every other lead waits for Glowy Homes to choose the agent.
+  if (leadAssignmentMode() === "admin" && mode !== "reassign" && !lead.listingOwnerProId) return holdForAdmin(sql, lead, extra, requestedProId);
   const score = mode === "initial" ? await scoreFor(sql, lead) : null;
 
   let exclude = [...previous];

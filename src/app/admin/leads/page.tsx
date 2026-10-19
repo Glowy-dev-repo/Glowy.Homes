@@ -21,22 +21,37 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
     <div className="space-y-8">
       <h1 className="text-h1">Leads</h1>
       <section aria-labelledby="unassigned-h">
-        <h2 id="unassigned-h" className="mb-3 text-h2">Unassigned ({stats.unassigned.length})</h2>
-        {!stats.unassigned.length && <p className="text-body text-neutral-600">Every lead is assigned.</p>}
+        <h2 id="unassigned-h" className="mb-1 text-h2">Waiting for an agent ({stats.unassigned.length})</h2>
+        <p className="mb-3 max-w-2xl text-small text-neutral-600">
+          New leads come to Glowy Homes first. Choose the partner agent for each one; the agent who covers the
+          home&apos;s ZIP code is suggested. The agent is emailed as soon as you assign.
+        </p>
+        {!stats.unassigned.length && <p className="text-body text-neutral-600">Every lead has an agent.</p>}
       </section>
       <ul className="space-y-3" data-testid="admin-leads">
-        {rows.map(({ lead, pros }) => (
-          <li key={lead.id} data-lead-id={lead.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 p-4">
-            <div>
-              <p className="text-h3">{lead.consumerName}, {lead.leadType.replace(/_/g, " ")}</p>
-              <p className="text-small text-neutral-600">
-                {formatDate(lead.createdAt)} · {lead.region ?? "Unknown area"} · {lead.proName ? `with ${lead.proName}` : "unassigned"}
-                {"reason" in lead && lead.reason ? ` · ${lead.reason}` : ""}
-              </p>
-            </div>
-            <ReassignForm leadId={lead.id} pros={pros} />
-          </li>
-        ))}
+        {rows.map(({ lead, pros }) => {
+          const suggested = "suggestedProId" in lead ? lead.suggestedProId : null;
+          return (
+            <li key={lead.id} data-lead-id={lead.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 p-4">
+              <div>
+                <p className="text-h3">{lead.consumerName}, {lead.leadType.replace(/_/g, " ")}</p>
+                <p className="text-small text-neutral-600">
+                  {formatDate(lead.createdAt)} · {lead.region ?? "Unknown area"} · {lead.proName ? `with ${lead.proName}` : "waiting for an agent"}
+                </p>
+                {!lead.proName && (
+                  <p className="text-small text-neutral-800" data-testid="suggested-agent">
+                    {"suggestedName" in lead && lead.suggestedName
+                      ? `Suggested: ${lead.suggestedName}`
+                      : "reason" in lead && lead.reason && !lead.reason.startsWith("waiting for Glowy Homes")
+                        ? `No suggestion: ${lead.reason}`
+                        : "No partner agent covers this ZIP code yet"}
+                  </p>
+                )}
+              </div>
+              <ReassignForm leadId={lead.id} pros={pros} suggestedId={suggested} assigned={!!lead.proName} />
+            </li>
+          );
+        })}
       </ul>
 
       <section aria-labelledby="all-h" className="space-y-4">

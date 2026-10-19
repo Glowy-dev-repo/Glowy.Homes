@@ -58,6 +58,23 @@ export function consumerConfirmationEmail(opts: { appUrl: string; consumerName: 
   };
 }
 
+/** A new lead waiting for Glowy Homes to choose its agent (lead assignment by admin). */
+export function adminNewLeadEmail(opts: { appUrl: string; leadId: string; leadType: string; region: string | null; address: string | null; suggestedAgent: string | null }) {
+  const subject = `New ${TYPE_LABEL[opts.leadType] ?? "lead"} to assign${opts.region ? ` in ${opts.region}` : ""}`;
+  const href = `${opts.appUrl}/admin/leads?lead=${opts.leadId}`;
+  const lines = [
+    opts.address ? `Home: ${opts.address}` : null,
+    opts.suggestedAgent ? `Suggested agent: ${opts.suggestedAgent}` : "No partner agent covers this ZIP code yet.",
+    "Choose the agent in admin. The customer has been told a local agent will contact them.",
+  ].filter((l): l is string => !!l);
+  return {
+    subject,
+    text: `${subject}\n${lines.join("\n")}\nAssign it here: ${href}`,
+    html: layout(subject, lines.map((l) => `<p style="font-size:15px;color:#3f3f46">${esc(l)}</p>`).join(""), { href, label: "Choose an agent" }),
+    link: href,
+  };
+}
+
 export function adminUnassignedEmail(opts: { appUrl: string; leadId: string; leadType: string; reason: string; region: string | null }) {
   const subject = `Unassigned ${TYPE_LABEL[opts.leadType] ?? "lead"}${opts.region ? ` in ${opts.region}` : ""}`;
   const href = `${opts.appUrl}/admin/leads?lead=${opts.leadId}`;
