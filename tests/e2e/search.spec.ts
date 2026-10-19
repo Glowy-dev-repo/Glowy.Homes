@@ -81,6 +81,34 @@ test.describe("map search", () => {
     await expect(page.locator(`[data-testid="price-pin"][data-id="${id}"]`)).toHaveClass(/is-hovered/);
   });
 
+  test("hovering a pin highlights it in place without redrawing the map's pins", async ({ page, isMobile }) => {
+    test.skip(isMobile, "hover is a pointer interaction");
+    await page.goto(`/search?${await smallSearch(page)}`);
+    await expect(page.getByTestId("map")).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
+    await expect(page.getByTestId("price-pin").first()).toBeVisible();
+    // Tag the markers: a redraw on hover replaces them and drops the hover under the pointer.
+    await page.evaluate(() => document.querySelectorAll<HTMLElement>('[data-testid="price-pin"]').forEach((el) => (el.dataset.tag = "original")));
+    // A pin that is on top at its own centre, so the pointer really lands on it.
+    const index = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid="price-pin"]')].findIndex((el) => {
+        const r = el.getBoundingClientRect();
+        return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('[data-testid="price-pin"]') === el;
+      }),
+    );
+    expect(index).toBeGreaterThanOrEqual(0);
+    const pin = page.getByTestId("price-pin").nth(index);
+    const before = (await pin.boundingBox())!;
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+    await expect(pin).toHaveClass(/is-hovered/);
+    const after = (await pin.boundingBox())!;
+    // Its centre stays under the pointer (the label grows a little around it).
+    expect(Math.abs(after.x + after.width / 2 - (before.x + before.width / 2))).toBeLessThan(2);
+    expect(Math.abs(after.y + after.height / 2 - (before.y + before.height / 2))).toBeLessThan(2);
+    await expect(page.locator('[data-testid="price-pin"]:not([data-tag="original"])')).toHaveCount(0);
+    await page.mouse.move(2, 2);
+    await expect(page.locator(".map-price-pin.is-hovered")).toHaveCount(0);
+  });
+
   test("mobile shows the list first and toggles to the map", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mobile layout");
     await page.goto("/search?city=san-jose");

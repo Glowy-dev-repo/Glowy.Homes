@@ -36,15 +36,30 @@
 }
 
 @layer components {
-  .map-price-pin {
-    @apply tabular rounded-pill border border-white bg-accent px-2 py-0.5 text-[12px] font-semibold text-white shadow-card transition-transform duration-150;
+  /* Map markers: MapLibre positions the outer element with an inline transform, so any scale on it
+     would also scale its position on the map and make the pin jump away from the pointer. Only the
+     inner label grows on hover. */
+  .map-price-pin,
+  .map-cluster {
+    @apply cursor-pointer border-0 bg-transparent p-0;
   }
   .map-price-pin.is-hovered,
-  .map-price-pin:hover {
-    @apply z-10 scale-110 bg-neutral-900;
+  .map-price-pin:hover,
+  .map-cluster:hover {
+    @apply z-10;
   }
-  .map-cluster {
-    @apply grid place-items-center rounded-full border-2 border-white bg-navy/90 text-[12px] font-semibold text-white shadow-card transition-transform duration-150 hover:scale-105;
+  .map-price-pin-label {
+    @apply tabular block rounded-pill border border-white bg-accent px-2 py-0.5 text-[12px] font-semibold text-white shadow-card transition duration-150;
+  }
+  .map-price-pin.is-hovered .map-price-pin-label,
+  .map-price-pin:hover .map-price-pin-label {
+    @apply scale-110 bg-neutral-900;
+  }
+  .map-cluster-label {
+    @apply grid size-full place-items-center rounded-full border-2 border-white bg-navy/90 text-[12px] font-semibold text-white shadow-card transition duration-150;
+  }
+  .map-cluster:hover .map-cluster-label {
+    @apply scale-105;
   }
 }
 

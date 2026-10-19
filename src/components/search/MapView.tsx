@@ -161,7 +161,11 @@ export default function MapView({
         el.dataset.testid = "price-pin";
         el.dataset.id = p.id;
         el.className = "map-price-pin";
-        el.textContent = formatPrice(p.price, { compact: true });
+        // The visible pill is an inner span so its hover scale never touches the marker's position.
+        const label = document.createElement("span");
+        label.className = "map-price-pin-label";
+        label.textContent = formatPrice(p.price, { compact: true });
+        el.appendChild(label);
         el.setAttribute("aria-label", `Listing for ${formatPrice(p.price)}`);
         el.addEventListener("mouseenter", () => handlers.current.onHover(p.id));
         el.addEventListener("mouseleave", () => handlers.current.onHover(null));
@@ -177,7 +181,10 @@ export default function MapView({
       el.className = "map-cluster";
       const size = Math.min(56, 28 + Math.log10(c.count) * 10);
       el.style.width = el.style.height = `${size}px`;
-      el.textContent = c.count >= 1000 ? `${(c.count / 1000).toFixed(1)}k` : String(c.count);
+      const label = document.createElement("span");
+      label.className = "map-cluster-label";
+      label.textContent = c.count >= 1000 ? `${(c.count / 1000).toFixed(1)}k` : String(c.count);
+      el.appendChild(label);
       el.setAttribute("aria-label", `${c.count} homes here. Zoom in`);
       el.addEventListener("click", () => {
         const [w, s, e, n] = c.bounds;

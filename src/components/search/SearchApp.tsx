@@ -34,6 +34,11 @@ function useIsDesktop(): boolean | null {
   );
 }
 
+// Shared empty lists: a new [] on every render would make MapView redraw all its markers each time
+// anything re-renders (hovering a pin or card), dropping the hover under the pointer.
+const NO_PINS: NonNullable<SearchResult["pins"]> = [];
+const NO_CLUSTERS: NonNullable<SearchResult["clusters"]> = [];
+
 async function fetchSearch(qs: string): Promise<SearchResult> {
   const res = await fetch(`/api/search?${qs}`);
   const body = (await res.json()) as { data: SearchResult | null; error: { message: string } | null };
@@ -124,8 +129,8 @@ function SearchAppInner({
           <div className="relative h-[calc(100dvh-124px)] lg:sticky lg:top-[124px]">
             {/* Sticky under the header (64px) and the sticky filter bar (60px). */}
             <MapView
-              pins={result?.pins ?? []}
-              clusters={result?.clusters ?? []}
+              pins={result?.pins ?? NO_PINS}
+              clusters={result?.clusters ?? NO_CLUSTERS}
               initialBounds={initialBounds}
               hoveredId={hoveredId}
               onHover={setHoveredId}
