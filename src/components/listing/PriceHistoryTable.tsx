@@ -20,6 +20,7 @@ const SOURCE_LABELS: Record<string, string> = {
   synthetic: "Demo feed",
   reso: "MLS",
   crea_ddf: "MLS",
+  simplyrets: "MLS",
   csv: "Brokerage import",
   fsbo: "Owner",
   landlord: "Landlord",

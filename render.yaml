@@ -83,6 +83,13 @@ services:
       # Private preview password; delete it to open the site to the public.
       - key: PREVIEW_PASSWORD
         sync: false
+      # SimplyRETS MLS feed: set LISTING_FEED to simplyrets once the CSMAR license is approved.
+      - key: SIMPLYRETS_API_KEY
+        sync: false
+      - key: SIMPLYRETS_API_SECRET
+        sync: false
+      - key: FEED_PHOTO_ORIGINS
+        sync: false
       # IDX Broker API key (Home, Access Control): imports leads from the IDX search every 10 minutes.
       - key: IDX_BROKER_API_KEY
         sync: false

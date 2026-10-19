@@ -18,7 +18,7 @@ export async function feedHealth() {
     from listings`;
   const last = runs[0];
   const lastSuccess = runs.find((r) => r.status === "success" || r.status === "partial");
-  const scheduled = process.env.LISTING_FEED === "reso" || process.env.LISTING_FEED === "crea_ddf";
+  const scheduled = ["reso", "crea_ddf", "simplyrets"].includes(process.env.LISTING_FEED ?? "");
   const signals: string[] = [];
   if (scheduled && (!lastSuccess || Date.now() - Date.parse(lastSuccess.startedAt) > 60 * 60_000)) signals.push("No successful feed run in the last 60 minutes.");
   if (last && (last.stats.errors ?? 0) >= Math.max(1, (last.stats.fetched ?? 0) * 0.02)) signals.push("The last run had errors on 2% or more of records.");

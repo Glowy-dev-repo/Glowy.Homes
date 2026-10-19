@@ -11,6 +11,8 @@ export function snapWidth(width: number): (typeof MEDIA_WIDTHS)[number] {
 }
 
 export function mediaUrl(storageKey: string, width: number): string {
+  // Feed photos served from the feed's own CDN (SimplyRETS) are stored as their https URL.
+  if (storageKey.startsWith("https://")) return storageKey;
   const w = snapWidth(width);
   // Demo photos are vector illustrations: one SVG per photo, drawn by the browser at any size, so the
   // server never rasterizes them. The style version makes browsers holding the year long immutable copy

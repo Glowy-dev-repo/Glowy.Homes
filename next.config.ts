@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
 const mediaOrigin = new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "https://media.glowyhomes.com").origin;
+// Listing photos served straight from the MLS feed's CDN (SimplyRETS), matching the ingest adapter.
+const feedPhotoOrigins = (process.env.FEED_PHOTO_ORIGINS ?? "https://d2bd5h5te3s67r.cloudfront.net")
+  .split(",")
+  .map((s) => s.trim())
+  .filter((s) => /^https:\/\/[a-z0-9.-]+$/i.test(s))
+  .join(" ");
 
 // Hash or nonce based script CSP is part of the Phase 6 security review; inline scripts are
 // needed by Next's hydration payload until then.
@@ -10,7 +16,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${mediaOrigin} https://api.maptiler.com https://tiles.openfreemap.org`,
+  `img-src 'self' data: blob: ${mediaOrigin} ${feedPhotoOrigins} https://api.maptiler.com https://tiles.openfreemap.org`,
   "font-src 'self' data:",
   `connect-src 'self' https://api.maptiler.com https://tiles.openfreemap.org https://*.ingest.sentry.io https://*.ingest.us.sentry.io${isDev ? " ws:" : ""}`,
   "worker-src 'self' blob:",

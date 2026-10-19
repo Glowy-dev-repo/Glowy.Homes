@@ -30,7 +30,7 @@ const EnvSchema = z.object({
   R2_BUCKET: z.string().default("glowy-homes-media"),
   NEXT_PUBLIC_MEDIA_BASE_URL: z.string().default("https://media.glowyhomes.com"),
   SENTRY_DSN: optional,
-  LISTING_FEED: z.enum(["synthetic", "reso", "crea_ddf", "csv"]).default("synthetic"),
+  LISTING_FEED: z.enum(["synthetic", "reso", "crea_ddf", "csv", "simplyrets"]).default("synthetic"),
   STRIPE_SECRET_KEY: optional,
   ANTHROPIC_API_KEY: optional,
   ANTHROPIC_MODEL: optional,
