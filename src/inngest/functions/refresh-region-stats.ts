@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { sqlClient } from "@/db";
 import { refreshRegionStats } from "@/lib/regions/stats";
 import { inngest } from "../client";
@@ -14,10 +14,10 @@ export const refreshRegionStatsFn = inngest.createFunction(
   async ({ step }) => {
     const regions = await step.run("refresh", () => refreshRegionStats(sqlClient));
     await step.run("revalidate", () => {
-      revalidatePath("/", "page");
-      revalidatePath("/homes/[city]", "page");
-      revalidatePath("/homes/[city]/[neighborhood]", "page");
-      revalidatePath("/rentals/[city]", "page");
+      revalidateSitePage("/", "page");
+      revalidateSitePage("/homes/[city]", "page");
+      revalidateSitePage("/homes/[city]/[neighborhood]", "page");
+      revalidateSitePage("/rentals/[city]", "page");
     });
     return { regions };
   },

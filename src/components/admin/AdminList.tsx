@@ -14,9 +14,11 @@ export type FilterField =
   | { kind: "text"; name: string; label: string; value?: string; placeholder?: string; inputMode?: "numeric" }
   | { kind: "select"; name: string; label: string; value?: string; options: { value: string; label: string }[] };
 
-export function AdminFilters({ action, fields }: { action: string; fields: FilterField[] }) {
+export function AdminFilters({ action, fields, hidden }: { action: string; fields: FilterField[]; hidden?: Record<string, string> }) {
+  const clearHref = hidden ? `${action}?${new URLSearchParams(hidden).toString()}` : action;
   return (
-    <form action={action} method="get" role="search" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+    <form action={action} method="get" role="search" className="grid gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+      {hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       {fields.map((f) => (
         <div key={f.name} className="space-y-1">
           <Label htmlFor={`f-${f.name}`}>{f.label}</Label>
@@ -35,7 +37,7 @@ export function AdminFilters({ action, fields }: { action: string; fields: Filte
       <div className="flex gap-2">
         <Button type="submit">Filter</Button>
         <Button asChild variant="secondary">
-          <Link href={action}>Clear</Link>
+          <Link href={clearHref}>Clear</Link>
         </Button>
       </div>
     </form>

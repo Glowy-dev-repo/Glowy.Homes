@@ -211,7 +211,7 @@ test.describe("admin and pros", () => {
     test.skip(isMobile, "admin desktop flow");
     const [lead] = await db()`select id, assigned_pro_id as pro from leads where assigned_pro_id is not null order by created_at desc limit 1`;
     test.skip(!lead, "needs at least one assigned lead");
-    await signInAs(page, "admin@example.com", "/admin/leads");
+    await signInAs(page, "admin@example.com", `/admin/leads?lead=${lead.id}`);
     const row = page.locator(`[data-lead-id="${lead.id}"]`).first();
     const form = row.getByTestId("reassign-form");
     const options = await form.locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
@@ -224,13 +224,19 @@ test.describe("admin and pros", () => {
     expect(after.last).toMatchObject({ action: "admin_reassigned", pro_id: target });
   });
 
-  test("admin sees feed health, lead stats and the moderation queue", async ({ page, isMobile }) => {
+  test("admin sees what needs attention, lead stats, feed health and approvals", async ({ page, isMobile }) => {
     test.skip(isMobile, "admin desktop flow");
     await signInAs(page, "admin@example.com", "/admin");
-    await expect(page.getByTestId("feed-runs").locator("tbody tr")).not.toHaveCount(0);
+    // Admin is its own area: no public header or footer.
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
+    await expect(page.getByTestId("attention")).toBeVisible();
     await expect(page.getByTestId("lead-stats")).toBeVisible();
-    await page.getByRole("link", { name: "Moderation" }).click();
-    await expect(page.getByRole("heading", { name: "Moderation queue" })).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Admin" });
+    await nav.getByRole("link", { name: "Settings" }).click();
+    await expect(page.getByTestId("setup-checklist")).toBeVisible();
+    await expect(page.getByTestId("feed-runs").locator("tbody tr")).not.toHaveCount(0);
+    await nav.getByRole("link", { name: /Approvals/ }).click();
+    await expect(page.getByRole("heading", { name: "Approvals" })).toBeVisible();
   });
 
   test("agent signup, admin approval, public profile and find an agent", async ({ page, browser, isMobile }) => {

@@ -58,7 +58,8 @@ test("a lead from the IDX Broker search reaches the partner agent for its ZIP co
     .not.toBeNull();
   expect(assigned!.covers).toBe(true);
 
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent("/admin/leads")}`);
+  // The gate runs automatic assignment, so the lead already has its agent.
+  await page.goto(`/signin?callbackUrl=${encodeURIComponent(`/admin/leads?lead=${created[0]}`)}`);
   await page.getByLabel("Email").fill("admin@example.com");
   await page.getByRole("button", { name: "Email me a sign in link" }).click();
   await expect(page).toHaveURL(/check-email/);

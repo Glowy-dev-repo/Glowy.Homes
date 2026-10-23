@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { z } from "zod";
 import { fail, invalid, ok } from "@/server/api/respond";
 import { requireAdmin } from "@/server/api/pro";
@@ -29,8 +29,8 @@ export async function PATCH(req: Request) {
   if (item.itemType === "listing") await applyListingDecision(item.itemId, parsed.data.decision, parsed.data.note ?? null);
   if (item.itemType === "claim") await decideClaim(item.itemId, parsed.data.decision);
   if (item.itemType === "pro" || item.itemType === "review") {
-    revalidatePath("/agent/[slug]", "page");
-    revalidatePath("/agents/[city]", "page");
+    revalidateSitePage("/agent/[slug]", "page");
+    revalidateSitePage("/agents/[city]", "page");
   }
   return ok({ decided: true });
 }

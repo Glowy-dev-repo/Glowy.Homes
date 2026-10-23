@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { brand } from "@/config/brand";
 import { sqlClient } from "@/db";
 import { sendEmail } from "@/lib/email";
@@ -151,10 +151,10 @@ export async function applyUserListingDecision(listingId: string, decision: "app
   const street = [l.line2, l.line1].filter(Boolean).join(", ");
   if (decision === "approve") {
     await sql`insert into listing_price_events (property_id, listing_id, event_type, price, event_date, source) values (${l.propertyId}, ${l.id}, 'listed', ${l.price}, current_date, 'user')`;
-    revalidatePath("/homes/[city]", "page");
-    revalidatePath("/rentals/[city]", "page");
-    revalidatePath("/listing/[id]", "page");
-    revalidatePath("/listing/[id]/[slug]", "page");
+    revalidateSitePage("/homes/[city]", "page");
+    revalidateSitePage("/rentals/[city]", "page");
+    revalidateSitePage("/listing/[id]", "page");
+    revalidateSitePage("/listing/[id]/[slug]", "page");
     const href = `${appUrl()}/listing/${l.id}/${addressSlug(l.line1, l.line2, l.city)}`;
     if (l.ownerEmail) {
       await sendEmail({ to: l.ownerEmail, subject: "Your listing is live", text: `${street}, ${l.city} is now live: ${href}`, html: `<p>${street}, ${l.city} is now live.</p><p><a href="${href}">View your listing</a></p>`, link: href }).catch(() => {});

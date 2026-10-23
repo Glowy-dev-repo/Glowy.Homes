@@ -30,7 +30,7 @@ export default async function AdminZipsPage() {
       {rows.length === 0 ? (
         <p className="text-body text-neutral-600">No ZIP codes yet. They appear when an agent adds one or a lead comes in.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white px-4">
           <table className="w-full min-w-[640px] text-left text-body" data-testid="zip-coverage">
             <caption className="sr-only">ZIP code coverage</caption>
             <thead>

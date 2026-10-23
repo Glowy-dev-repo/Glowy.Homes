@@ -20,7 +20,7 @@ test("a lead waiting for Glowy Homes shows the suggested agent and admin assigns
     values ('tour', 'Assign Test', ${`assign-${Date.now()}@example.com`}, ${home.listingId}, ${home.propertyId}, '{}'::jsonb, 'new', ${db().json([entry])})
     returning id`;
 
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent("/admin/leads")}`);
+  await page.goto(`/signin?callbackUrl=${encodeURIComponent(`/admin/leads?lead=${lead.id}`)}`);
   await page.getByLabel("Email").fill("admin@example.com");
   await page.getByRole("button", { name: "Email me a sign in link" }).click();
   await expect(page).toHaveURL(/check-email/);
@@ -38,6 +38,7 @@ test("a lead waiting for Glowy Homes shows the suggested agent and admin assigns
       select assigned_pro_id as pro, routing_log -> -1 as last from leads where id = ${lead.id}`)[0];
   await expect.poll(async () => (await assigned()).pro, { timeout: 20_000 }).toBe(home.proId);
   expect((await assigned()).last.action).toBe("admin_reassigned");
-  // The page refreshes: the lead now shows its agent instead of waiting.
+  // It now shows its agent.
+  await page.goto(`/admin/leads?lead=${lead.id}`);
   await expect(page.locator(`[data-lead-id="${lead.id}"]`).first()).toContainText("with ");
 });

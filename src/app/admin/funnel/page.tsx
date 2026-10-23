@@ -12,9 +12,11 @@ export default async function FunnelPage() {
   return (
     <div className="space-y-10">
       <section aria-labelledby="funnel-heading">
-        <h1 id="funnel-heading" className="text-h1">Search to lead funnel</h1>
-        <p className="mb-4 mt-1 text-body text-neutral-600">Last 30 days, by city. Each step counts visitors who also did the step before it, in order.</p>
-        <div className="overflow-x-auto">
+        <h1 id="funnel-heading" className="text-h1">Reports</h1>
+        <p className="mb-4 mt-1 max-w-2xl text-body text-neutral-600">
+          How visitors turn into leads over the last 30 days, by city: how many searched, how many of those opened a listing, and how many of those sent a request.
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white px-4">
           <table className="w-full min-w-[560px] text-left text-body" data-testid="funnel-table">
             <caption className="sr-only">Funnel by city</caption>
             <thead>
@@ -44,7 +46,7 @@ export default async function FunnelPage() {
         </div>
       </section>
       <section aria-labelledby="events-heading">
-        <h2 id="events-heading" className="text-h2">Events, last 7 days</h2>
+        <h2 id="events-heading" className="text-h2">Visitor actions, last 7 days</h2>
         <dl className="mt-3 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
           {counts.map((c) => (
             <div key={c.name} className="flex justify-between gap-3 border-b border-neutral-100 py-1">

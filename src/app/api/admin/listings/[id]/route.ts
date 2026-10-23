@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { z } from "zod";
 import { sqlClient } from "@/db";
 import { isUuid } from "@/lib/listings/detail";
@@ -20,6 +20,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!parsed.success) return invalid(parsed.error);
   const rows = await sqlClient`update listings set hide_estimate = ${parsed.data.hideEstimate}, updated_at = now() where id = ${id} returning id`;
   if (!rows.length) return fail(404, { code: "not_found", message: "Listing not found." });
-  revalidatePath("/listing/[id]/[slug]", "page");
+  revalidateSitePage("/listing/[id]/[slug]", "page");
   return ok({ id, hideEstimate: parsed.data.hideEstimate });
 }

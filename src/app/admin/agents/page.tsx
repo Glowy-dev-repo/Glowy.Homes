@@ -48,7 +48,7 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams: 
       {rows.length === 0 ? (
         <p className="text-body text-neutral-600">No agents match these filters.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white px-4">
           <table className="w-full min-w-[860px] text-left text-body" data-testid="admin-agents">
             <caption className="sr-only">Partner agents</caption>
             <thead>

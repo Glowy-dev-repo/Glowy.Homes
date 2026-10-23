@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { ProProfileUpdate } from "@/lib/pros/schema";
 import { invalid, ok } from "@/server/api/respond";
 import { requirePro } from "@/server/api/pro";
@@ -13,7 +13,7 @@ export async function PATCH(req: Request) {
   const parsed = ProProfileUpdate.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
   await updatePro(who.pro.proId, parsed.data);
-  revalidatePath("/agent/[slug]", "page");
-  revalidatePath("/agents/[city]", "page");
+  revalidateSitePage("/agent/[slug]", "page");
+  revalidateSitePage("/agents/[city]", "page");
   return ok({ updated: true });
 }

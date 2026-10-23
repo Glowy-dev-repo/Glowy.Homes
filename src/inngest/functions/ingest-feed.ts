@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { revalidateSitePage } from "@/lib/revalidate";
 import { sqlClient } from "@/db";
 import { configuredFeedSource, getAdapter } from "@/lib/ingestion/adapters";
 import { runIngest } from "@/lib/ingestion/ingest";
@@ -38,9 +39,9 @@ export const ingestFeed = inngest.createFunction(
     if (result.deactivatedListingIds.length || result.stats.created) {
       await step.run("revalidate", async () => {
         // Browse pages are ISR; refresh them so counts and cards reflect the run.
-        revalidatePath("/homes/[city]", "page");
-        revalidatePath("/homes/[city]/[neighborhood]", "page");
-        revalidatePath("/rentals/[city]", "page");
+        revalidateSitePage("/homes/[city]", "page");
+        revalidateSitePage("/homes/[city]/[neighborhood]", "page");
+        revalidateSitePage("/rentals/[city]", "page");
         for (const id of result.deactivatedListingIds.slice(0, 1000)) revalidatePath(`/listing/${id}`, "layout");
       });
     }
