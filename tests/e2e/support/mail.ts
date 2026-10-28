@@ -1,32 +1,53 @@
-import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-// Mirrors devMailFile in src/lib/email: the log transport writes the latest email per recipient.
-function mailFile(to: string) {
-  return resolve(process.cwd(), ".dev-mail", `${to.toLowerCase().replace(/[^a-z0-9@._]/g, "_")}.json`);
+/** Marks a link as taken by this test; false if another test already took it (atomic create). */
+function claim(link: string): boolean {
+  const dir = resolve(process.cwd(), ".dev-mail", "claimed");
+  mkdirSync(dir, { recursive: true });
+  try {
+    closeSync(openSync(resolve(dir, createHash("sha1").update(link).digest("hex")), "wx"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+type Sent = { subject: string; link?: string; sentAt?: string };
+
+/** Every email to `to` (newest first). Mirrors devMailFolder in src/lib/email: one file per email. */
+export function recentEmails(to: string): Sent[] {
+  const folder = resolve(process.cwd(), ".dev-mail", "all", to.toLowerCase().replace(/[^a-z0-9@._]/g, "_"));
+  if (!existsSync(folder)) return [];
+  return readdirSync(folder)
+    .sort()
+    .reverse()
+    .slice(0, 50)
+    .flatMap((f) => {
+      try {
+        return [JSON.parse(readFileSync(resolve(folder, f), "utf8")) as Sent];
+      } catch {
+        return []; // caught mid write; the next poll reads it
+      }
+    });
 }
 
 /**
  * Waits for the app's log transport to record an email to `to` and returns its primary link. With
- * `match`, only links that match count (the transport keeps recent history per person). With `since`,
- * only emails sent after that moment count and the earliest one wins, so tests signing in as the same
- * person at once each take their own link.
+ * `match`, only links that match count. With `since`, only emails sent after that moment count and the
+ * earliest one wins, so tests signing in as the same person at once each take their own link.
  */
 export async function waitForEmailLink(to: string, timeoutMs = 15_000, match?: RegExp, since?: number): Promise<string> {
-  const file = mailFile(to);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (existsSync(file)) {
-      try {
-        type Sent = { link?: string; sentAt?: string };
-        const mail = JSON.parse(readFileSync(file, "utf8")) as Sent & { history?: Sent[] };
-        const sent = mail.history?.length ? mail.history : [mail];
-        const candidates = sent.filter((m) => m.link && (!match || match.test(m.link)) && (since === undefined || Date.parse(m.sentAt ?? "") >= since));
-        const pick = since === undefined ? candidates[0] : candidates[candidates.length - 1];
-        if (pick?.link) return pick.link;
-      } catch {
-        // Caught the file mid write; read it again.
-      }
+    const candidates = recentEmails(to).filter((m) => m.link && (!match || match.test(m.link)) && (since === undefined || Date.parse(m.sentAt ?? "") >= since));
+    if (since === undefined) {
+      if (candidates[0]?.link) return candidates[0].link;
+    } else {
+      // Oldest first, and each link goes to one test only: two tests signing in as the same person to the
+      // same page at once would otherwise both follow the first link (a sign in link works once).
+      for (const m of [...candidates].reverse()) if (m.link && claim(m.link)) return m.link;
     }
     await new Promise((r) => setTimeout(r, 200));
   }
@@ -41,3 +62,4 @@ export const SIGN_IN_LINK = /\/api\/auth\/callback\//;
 
 export const uniqueEmail = (tag: string) =>
   `e2e-${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+

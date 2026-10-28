@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Resend } from "resend";
 import { emailTransport, env } from "@/lib/env";
@@ -22,16 +22,21 @@ export function devMailFile(to: string): string {
   return resolve(DEV_MAIL_DIR, `${to.toLowerCase().replace(/[^a-z0-9@._]/g, "_")}.json`);
 }
 
+/** Folder holding every email to a recipient in the log transport, one file each (name starts with the time). */
+export function devMailFolder(to: string): string {
+  return resolve(DEV_MAIL_DIR, "all", to.toLowerCase().replace(/[^a-z0-9@._]/g, "_"));
+}
+
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
   if (emailTransport() === "log") {
     await mkdir(DEV_MAIL_DIR, { recursive: true });
-    // The latest email is at the top level; earlier ones stay in "history" (newest first, up to 20) so a
-    // test waiting for one email is not thrown off by another arriving for the same person.
-    const file = devMailFile(email.to);
-    const previous = await readFile(file, "utf8").then((t) => JSON.parse(t) as { history?: unknown[] } & Record<string, unknown>).catch(() => null);
     const sent = { ...email, sentAt: new Date().toISOString() };
-    const history = [sent, ...(previous?.history ?? (previous ? [previous] : []))].slice(0, 20);
-    await writeFile(file, JSON.stringify({ ...sent, history }, null, 2));
+    // The latest email per person, plus every email as its own file in a folder per person, so a test
+    // waiting for one email is never thrown off by another arriving for the same person at once.
+    await writeFile(devMailFile(email.to), JSON.stringify(sent, null, 2));
+    const folder = devMailFolder(email.to);
+    await mkdir(folder, { recursive: true });
+    await writeFile(resolve(folder, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`), JSON.stringify(sent, null, 2));
     // Links (sign in links included) only reach the console outside production.
     const showLink = email.link && process.env.NODE_ENV !== "production";
     console.info(`[email:log] to=${email.to} subject="${email.subject}"${showLink ? ` link=${email.link}` : ""}`);

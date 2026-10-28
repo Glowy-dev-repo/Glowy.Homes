@@ -12,6 +12,9 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? "list" : [["list"], ["html", { open: "never" }]],
   timeout: 45_000,
+  // Assertions wait up to 10 seconds: the suite runs many browsers against one local server, and a form
+  // post can take several seconds while every worker is busy.
+  expect: { timeout: 10_000 },
   use: {
     baseURL,
     trace: "retain-on-failure",
