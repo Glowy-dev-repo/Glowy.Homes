@@ -27,3 +27,10 @@ export const LeadPatch = z
     }
   });
 export type LeadPatch = z.infer<typeof LeadPatch>;
+
+/** A typed dollar amount ("$1,250,000", "450000.00") in whole dollars, or null if it is not one. */
+export function parseDollars(input: string): number | null {
+  const v = input.trim();
+  if (!/^\$?(\d{1,3}(,\d{3})+|\d+)(\.\d{1,2})?$/.test(v)) return null;
+  return Math.round(Number(v.replace(/[$,]/g, "")));
+}

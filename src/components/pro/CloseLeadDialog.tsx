@@ -5,6 +5,7 @@ import { Loader2, X } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseDollars } from "@/lib/leads/closing";
 
 /** Marking a lead Closed asks for the sale price and closing date (Glowy Homes' referral statement). */
 export function CloseLeadDialog({ leadId, consumerName, onClose, onDone }: { leadId: string | null; consumerName: string; onClose: () => void; onDone: () => void }) {
@@ -17,14 +18,19 @@ export function CloseLeadDialog({ leadId, consumerName, onClose, onDone }: { lea
     e.preventDefault();
     if (!leadId) return;
     const f = new FormData(e.currentTarget);
-    const price = Number(String(f.get("closePrice") ?? "").replace(/[^\d]/g, ""));
+    const price = parseDollars(String(f.get("closePrice") ?? ""));
+    if (price === null) {
+      setErrors({ closePrice: "Enter the sale price in dollars, like 850,000." });
+      setSummary(null);
+      return;
+    }
     setBusy(true);
     setErrors({});
     setSummary(null);
     const res = await fetch(`/api/pro/leads/${leadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "closed", closePrice: price || undefined, closeDate: f.get("closeDate") || undefined }),
+      body: JSON.stringify({ status: "closed", closePrice: price, closeDate: f.get("closeDate") || undefined }),
     }).catch(() => null);
     const body = (await res?.json().catch(() => null)) as { error?: { message?: string; fields?: Record<string, string[]> } } | null;
     setBusy(false);

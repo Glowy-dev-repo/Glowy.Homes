@@ -36,3 +36,18 @@ describe("LeadPatch", () => {
     expect(LeadPatch.safeParse({ status: "unassigned" }).success).toBe(false);
   });
 });
+
+describe("parseDollars", () => {
+  it("reads a price however it is typed", async () => {
+    const { parseDollars } = await import("@/lib/leads/closing");
+    expect(parseDollars("812,000")).toBe(812_000);
+    expect(parseDollars("$1,250,000")).toBe(1_250_000);
+    expect(parseDollars("450000.00")).toBe(450_000);
+    expect(parseDollars(" 450000.6 ")).toBe(450_001);
+  });
+
+  it("refuses what is not a price instead of guessing", async () => {
+    const { parseDollars } = await import("@/lib/leads/closing");
+    for (const v of ["-450000", "", "abc", "45.000.00", "1e6"]) expect(parseDollars(v), v).toBeNull();
+  });
+});
