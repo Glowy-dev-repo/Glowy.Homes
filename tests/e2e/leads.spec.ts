@@ -104,6 +104,7 @@ test.describe("lead routing", () => {
     await page.goto(path);
     await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
     const dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("Email")).toHaveValue(email);
     await dialog.getByLabel("Name").fill("Casey Signedin");
     await dialog.getByRole("checkbox").check();
     await dialog.getByRole("button", { name: "Send message" }).click();
@@ -167,6 +168,8 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   await page.goto(path);
   await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
   const dialog = page.getByRole("dialog");
+  // The signed in email fills in once the session loads; wait for it rather than sending an empty one.
+  await expect(dialog.getByLabel("Email")).toHaveValue(email);
   await dialog.getByLabel("Name").fill("Robin Reviewer");
   await dialog.getByRole("checkbox").check();
   await dialog.getByRole("button", { name: "Send message" }).click();
@@ -176,19 +179,25 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   const pro = await browser.newPage();
   await signInAs(pro, await proEmail(lead.pro!), "/pro/leads");
   await pro.locator(`[data-lead-id="${lead.id}"]`).getByTestId("lead-status").selectOption("closed");
+  const closeForm = pro.getByTestId("close-lead-form");
+  await closeForm.getByLabel("Sale price ($)").fill("812,000");
+  await closeForm.getByLabel("Closing date").fill(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date()));
+  await closeForm.getByRole("button", { name: "Mark as closed" }).click();
   await expect.poll(async () => (await db()`select status from leads where id = ${lead.id}`)[0].status).toBe("closed");
   await pro.close();
 
   await page.goto("/account/inquiries");
   const item = page.getByTestId("inquiry").first();
   await item.getByRole("button", { name: "5 stars" }).click();
-  await item.getByLabel("Your review (optional)").fill("Quick replies and great advice.");
+  // Unique text, so admin approves this review and not one an earlier run left in the queue.
+  const reviewText = `Quick replies and great advice. ${lead.id.slice(0, 8)}`;
+  await item.getByLabel("Your review (optional)").fill(reviewText);
   await item.getByRole("button", { name: "Submit review" }).click();
   await expect(item.getByRole("status")).toContainText("Thanks for your review");
 
   const admin = await browser.newPage();
   await signInAs(admin, "admin@example.com", "/admin/moderation");
-  await admin.getByTestId("moderation-item").filter({ hasText: "5 star review" }).first().getByRole("button", { name: "Approve" }).click();
+  await admin.getByTestId("moderation-item").filter({ hasText: reviewText }).getByRole("button", { name: "Approve" }).click();
   await expect.poll(async () => (await db()`select status from pro_reviews where lead_id = ${lead.id}`)[0]?.status).toBe("approved");
   await admin.close();
 

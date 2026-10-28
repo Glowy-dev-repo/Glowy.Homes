@@ -1,7 +1,10 @@
 import "server-only";
 import { sqlClient } from "@/db";
 import { LEAD_STATUSES, type LeadStatus } from "@/db/schema/leads";
+import { brand } from "@/config/brand";
 import { market } from "@/config/market";
+import { sendEmail } from "@/lib/email";
+import { adminLeadClosedEmail } from "@/lib/email/templates/pros";
 
 // Pro inbox and lead detail (docs/01 P3, P5, P6). Every read is scoped: a pro only sees leads
 // assigned to them; a consumer only sees their own leads (docs/02 section 8.6).
@@ -140,20 +143,24 @@ export async function addMessage(leadId: string, userId: string, role: "consumer
   return m;
 }
 
-export async function updateLeadByPro(proId: string, leadId: string, patch: { status?: LeadStatus; note?: string }) {
+export async function updateLeadByPro(proId: string, leadId: string, patch: { status?: LeadStatus; note?: string; closePrice?: number; closeDate?: string }) {
   if (patch.status && !LEAD_STATUSES.includes(patch.status)) return false;
+  const closing = patch.status === "closed" && patch.closePrice !== undefined && patch.closeDate !== undefined;
   const entry = {
     at: new Date().toISOString(),
     action: patch.status ? "status_changed" : "note",
     status: patch.status,
     note: patch.note,
     pro_id: proId,
+    ...(closing ? { close_price: patch.closePrice, close_date: patch.closeDate } : {}),
   };
   const rows = await sql`
     update leads set
       status = coalesce(${patch.status ?? null}, status),
       status_changed_at = case when ${patch.status ?? null}::text is not null and ${patch.status ?? null} <> status then now() else status_changed_at end,
       routing_log = routing_log || ${sql.json([entry] as never)},
+      close_price = case when ${closing} then ${patch.closePrice ?? null}::int else close_price end,
+      close_date = case when ${closing} then ${patch.closeDate ?? null}::date else close_date end,
       first_response_at = coalesce(first_response_at, now()),
       updated_at = now()
     where id = ${leadId} and assigned_pro_id = ${proId}
@@ -174,4 +181,22 @@ export async function consumerLeads(userId: string) {
     left join pros pr on pr.id = ld.assigned_pro_id
     where ld.consumer_user_id = ${userId}
     order by ld.created_at desc`;
+}
+
+/** A lead was closed: every admin gets the sale price and date for the agent's referral statement. */
+export async function notifyLeadClosed(leadId: string): Promise<void> {
+  const [lead] = await sql<{ agentName: string; address: string | null; closePrice: number | null; closeDate: string | null }[]>`
+    select pr.display_name as "agentName", nullif(concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city), '') as address,
+      ld.close_price as "closePrice", ld.close_date::text as "closeDate"
+    from leads ld
+    join pros pr on pr.id = ld.assigned_pro_id
+    left join listings l on l.id = ld.listing_id
+    left join properties p on p.id = coalesce(ld.property_id, l.property_id)
+    where ld.id = ${leadId}`;
+  if (!lead || lead.closePrice === null || !lead.closeDate) return;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${brand.domain}`;
+  const admins = await sql<{ email: string }[]>`select email from users where 'admin' = any(roles)`;
+  for (const a of admins) {
+    await sendEmail({ to: a.email, ...adminLeadClosedEmail({ appUrl, leadId, agentName: lead.agentName, address: lead.address, closePrice: lead.closePrice, closeDate: lead.closeDate }) }).catch(() => {});
+  }
 }

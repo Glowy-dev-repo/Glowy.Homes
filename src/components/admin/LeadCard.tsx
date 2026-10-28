@@ -1,6 +1,6 @@
-import { Clock, Home, Mail, MessageSquare, Phone } from "lucide-react";
+import { BadgeDollarSign, Clock, Home, Mail, MessageSquare, Phone } from "lucide-react";
 import { ReassignForm } from "@/components/admin/ReassignForm";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPrice } from "@/lib/format";
 import type { AdminLeadCard } from "@/server/data/admin-dashboard";
 
 const TYPE: Record<string, string> = { tour: "Tour request", contact: "Question", sell: "Selling a home", rental_inquiry: "Rental question", rental_application: "Rental application" };
@@ -45,6 +45,12 @@ export function LeadCard({ lead, pros }: { lead: AdminLeadCard; pros: { id: stri
             <dd><a href={`tel:${lead.consumerPhone}`} className="text-accent hover:underline">{lead.consumerPhone}</a></dd>
           </div>
         )}
+        {lead.closePrice !== null && lead.closeDate && (
+          <div className="flex gap-2 sm:col-span-2" data-testid="lead-closing">
+            <dt><BadgeDollarSign className="mt-0.5 size-4 text-neutral-500" aria-label="Closed" /></dt>
+            <dd>Closed for {formatPrice(lead.closePrice)} on {formatDate(lead.closeDate)}</dd>
+          </div>
+        )}
         {lead.message && (
           <div className="flex gap-2 sm:col-span-2">
             <dt><MessageSquare className="mt-0.5 size-4 text-neutral-500" aria-label="Message" /></dt>
@@ -63,7 +69,14 @@ export function LeadCard({ lead, pros }: { lead: AdminLeadCard; pros: { id: stri
                 : "No partner agent covers this ZIP code yet"}
           </p>
         ) : (
-          <p className="text-small text-neutral-600">Agent: <span className="font-medium text-neutral-900">{lead.proName}</span></p>
+          <p className="text-small text-neutral-600">
+            Agent: <span className="font-medium text-neutral-900">{lead.proName}</span>
+            {lead.followUp && (
+              <span className="ml-2 rounded bg-warning/15 px-1.5 py-0.5 text-neutral-900" data-testid="follow-up">
+                {lead.followUp === "no_response" ? "No reply, even after a reminder" : "No reply yet, agent reminded"}
+              </span>
+            )}
+          </p>
         )}
         <ReassignForm leadId={lead.id} pros={pros} suggestedId={lead.suggestedProId} assigned={!!lead.proName} />
       </div>

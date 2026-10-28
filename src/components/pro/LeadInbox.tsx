@@ -10,6 +10,7 @@ import { LEAD_STATUSES } from "@/db/schema/leads";
 import { formatDate, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { InboxLead, LeadDetail, Message } from "@/server/data/pro-leads";
+import { CloseLeadDialog } from "./CloseLeadDialog";
 
 const STATUS_LABEL: Record<string, string> = {
   new: "New",
@@ -54,6 +55,8 @@ export function LeadInbox({ initialOpenId }: { initialOpenId?: string }) {
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
   const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
+  // Closing asks for the sale price and date first (CloseLeadDialog).
+  const [closing, setClosing] = useState<{ id: string; name: string } | null>(null);
   const qs = new URLSearchParams({ ...(status ? { status } : {}), ...(type ? { type } : {}) });
   const { data, isLoading, isError } = useQuery({ queryKey: ["pro-leads", status, type], queryFn: async () => json<InboxData>(await fetch(`/api/pro/leads?${qs}`)), refetchInterval: 30_000 });
 
@@ -134,7 +137,7 @@ export function LeadInbox({ initialOpenId }: { initialOpenId?: string }) {
               <select
                 id={`status-${l.id}`}
                 value={l.status}
-                onChange={(e) => patch.mutate({ id: l.id, body: { status: e.target.value } })}
+                onChange={(e) => (e.target.value === "closed" ? setClosing({ id: l.id, name: l.consumerName }) : patch.mutate({ id: l.id, body: { status: e.target.value } }))}
                 className="h-11 rounded-md border border-neutral-300 bg-white px-2 text-base"
                 data-testid="lead-status"
               >
@@ -147,7 +150,26 @@ export function LeadInbox({ initialOpenId }: { initialOpenId?: string }) {
         </ul>
       )}
 
-      <LeadDrawer id={openId} onClose={() => setOpenId(null)} onPatch={(body) => openId && patch.mutate({ id: openId, body })} />
+      <LeadDrawer
+        id={openId}
+        onClose={() => setOpenId(null)}
+        onPatch={(body) => {
+          if (!openId) return;
+          if (body.status === "closed") setClosing({ id: openId, name: data?.items.find((l) => l.id === openId)?.consumerName ?? "this client" });
+          else patch.mutate({ id: openId, body });
+        }}
+      />
+      <CloseLeadDialog
+        leadId={closing?.id ?? null}
+        consumerName={closing?.name ?? ""}
+        onClose={() => setClosing(null)}
+        onDone={() => {
+          const id = closing?.id;
+          setClosing(null);
+          qc.invalidateQueries({ queryKey: ["pro-leads"] });
+          if (id) qc.invalidateQueries({ queryKey: ["pro-lead", id] });
+        }}
+      />
     </div>
   );
 }

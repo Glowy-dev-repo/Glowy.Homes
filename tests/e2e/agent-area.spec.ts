@@ -3,7 +3,7 @@ import { fillAgentWizard, uniqueLicense } from "./support/agents";
 import { signIn, signInAs } from "./support/auth";
 import { db } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { waitForEmailLink } from "./support/mail";
+import { recentEmails, waitForEmailLink } from "./support/mail";
 
 // The partner agent area: joining, the workspace, and what admin controls (docs/superpowers/plans/2026-10-27-agent-area.md).
 
@@ -158,5 +158,81 @@ test.describe("agent profile photo", () => {
 
     await box.getByRole("button", { name: "Remove" }).click();
     await expect(box.getByRole("status")).toHaveText("Photo removed.");
+  });
+});
+
+test.describe("follow up after admin assigns a lead", () => {
+  test("the agent is reminded when they do not reply; a suspended agent cannot be assigned", async ({ page, isMobile }) => {
+    test.skip(isMobile, "admin desktop flow");
+    test.setTimeout(180_000);
+    const [agent] = await db()<{ id: string; email: string }[]>`
+      select p.id, u.email from pros p join users u on u.id = p.user_id where p.pro_type = 'agent' and p.status = 'active'
+      order by p.created_at offset 5 limit 1`;
+    const [suspended] = await db()<{ id: string }[]>`select id from pros where pro_type = 'agent' and status = 'suspended' limit 1`;
+    const [lead] = await db()<{ id: string }[]>`
+      insert into leads (lead_type, consumer_name, consumer_email, payload, status, routing_log)
+      values ('contact', 'Fern Followup', ${`followup-${Date.now()}@example.com`}, '{}'::jsonb, 'new',
+        ${db().json([{ at: new Date().toISOString(), action: "awaiting_admin", reason: "waiting for Glowy Homes to choose" }])})
+      returning id`;
+    await signInAs(page, "admin@example.com", `/admin/leads?lead=${lead.id}`);
+
+    // Assigning to a suspended agent is refused and the lead keeps waiting.
+    const refused = await page.request.post(`/api/admin/leads/${lead.id}/reassign`, { data: { proId: suspended.id } });
+    expect(refused.status()).toBe(404);
+    const [still] = await db()<{ pro: string | null }[]>`select assigned_pro_id as pro from leads where id = ${lead.id}`;
+    expect(still.pro).toBeNull();
+
+    const since = Date.now();
+    expect((await page.request.post(`/api/admin/leads/${lead.id}/reassign`, { data: { proId: agent.id } })).status()).toBe(200);
+    // The gate shortens the response window to 45 seconds (LEAD_REASSIGN_SECONDS).
+    await expect
+      .poll(
+        async () => (await db()<{ n: number }[]>`
+          select count(*)::int as n from leads, jsonb_array_elements(routing_log) e where id = ${lead.id} and e->>'action' = 'reminder_sent'`)[0].n,
+        { timeout: 120_000, intervals: [2000] },
+      )
+      .toBe(1);
+    const reminder = recentEmails(agent.email).find((m) => m.subject.startsWith("Reminder:") && Date.parse(m.sentAt ?? "") >= since);
+    expect(reminder?.link).toContain(`/pro/leads?lead=${lead.id}`);
+    await page.goto(`/admin/leads?lead=${lead.id}`);
+    await expect(page.locator(`[data-lead-id="${lead.id}"]`).getByTestId("follow-up")).toHaveText("No reply yet, agent reminded");
+    await db()`delete from leads where id = ${lead.id}`;
+  });
+});
+
+test.describe("closing a lead", () => {
+  test("an agent closes a lead with the sale price and date; admin sees them and is emailed", async ({ page, browser, isMobile }) => {
+    test.skip(isMobile, "one viewport is enough");
+    test.setTimeout(90_000);
+    const [agent] = await db()<{ id: string; email: string }[]>`
+      select p.id, u.email from pros p join users u on u.id = p.user_id where p.pro_type = 'agent' and p.status = 'active'
+      order by p.created_at offset 6 limit 1`;
+    const [lead] = await db()<{ id: string }[]>`
+      insert into leads (lead_type, consumer_name, consumer_email, payload, status, assigned_pro_id, assigned_at, first_response_at, routing_log)
+      values ('contact', 'Clara Closing', ${`closing-${Date.now()}@example.com`}, '{}'::jsonb, 'touring', ${agent.id}, now(), now(), '[]'::jsonb)
+      returning id`;
+    const since = Date.now();
+    await signInAs(page, agent.email, "/pro/leads");
+    await page.locator(`[data-lead-id="${lead.id}"]`).getByTestId("lead-status").selectOption("closed");
+    const form = page.getByTestId("close-lead-form");
+    // Nothing is saved without the sale details.
+    await form.getByLabel("Closing date").fill("2026-01-15");
+    await form.getByLabel("Sale price ($)").fill("0");
+    await form.getByRole("button", { name: "Mark as closed" }).click();
+    await expect(form).toContainText("Enter the sale price");
+    expect((await db()<{ status: string }[]>`select status from leads where id = ${lead.id}`)[0].status).toBe("touring");
+
+    await form.getByLabel("Sale price ($)").fill("1,250,000");
+    await form.getByRole("button", { name: "Mark as closed" }).click();
+    await expect(form).toHaveCount(0);
+    await expect.poll(async () => (await db()<{ status: string; price: number | null }[]>`select status, close_price as price from leads where id = ${lead.id}`)[0])
+      .toEqual({ status: "closed", price: 1_250_000 });
+    expect(recentEmails("admin@example.com").some((m) => m.subject === "A partner agent closed a lead" && Date.parse(m.sentAt ?? "") >= since)).toBe(true);
+
+    const admin = await browser.newPage();
+    await signInAs(admin, "admin@example.com", `/admin/leads?lead=${lead.id}`);
+    await expect(admin.locator(`[data-lead-id="${lead.id}"]`).getByTestId("lead-closing")).toContainText("$1,250,000");
+    await admin.close();
+    await db()`delete from leads where id = ${lead.id}`;
   });
 });

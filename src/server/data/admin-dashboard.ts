@@ -51,6 +51,11 @@ export type AdminLeadCard = {
   suggestedProId: string | null;
   suggestedName: string | null;
   note: string | null;
+  /** Latest follow up for the current agent (inngest lead-follow-up): reminder sent, or still no reply. */
+  followUp: "reminder_sent" | "no_response" | null;
+  /** Reported by the agent when they closed the lead. */
+  closePrice: number | null;
+  closeDate: string | null;
 };
 
 /** How many leads have an agent (for paging the Assigned view). */
@@ -81,7 +86,12 @@ export async function adminLeadCards(view: "waiting" | "assigned", opts: { limit
       case when ld.external_ref like 'idx:%' then 'idx' else 'site' end as source,
       pr.id as "proId", pr.display_name as "proName",
       sp.id as "suggestedProId", sp.display_name as "suggestedName",
-      case when sp.id is null then (ld.routing_log -> -1 ->> 'reason') end as note
+      case when sp.id is null then (ld.routing_log -> -1 ->> 'reason') end as note,
+      case when ld.status = 'new' and ld.first_response_at is null then (
+        select e->>'action' from jsonb_array_elements(ld.routing_log) e
+        where e->>'action' in ('reminder_sent', 'no_response') and e->>'pro_id' = ld.assigned_pro_id::text order by e->>'at' desc limit 1
+      ) end as "followUp",
+      ld.close_price as "closePrice", ld.close_date::text as "closeDate"
     from leads ld
     left join listings l on l.id = ld.listing_id
     left join properties p on p.id = coalesce(ld.property_id, l.property_id)

@@ -1,9 +1,8 @@
-import { z } from "zod";
-import { LEAD_STATUSES } from "@/db/schema/leads";
+import { LeadPatch } from "@/lib/leads/closing";
 import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok } from "@/server/api/respond";
 import { requirePro } from "@/server/api/pro";
-import { consumerActivity, leadForPro, messages, updateLeadByPro } from "@/server/data/pro-leads";
+import { consumerActivity, leadForPro, messages, notifyLeadClosed, updateLeadByPro } from "@/server/data/pro-leads";
 import { trackServer } from "@/lib/analytics/server";
 import { rateLimitWrite } from "@/server/api/rate-limit";
 
@@ -22,9 +21,6 @@ export async function GET(_req: Request, { params }: Ctx) {
   return ok({ lead, activity, messages: thread });
 }
 
-const Patch = z
-  .object({ status: z.enum(LEAD_STATUSES).exclude(["unassigned"]).optional(), note: z.string().trim().min(1).max(2000).optional() })
-  .refine((v) => v.status || v.note, "Change the status or add a note.");
 
 export async function PATCH(req: Request, { params }: Ctx) {
   const writeLimited = rateLimitWrite(req);
@@ -33,9 +29,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if ("response" in who) return who.response;
   const { id } = await params;
   if (!isUuid(id)) return notFound();
-  const parsed = Patch.safeParse(await req.json().catch(() => null));
+  const parsed = LeadPatch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
   if (!(await updateLeadByPro(who.pro.proId, id, parsed.data))) return notFound();
   if (parsed.data.status) await trackServer("lead_status_change", { leadId: id, status: parsed.data.status }, who.userId);
+  if (parsed.data.status === "closed") await notifyLeadClosed(id).catch((e) => console.warn(`[leads] closing email failed: ${e}`));
   return ok({ updated: true });
 }
