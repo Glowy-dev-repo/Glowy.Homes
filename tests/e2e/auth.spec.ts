@@ -1,5 +1,5 @@
 import { expect, test } from "./support/fixtures";
-import { uniqueEmail, waitForEmailLink } from "./support/mail";
+import { uniqueEmail, SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
 
 test.describe("magic link sign in", () => {
   test("protected page redirects to sign in, magic link signs in and returns there", async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe("magic link sign in", () => {
     await expect(page).toHaveURL(/\/signin\/check-email/);
     await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
 
-    const link = await waitForEmailLink(email);
+    const link = await waitForEmailLink(email, 15_000, SIGN_IN_LINK);
     // The link carries the host the request came in on, so it works against any test port.
     await page.goto(link);
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Resend } from "resend";
 import { emailTransport, env } from "@/lib/env";
@@ -25,7 +25,13 @@ export function devMailFile(to: string): string {
 export async function sendEmail(email: OutgoingEmail): Promise<void> {
   if (emailTransport() === "log") {
     await mkdir(DEV_MAIL_DIR, { recursive: true });
-    await writeFile(devMailFile(email.to), JSON.stringify({ ...email, sentAt: new Date().toISOString() }, null, 2));
+    // The latest email is at the top level; earlier ones stay in "history" (newest first, up to 20) so a
+    // test waiting for one email is not thrown off by another arriving for the same person.
+    const file = devMailFile(email.to);
+    const previous = await readFile(file, "utf8").then((t) => JSON.parse(t) as { history?: unknown[] } & Record<string, unknown>).catch(() => null);
+    const sent = { ...email, sentAt: new Date().toISOString() };
+    const history = previous ? [sent, (({ history: _h, ...rest }) => rest)(previous), ...(previous.history ?? [])].slice(0, 20) : [sent];
+    await writeFile(file, JSON.stringify({ ...sent, history }, null, 2));
     // Links (sign in links included) only reach the console outside production.
     const showLink = email.link && process.env.NODE_ENV !== "production";
     console.info(`[email:log] to=${email.to} subject="${email.subject}"${showLink ? ` link=${email.link}` : ""}`);

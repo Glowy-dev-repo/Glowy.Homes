@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { signIn } from "./support/auth";
 import { db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { waitForEmailLink } from "./support/mail";
+import { SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
 
 // docs/05 Phase 5 acceptance criteria 1 to 4, as one landlord and one renter going through the real UI.
 
@@ -17,7 +17,7 @@ async function signInAs(page: Page, email: string, callbackUrl: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a sign in link" }).click();
   await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink(email));
+  await page.goto(await waitForEmailLink(email, 15_000, SIGN_IN_LINK));
 }
 
 /** A Los Angeles condo with no owner and nothing listed, so the landlord can list it. */
