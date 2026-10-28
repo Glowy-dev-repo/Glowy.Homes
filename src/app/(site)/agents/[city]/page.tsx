@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { AgentAvatar } from "@/components/pro/AgentAvatar";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,9 +45,7 @@ export default async function FindAgentPage({ params }: Props) {
         {agents.map((a) => (
           <li key={a.id}>
             <Link href={`/agent/${a.slug}`} className="flex h-full gap-4 rounded-lg border border-neutral-200 p-5 shadow-card transition-shadow hover:shadow-raised">
-              <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-full bg-accent/10 text-h3 text-accent">
-                {a.displayName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-              </span>
+              <AgentAvatar name={a.displayName} photoKey={a.photoUrl} size={56} />
               <span className="min-w-0">
                 <span className="block text-h3">{a.displayName}</span>
                 <span className="block truncate text-small text-neutral-600">{a.brokerageName}</span>

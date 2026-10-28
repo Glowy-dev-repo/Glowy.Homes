@@ -1,4 +1,5 @@
 import { BadgeCheck, Star } from "lucide-react";
+import { AgentAvatar } from "@/components/pro/AgentAvatar";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
@@ -51,9 +52,7 @@ export default async function AgentProfilePage({ params }: Props) {
   return (
     <div className="container-page py-10">
       <div className="flex flex-wrap items-start gap-6">
-        <div aria-hidden className="grid size-24 place-items-center rounded-full bg-accent/10 text-display text-accent">
-          {pro.displayName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-        </div>
+        <AgentAvatar name={pro.displayName} photoKey={pro.photoUrl} size={96} priority />
         <div className="min-w-0 flex-1">
           <h1 className="text-h1">{pro.displayName}</h1>
           <p className="text-body text-neutral-700">

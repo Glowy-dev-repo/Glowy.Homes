@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PhotoUpload } from "@/components/pro/PhotoUpload";
 import { ProProfileForm } from "@/components/pro/ProProfileForm";
 import { auth } from "@/lib/auth";
 import { zipOptions } from "@/lib/zips";
@@ -16,6 +17,7 @@ export default async function ProProfilePage() {
   return (
     <div>
       <h1 className="mb-6 text-h1">Your profile</h1>
+      {pro.proType === "agent" && <PhotoUpload name={pro.displayName} photoKey={pro.photoUrl} />}
       <ProProfileForm initial={pro} zips={zips} />
     </div>
   );

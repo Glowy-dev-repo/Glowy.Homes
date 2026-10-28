@@ -1,3 +1,4 @@
+import { mediaUrl } from "@/lib/media/urls";
 import { sqlClient } from "@/db";
 import { auth } from "@/lib/auth";
 import { isUuid } from "@/lib/listings/detail";
@@ -19,5 +20,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!row) return notFound;
   const session = verifyLeadViewToken(id, token) ? null : await auth();
   if (!verifyLeadViewToken(id, token) && (!session?.user?.id || session.user.id !== row.consumer)) return notFound;
-  return ok({ status: row.status, pro: row.name ? { name: row.name, photoUrl: row.photo, brokerage: row.brokerage, slug: row.slug } : null });
+  return ok({ status: row.status, pro: row.name ? { name: row.name, photoUrl: row.photo ? mediaUrl(row.photo, 400) : null, brokerage: row.brokerage, slug: row.slug } : null });
 }
