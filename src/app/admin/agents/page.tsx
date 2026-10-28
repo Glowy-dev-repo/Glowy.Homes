@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminFilters, AdminPager } from "@/components/admin/AdminList";
+import { Panel } from "@/components/admin/AdminPage";
+import { InviteAgentForm } from "@/components/admin/InviteAgentForm";
 import { formatDate } from "@/lib/format";
 import { ADMIN_PAGE_SIZE, AgentFilters, adminAgents } from "@/server/data/admin-directory";
+import { recentInvites } from "@/server/data/pro-invites";
 
 export const metadata: Metadata = { title: "Admin agents", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -16,7 +19,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default async function AdminAgentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const filters = AgentFilters.parse(await searchParams);
-  const { rows, total } = await adminAgents(filters);
+  const [{ rows, total }, invites] = await Promise.all([adminAgents(filters), recentInvites()]);
 
   return (
     <div className="space-y-6">
@@ -26,6 +29,31 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams: 
           Every agent, their ZIP codes and how many leads they received. Open an agent to check their license, approve, suspend or reactivate them.
         </p>
       </div>
+
+      <Panel title="Invite an agent" description="They get an email explaining how Glowy Homes works and a link to apply. You still approve them after they apply.">
+        <InviteAgentForm />
+        {invites.length > 0 && (
+          <ul className="mt-4 divide-y divide-neutral-100 text-body" data-testid="invites">
+            {invites.map((i) => (
+              <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="min-w-0 truncate">
+                  {i.name ? `${i.name}, ` : ""}
+                  {i.email}
+                </span>
+                <span className="text-small text-neutral-600">
+                  {i.joinedProId ? (
+                    <Link href={`/admin/agents/${i.joinedProId}`} className="font-medium text-accent hover:underline">
+                      Applied
+                    </Link>
+                  ) : (
+                    `Invited ${formatDate(i.createdAt)}, not applied yet`
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
 
       <AdminFilters
         action="/admin/agents"
