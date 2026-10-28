@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, updatedAt } from "./columns";
 import { pros } from "./agents";
 import { regions } from "./geo";
@@ -61,6 +61,9 @@ export const leads = pgTable(
     utm: jsonb("utm").$type<Record<string, string>>(),
     /** Id of the lead in an outside system it was imported from, e.g. "idx:123" for IDX Broker. */
     externalRef: text("external_ref"),
+    /** Reported by the agent when they close the lead: the basis of the referral statement. */
+    closePrice: integer("close_price"),
+    closeDate: date("close_date"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

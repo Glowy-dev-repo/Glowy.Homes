@@ -4,11 +4,13 @@ import {
   check,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, id, updatedAt } from "./columns";
@@ -19,6 +21,8 @@ import { users } from "./users";
 // "owner" is a for sale by owner seller: a profile only so inquiries on their listing reach them.
 export const PRO_TYPES = ["agent", "lender", "landlord", "property_manager", "owner"] as const;
 export type ProType = (typeof PRO_TYPES)[number];
+export type ProStatus = "pending" | "active" | "suspended";
+export type ProStatusLogEntry = { at: string; from: ProStatus; to: ProStatus; action: string; reason: string | null; admin_user_id: string | null };
 
 export const pros = pgTable("pros", {
   id: id(),
@@ -47,10 +51,34 @@ export const pros = pgTable("pros", {
   priceMin: integer("price_min"),
   priceMax: integer("price_max"),
   isAcceptingLeads: boolean("is_accepting_leads").notNull().default(true),
-  status: text("status").$type<"pending" | "active" | "suspended">().notNull().default("pending"),
+  status: text("status").$type<ProStatus>().notNull().default("pending"),
+  /** Partner agreement the agent accepted at signup (lib/pros/license.ts PARTNER_AGREEMENT_VERSION). */
+  agreementVersion: text("agreement_version"),
+  agreementAcceptedAt: timestamp("agreement_accepted_at", { withTimezone: true }),
+  /** Every status change by an admin: who, when, from, to and why (lib/pros/status.ts). */
+  statusLog: jsonb("status_log").$type<ProStatusLogEntry[]>().notNull().default([]),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-});
+}, (t) => [
+  // One working account per DRE license: suspended duplicates stay for the record.
+  uniqueIndex("pros_agent_license_key")
+    .on(t.licenseRegion, t.licenseNumber)
+    .where(sql`${t.proType} = 'agent' and ${t.status} <> 'suspended' and ${t.licenseNumber} is not null`),
+]);
+
+/** Agents Glowy Homes invited by email. An invite grants nothing: the agent still signs up and is approved. */
+export const proInvites = pgTable(
+  "pro_invites",
+  {
+    id: id(),
+    email: text("email").notNull(),
+    name: text("name"),
+    invitedBy: uuid("invited_by").references(() => users.id),
+    createdAt: createdAt(),
+    acceptedProId: uuid("accepted_pro_id").references(() => pros.id),
+  },
+  (t) => [uniqueIndex("pro_invites_email_key").on(sql`lower(${t.email})`)],
+);
 
 export const proServiceAreas = pgTable(
   "pro_service_areas",
