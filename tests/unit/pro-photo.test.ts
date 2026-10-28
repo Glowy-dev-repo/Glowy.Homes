@@ -22,4 +22,10 @@ describe("encodeProPhoto", () => {
   it("refuses a file that is not an image", async () => {
     await expect(encodeProPhoto(Buffer.from("not a photo, just text"))).rejects.toBeInstanceOf(PhotoError);
   });
+
+  it("refuses images in other formats, such as SVG or GIF, whatever the file claims to be", async () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>');
+    const gif = await sharp({ create: { width: 10, height: 10, channels: 3, background: { r: 0, g: 0, b: 0 } } }).gif().toBuffer();
+    for (const input of [svg, gif]) await expect(encodeProPhoto(input)).rejects.toBeInstanceOf(PhotoError);
+  });
 });
