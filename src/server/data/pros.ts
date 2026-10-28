@@ -4,6 +4,7 @@ import { market } from "@/config/market";
 import { sqlClient } from "@/db";
 import { rankCandidates, type Candidate } from "@/lib/leads/routing";
 import type { ProProfileUpdate, ProSignup, ReviewInput } from "@/lib/pros/schema";
+import { PARTNER_AGREEMENT_VERSION } from "@/lib/pros/license";
 import { slugify } from "@/lib/slug";
 
 const sql = sqlClient;
@@ -18,24 +19,44 @@ export async function createPro(userId: string, input: z.infer<typeof ProSignup>
   if (existing.length) return { status: "exists" as const };
   const role = input.proType;
   const status = input.proType === "landlord" ? "active" : "pending";
-  return sql.begin(async (tx) => {
-    const [pro] = await tx<{ id: string; slug: string }[]>`
+  const agreement = input.proType === "agent" ? PARTNER_AGREEMENT_VERSION : null;
+  try {
+    return await sql.begin(async (tx) => {
+      const [pro] = await tx<{ id: string; slug: string }[]>`
       insert into pros (user_id, pro_type, slug, display_name, brokerage_name, license_number, license_region, phone, bio, languages,
-        years_experience, price_min, price_max, specialties, status)
+        years_experience, price_min, price_max, specialties, status, agreement_version, agreement_accepted_at)
       values (${userId}, ${input.proType}, ${`${slugify(input.displayName)}-${Math.random().toString(36).slice(2, 7)}`}, ${input.displayName},
         ${input.brokerageName}, ${input.licenseNumber}, ${input.licenseNumber ? market.regionCode : null}, ${input.phone}, ${input.bio},
         ${tx.array(input.languages)}, ${input.yearsExperience ?? null}, ${input.priceMin ?? null}, ${input.priceMax ?? null},
-        ${tx.array(input.homeTypes)}, ${status})
+        ${tx.array(input.homeTypes)}, ${status}, ${agreement}, case when ${agreement}::text is not null then now() end)
       returning id, slug`;
-    if (input.zipCodes.length) {
-      await tx`insert into pro_zip_codes ${tx(input.zipCodes.map((zip) => ({ pro_id: pro.id, zip })), "pro_id", "zip")} on conflict do nothing`;
+      // An agent Glowy Homes invited: the invite now shows as joined.
+      await tx`
+      update pro_invites set accepted_pro_id = ${pro.id}
+      where accepted_pro_id is null and lower(email) = (select lower(email) from users where id = ${userId})`;
+      if (input.zipCodes.length) {
+        await tx`insert into pro_zip_codes ${tx(
+          input.zipCodes.map((zip) => ({ pro_id: pro.id, zip })),
+          "pro_id",
+          "zip",
+        )} on conflict do nothing`;
+      }
+      await tx`update users set roles = array(select distinct unnest(roles || ${tx.array([role])}::text[])) where id = ${userId}`;
+      if (status === "pending") {
+        await tx`insert into moderation_items (item_type, item_id, reason) values ('pro', ${pro.id}, 'new_submission')`;
+      }
+      return { status: "created" as const, proId: pro.id, slug: pro.slug, proStatus: status };
+    });
+  } catch (e) {
+    // Another working account already holds this DRE license (index from migration 0011).
+    if (
+      (e as { code?: string; constraint_name?: string }).code === "23505" &&
+      (e as { constraint_name?: string }).constraint_name === "pros_agent_license_key"
+    ) {
+      return { status: "license_taken" as const };
     }
-    await tx`update users set roles = array(select distinct unnest(roles || ${tx.array([role])}::text[])) where id = ${userId}`;
-    if (status === "pending") {
-      await tx`insert into moderation_items (item_type, item_id, reason) values ('pro', ${pro.id}, 'new_submission')`;
-    }
-    return { status: "created" as const, proId: pro.id, slug: pro.slug, proStatus: status };
-  });
+    throw e;
+  }
 }
 
 export async function updatePro(proId: string, input: z.infer<typeof ProProfileUpdate>) {
@@ -58,7 +79,12 @@ export async function updatePro(proId: string, input: z.infer<typeof ProProfileU
     const zips = input.zipCodes;
     await sql.begin(async (tx) => {
       await tx`delete from pro_zip_codes where pro_id = ${proId} and zip <> all(${zips}::text[])`;
-      if (zips.length) await tx`insert into pro_zip_codes ${tx(zips.map((zip) => ({ pro_id: proId, zip })), "pro_id", "zip")} on conflict do nothing`;
+      if (zips.length)
+        await tx`insert into pro_zip_codes ${tx(
+          zips.map((zip) => ({ pro_id: proId, zip })),
+          "pro_id",
+          "zip",
+        )} on conflict do nothing`;
     });
   }
 }
@@ -101,7 +127,18 @@ export async function proBySlug(slug: string): Promise<ProPublic | null> {
 }
 
 export async function proForEdit(userId: string) {
-  const [p] = await sql<(ProPublic & { status: string; isAcceptingLeads: boolean; leadCapPerDay: number; licenseNumber: string | null; zipCodes: string[]; priceMin: number | null; priceMax: number | null; homeTypes: string[] })[]>`
+  const [p] = await sql<
+    (ProPublic & {
+      status: string;
+      isAcceptingLeads: boolean;
+      leadCapPerDay: number;
+      licenseNumber: string | null;
+      zipCodes: string[];
+      priceMin: number | null;
+      priceMax: number | null;
+      homeTypes: string[];
+    })[]
+  >`
     select p.id, p.slug, p.pro_type as "proType", p.display_name as "displayName", p.brokerage_name as "brokerageName", p.phone, p.bio,
       p.photo_url as "photoUrl", p.languages, p.years_experience as "yearsExperience", p.rating::float8 as rating, p.review_count as "reviewCount",
       p.license_verified_at is not null as "licenseVerified", p.status, p.is_accepting_leads as "isAcceptingLeads",
@@ -113,7 +150,9 @@ export async function proForEdit(userId: string) {
 }
 
 export async function approvedReviews(proId: string) {
-  return sql<{ id: string; rating: number; body: string | null; author: string; createdAt: string; verified: boolean }[]>`
+  return sql<
+    { id: string; rating: number; body: string | null; author: string; createdAt: string; verified: boolean }[]
+  >`
     select r.id, r.rating, r.body, coalesce(split_part(u.name, ' ', 1), 'Client') as author, r.created_at::text as "createdAt", r.lead_id is not null as verified
     from pro_reviews r join users u on u.id = r.author_user_id
     where r.pro_id = ${proId} and r.status = 'approved' order by r.created_at desc limit 20`;
@@ -136,7 +175,20 @@ export async function submitReview(userId: string, input: z.infer<typeof ReviewI
 
 /** Find an agent page: active partner agents serving any ZIP code in the city. */
 export async function agentsInCity(citySlug: string) {
-  return sql<{ id: string; slug: string; displayName: string; brokerageName: string | null; photoUrl: string | null; rating: number | null; reviewCount: number; yearsExperience: number | null; responseTimeMinutes: number | null; languages: string[] }[]>`
+  return sql<
+    {
+      id: string;
+      slug: string;
+      displayName: string;
+      brokerageName: string | null;
+      photoUrl: string | null;
+      rating: number | null;
+      reviewCount: number;
+      yearsExperience: number | null;
+      responseTimeMinutes: number | null;
+      languages: string[];
+    }[]
+  >`
     select distinct on (p.id) p.id, p.slug, p.display_name as "displayName", p.brokerage_name as "brokerageName", p.photo_url as "photoUrl",
       p.rating::float8 as rating, p.review_count as "reviewCount", p.years_experience as "yearsExperience",
       p.response_time_minutes as "responseTimeMinutes", p.languages
@@ -164,7 +216,10 @@ export type LocalAgent = {
  * them (lib/leads/routing.ts), so the agent shown for a home is the one a question about it reaches.
  * Agents who are paused or at today's lead cap are left out.
  */
-export async function localAgents(zip: string, home: { price?: number | null; propertyType?: string | null } = {}): Promise<LocalAgent[]> {
+export async function localAgents(
+  zip: string,
+  home: { price?: number | null; propertyType?: string | null } = {},
+): Promise<LocalAgent[]> {
   if (!/^\d{5}$/.test(zip)) return [];
   const rows = await sql<(Candidate & LocalAgent)[]>`
     select pr.id, pr.id as "proId", pr.slug, pr.display_name as "displayName", pr.brokerage_name as "brokerageName", pr.photo_url as "photoUrl",
@@ -183,8 +238,15 @@ export async function localAgents(zip: string, home: { price?: number | null; pr
   return rankCandidates(rows.filter((r) => r.assignedToday < r.capPerDay)).map((c) => {
     const r = c as Candidate & LocalAgent;
     return {
-      id: r.id, slug: r.slug, displayName: r.displayName, brokerageName: r.brokerageName, photoUrl: r.photoUrl,
-      rating: r.rating, reviewCount: r.reviewCount, yearsExperience: r.yearsExperience, responseTimeMinutes: r.responseTimeMinutes,
+      id: r.id,
+      slug: r.slug,
+      displayName: r.displayName,
+      brokerageName: r.brokerageName,
+      photoUrl: r.photoUrl,
+      rating: r.rating,
+      reviewCount: r.reviewCount,
+      yearsExperience: r.yearsExperience,
+      responseTimeMinutes: r.responseTimeMinutes,
     };
   });
 }

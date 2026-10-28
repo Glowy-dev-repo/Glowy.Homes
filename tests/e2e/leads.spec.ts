@@ -1,4 +1,5 @@
-import { signIn } from "./support/auth";
+import { uniqueLicense } from "./support/agents";
+import { signIn, signInAs } from "./support/auth";
 import { COVERED_ZIP, db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
 import { uniqueEmail, waitForEmailLink } from "./support/mail";
@@ -23,15 +24,6 @@ async function waitForAssignment(leadWhere: { email: string }, timeoutMs = 60_00
 async function proEmail(proId: string): Promise<string> {
   const [r] = await db()`select u.email from pros p join users u on u.id = p.user_id where p.id = ${proId}`;
   return r.email;
-}
-
-/** Signs in as an existing account through the real magic link flow. */
-async function signInAs(page: import("@playwright/test").Page, email: string, callbackUrl: string) {
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink(email));
 }
 
 test.describe("lead routing", () => {
@@ -246,7 +238,7 @@ test.describe("admin and pros", () => {
     await signIn(page, "newagent", "/pro/join");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name clients will see").fill(agentName);
-    await page.getByLabel("California DRE license number").fill("02123456");
+    await page.getByLabel("California DRE license number").fill(uniqueLicense());
     await page.getByLabel("Business phone").fill("213 555 0199");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
@@ -258,6 +250,9 @@ test.describe("admin and pros", () => {
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
     await expect(page.locator("dd").filter({ hasText: "95811" })).toBeVisible();
+    await page.getByRole("button", { name: "Create my profile" }).click();
+    await expect(page.getByText("Please accept the partner agreement.")).toBeVisible();
+    await page.getByLabel(/I have read and accept the partner agreement/).check();
     await page.getByRole("button", { name: "Create my profile" }).click();
     await expect(page).toHaveURL(/\/pro\/profile/);
     await expect(page.getByTestId("pro-pending")).toBeVisible();

@@ -39,7 +39,7 @@ describe("lead status token", () => {
 });
 
 describe("partner signup", () => {
-  const common = { displayName: "Jo", phone: "2135550100", zipCodes: ["90027"] };
+  const common = { displayName: "Jo", phone: "2135550100", zipCodes: ["90027"], agreeToTerms: true };
 
   it("requires a license and at least one ZIP code for agents, neither for landlords", () => {
     expect(ProSignup.safeParse({ ...common, proType: "agent" }).success).toBe(false);

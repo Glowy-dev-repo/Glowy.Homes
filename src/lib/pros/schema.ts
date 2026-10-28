@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROPERTY_TYPES } from "@/db/schema/listings";
+import { normalizeDreLicense } from "./license";
 
 // Partner agents receive leads by ZIP code; landlords receive inquiries on the rentals they post.
 export const PRO_SIGNUP_TYPES = ["agent", "landlord"] as const;
@@ -34,10 +35,17 @@ const priceOrder = (v: { priceMin?: number | null; priceMax?: number | null }) =
 export const ProSignup = ProProfileFields.extend({
   proType: z.enum(PRO_SIGNUP_TYPES),
   licenseNumber: z.string().trim().max(40).optional().transform((v) => v || null),
+  agreeToTerms: z.boolean().optional(),
 })
   .refine((v) => v.proType === "landlord" || !!v.licenseNumber, { message: "Enter your license number.", path: ["licenseNumber"] })
+  .refine((v) => v.proType === "landlord" || !v.licenseNumber || !!normalizeDreLicense(v.licenseNumber), {
+    message: "Enter your 8 digit California DRE license number.",
+    path: ["licenseNumber"],
+  })
+  .refine((v) => v.proType === "landlord" || v.agreeToTerms === true, { message: "Please accept the partner agreement.", path: ["agreeToTerms"] })
   .refine((v) => v.proType === "landlord" || v.zipCodes.length > 0, { message: "Choose at least one ZIP code you serve.", path: ["zipCodes"] })
-  .refine(priceOrder, { message: "The lowest price must be below the highest price.", path: ["priceMax"] });
+  .refine(priceOrder, { message: "The lowest price must be below the highest price.", path: ["priceMax"] })
+  .transform((v) => ({ ...v, licenseNumber: v.licenseNumber ? normalizeDreLicense(v.licenseNumber) : null }));
 
 export const ProProfileUpdate = ProProfileFields.partial()
   .extend({

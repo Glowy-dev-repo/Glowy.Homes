@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { normalizeDreLicense } from "@/lib/pros/license";
 import { cn } from "@/lib/utils";
 import type { ZipOption } from "@/lib/zips";
 import { LeadPreferences, prefsToPayload, ZipPicker, type LeadPrefs } from "./ZipPicker";
@@ -21,6 +22,7 @@ type Draft = {
   bio: string;
   zipCodes: string[];
   prefs: LeadPrefs;
+  agreeToTerms: boolean;
 };
 
 const STEPS = ["Role", "Details", "ZIP codes", "Review"] as const;
@@ -35,7 +37,7 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
   const { update } = useSession();
   const id = useId();
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>({ proType: "agent", displayName: defaultName, brokerageName: "", licenseNumber: "", phone: "", yearsExperience: "", languages: "en", bio: "", zipCodes: [], prefs: { priceMin: "", priceMax: "", homeTypes: [] } });
+  const [draft, setDraft] = useState<Draft>({ proType: "agent", displayName: defaultName, brokerageName: "", licenseNumber: "", phone: "", yearsExperience: "", languages: "en", bio: "", zipCodes: [], prefs: { priceMin: "", priceMax: "", homeTypes: [] }, agreeToTerms: false });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
     if (step === 1) {
       if (draft.displayName.trim().length < 2) e.displayName = "Enter the name clients will see.";
       if (licensed && !draft.licenseNumber.trim()) e.licenseNumber = "Enter your license number.";
+      else if (licensed && !normalizeDreLicense(draft.licenseNumber)) e.licenseNumber = "Enter your 8 digit California DRE license number.";
       if (!/^\+?\d{10,15}$/.test(draft.phone.replace(/[^\d+]/g, ""))) e.phone = "Enter a phone number with area code.";
     }
     if (step === 2 && licensed && !draft.zipCodes.length) e.zipCodes = "Choose at least one ZIP code you serve.";
@@ -58,6 +61,10 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
   const next = () => validateStep() && setStep((s) => Math.min(STEPS.length - 1, s + 1));
 
   const submit = async () => {
+    if (licensed && !draft.agreeToTerms) {
+      setErrors({ agreeToTerms: "Please accept the partner agreement." });
+      return;
+    }
     setBusy(true);
     setSummary(null);
     const res = await fetch("/api/pro/signup", {
@@ -74,6 +81,7 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
         bio: draft.bio || undefined,
         zipCodes: licensed ? draft.zipCodes : [],
         ...(licensed ? prefsToPayload(draft.prefs) : {}),
+        ...(licensed ? { agreeToTerms: draft.agreeToTerms } : {}),
       }),
     });
     const body = (await res.json().catch(() => null)) as { error?: { message: string; fields?: Record<string, string[]> } } | null;
@@ -196,6 +204,32 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
             )}
           </dl>
           {licensed && <p className="text-small text-neutral-600">We verify licenses with the regulator before you receive leads. This typically takes one business day.</p>}
+          {licensed && (
+            <div className="pt-2">
+              <label className="flex min-h-11 items-start gap-3 text-body">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-5 shrink-0 accent-[var(--color-accent)]"
+                  checked={draft.agreeToTerms}
+                  onChange={(e) => set({ agreeToTerms: e.target.checked })}
+                  aria-invalid={!!errors.agreeToTerms || undefined}
+                  aria-describedby={errors.agreeToTerms ? `${id}-agree-error` : undefined}
+                />
+                <span>
+                  I have read and accept the{" "}
+                  <a href="/pro/agreement" target="_blank" rel="noopener" className="font-medium text-accent underline">
+                    partner agreement
+                  </a>
+                  .
+                </span>
+              </label>
+              {errors.agreeToTerms && (
+                <p id={`${id}-agree-error`} className="text-small text-danger">
+                  {errors.agreeToTerms}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

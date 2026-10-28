@@ -13,5 +13,12 @@ export async function POST(req: Request) {
   if (!parsed.success) return invalid(parsed.error);
   const result = await createPro(userId, parsed.data);
   if (result.status === "exists") return fail(409, { code: "exists", message: "You already have a pro profile." });
+  if (result.status === "license_taken") {
+    return fail(409, {
+      code: "license_taken",
+      message: "This DRE license already has a partner account. Contact support if this is you.",
+      fields: { licenseNumber: ["This DRE license already has a partner account."] },
+    });
+  }
   return ok(result, {}, { status: 201 });
 }
