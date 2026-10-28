@@ -129,16 +129,22 @@ export async function recomputeProRating(proId: string) {
 
 /** Applies an admin decision. Listing decisions are handled by the listing moderation module. */
 export async function decideModeration(itemId: string, decision: "approve" | "reject", note: string | null, adminId: string) {
+  // A partner agent: setProStatus changes the status and resolves this item only if that succeeds, so a
+  // failed change (say another admin acted first) leaves the item in the queue.
+  const [open] = await sql<{ itemType: string; itemId: string }[]>`
+    select item_type as "itemType", item_id as "itemId" from moderation_items where id = ${itemId} and status = 'open'`;
+  if (!open) return null;
+  if (open.itemType === "pro") {
+    const changed = await setProStatus(sql, open.itemId, decision === "approve" ? "approve" : "reject", { adminUserId: adminId, reason: note });
+    return changed.ok ? open : null;
+  }
   const [item] = await sql<{ itemType: string; itemId: string }[]>`
     update moderation_items set status = ${decision === "approve" ? "approved" : "rejected"}, reviewer_user_id = ${adminId},
       decision_note = ${note}, resolved_at = now()
     where id = ${itemId} and status = 'open'
     returning item_type as "itemType", item_id as "itemId"`;
   if (!item) return null;
-  if (item.itemType === "pro") {
-    // Same path as the admin agent page: status log, email to the agent, public pages refreshed.
-    await setProStatus(sql, item.itemId, decision === "approve" ? "approve" : "reject", { adminUserId: adminId, reason: note });
-  } else if (item.itemType === "review") {
+  if (item.itemType === "review") {
     const [r] = await sql<{ proId: string }[]>`
       update pro_reviews set status = ${decision === "approve" ? "approved" : "rejected"} where id = ${item.itemId} returning pro_id as "proId"`;
     if (r) await recomputeProRating(r.proId);
