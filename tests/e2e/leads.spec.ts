@@ -254,7 +254,8 @@ test.describe("admin and pros", () => {
     await expect(page.getByText("Please accept the partner agreement.")).toBeVisible();
     await page.getByLabel(/I have read and accept the partner agreement/).check();
     await page.getByRole("button", { name: "Create my profile" }).click();
-    await expect(page).toHaveURL(/\/pro\/profile/);
+    await expect(page).toHaveURL(/\/pro\/dashboard/);
+    await expect(page.getByTestId("application-steps")).toContainText("License check");
     await expect(page.getByTestId("pro-pending")).toBeVisible();
 
     const admin = await browser.newPage();

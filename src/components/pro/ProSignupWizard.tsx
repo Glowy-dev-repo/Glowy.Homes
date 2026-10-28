@@ -96,7 +96,7 @@ export function ProSignupWizard({ zips, defaultName }: { zips: ZipOption[]; defa
     // Refresh roles in the session token. update() needs a payload: without one next-auth sends a
     // plain GET and the jwt callback never sees trigger "update".
     await update({ refresh: "roles" });
-    router.push(draft.proType === "landlord" ? "/landlord" : "/pro/profile?welcome=1");
+    router.push(draft.proType === "landlord" ? "/landlord" : "/pro/dashboard");
     router.refresh();
   };
 

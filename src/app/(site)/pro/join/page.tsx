@@ -11,7 +11,7 @@ export default async function ProJoinPage() {
   const session = await auth();
   if (!session?.user) redirect("/signin?callbackUrl=/pro/join");
   const [existing] = await sqlClient`select pro_type from pros where user_id = ${session.user.id}`;
-  if (existing) redirect(existing.pro_type === "landlord" ? "/landlord" : "/pro/profile");
+  if (existing) redirect(existing.pro_type === "landlord" ? "/landlord" : "/pro/dashboard");
   const zips = await zipOptions();
   return (
     <div className="container-page py-10">
