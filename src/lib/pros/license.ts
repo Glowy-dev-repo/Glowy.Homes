@@ -10,3 +10,12 @@ export function normalizeDreLicense(raw: string): string | null {
   if (!digits || digits.length > 8) return null;
   return digits.padStart(8, "0");
 }
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** A stored agreement version ("2026-10-draft") as people read it ("October 2026 draft"). */
+export function agreementLabel(version: string | null): string {
+  const m = version?.match(/^(\d{4})-(\d{2})(?:-(\w+))?$/);
+  if (!m) return version ? version.replace(/-/g, " ") : "not recorded";
+  return [MONTHS[Number(m[2]) - 1], m[1], m[3]].filter(Boolean).join(" ");
+}

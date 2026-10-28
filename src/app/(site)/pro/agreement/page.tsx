@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
 import { broker } from "@/config/broker";
-import { PARTNER_AGREEMENT_VERSION } from "@/lib/pros/license";
+import { agreementLabel, PARTNER_AGREEMENT_VERSION } from "@/lib/pros/license";
 
 export const metadata: Metadata = {
   title: "Partner agent agreement",
@@ -60,7 +60,7 @@ export default function PartnerAgreementPage() {
         Draft, under legal review. The final wording may change before launch.
       </p>
       <h1 className="text-h1">Partner agent agreement</h1>
-      <p className="mt-2 text-small text-neutral-600">Version {PARTNER_AGREEMENT_VERSION}</p>
+      <p className="mt-2 text-small text-neutral-600">Version: {agreementLabel(PARTNER_AGREEMENT_VERSION)}</p>
       <div className="mt-8 space-y-8">
         {sections.map((s) => (
           <section key={s.h}>

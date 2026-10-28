@@ -6,6 +6,7 @@ import { AdminHeader, Panel, Stat } from "@/components/admin/AdminPage";
 import { AgentStatusForm } from "@/components/admin/AgentStatusForm";
 import { formatDate } from "@/lib/format";
 import { isUuid } from "@/lib/listings/detail";
+import { agreementLabel } from "@/lib/pros/license";
 import { allowedActions } from "@/lib/pros/status-rules";
 import { adminAgentDetail, dreLookupUrl } from "@/server/data/admin-agent";
 
@@ -52,7 +53,7 @@ export default async function AdminAgentPage({ params }: { params: Promise<{ id:
             <dt className="text-neutral-600">License checked</dt>
             <dd>{a.licenseVerifiedAt ? formatDate(a.licenseVerifiedAt) : "Not yet"}</dd>
             <dt className="text-neutral-600">Partner agreement</dt>
-            <dd>{a.agreementAcceptedAt ? `Version ${a.agreementVersion}, accepted ${formatDate(a.agreementAcceptedAt)}` : "Not accepted"}</dd>
+            <dd>{a.agreementAcceptedAt ? `${agreementLabel(a.agreementVersion)}, accepted ${formatDate(a.agreementAcceptedAt)}` : "Not accepted"}</dd>
             <dt className="text-neutral-600">Joined</dt>
             <dd>{formatDate(a.createdAt)}</dd>
             <dt className="text-neutral-600">Public profile</dt>

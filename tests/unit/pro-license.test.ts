@@ -48,3 +48,13 @@ describe("ProSignup", () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe("partner agreement version label", () => {
+  it("is readable and has no dashes (CLAUDE.md rule 10)", async () => {
+    const { agreementLabel, PARTNER_AGREEMENT_VERSION } = await import("@/lib/pros/license");
+    expect(agreementLabel(PARTNER_AGREEMENT_VERSION)).toBe("October 2026 draft");
+    expect(agreementLabel("2027-03")).toBe("March 2027");
+    expect(agreementLabel(null)).toBe("not recorded");
+    expect(agreementLabel(PARTNER_AGREEMENT_VERSION)).not.toMatch(/-/);
+  });
+});
