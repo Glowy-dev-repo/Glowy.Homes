@@ -63,7 +63,7 @@ export const pros = pgTable("pros", {
   // One working account per DRE license: suspended duplicates stay for the record.
   uniqueIndex("pros_agent_license_key")
     .on(t.licenseRegion, t.licenseNumber)
-    .where(sql`${t.proType} = 'agent' and ${t.status} <> 'suspended' and ${t.licenseNumber} is not null`),
+    .where(sql`${t.proType} = 'agent' and ${t.status} <> 'suspended' and ${t.licenseNumber} ~ '^[0-9]{8}$'`),
 ]);
 
 /** Agents Glowy Homes invited by email. An invite grants nothing: the agent still signs up and is approved. */

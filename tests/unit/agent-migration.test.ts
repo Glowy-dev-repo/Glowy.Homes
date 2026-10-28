@@ -20,3 +20,16 @@ describe("0011_agent_area migration", () => {
     expect(index).toBeGreaterThan(fix);
   });
 });
+
+describe("0011_agent_area duplicate license cleanup", () => {
+  const sql = readFileSync(file, "utf8");
+
+  it("keeps the active agent when duplicates exist, oldest first among equals", () => {
+    expect(sql).toContain("order by (status = 'active') desc, created_at, id");
+  });
+
+  it("only treats real 8 digit DRE numbers as duplicates, and indexes only those", () => {
+    expect(sql).toMatch(/license_number ~ '\^\[0-9\]\{8\}\$'\s*\) d where n > 1/);
+    expect(sql).toMatch(/CREATE UNIQUE INDEX "pros_agent_license_key"[^;]*license_number" ~ '\^\[0-9\]\{8\}\$'/);
+  });
+});

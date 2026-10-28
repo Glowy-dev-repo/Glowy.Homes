@@ -18,13 +18,14 @@ CREATE UNIQUE INDEX "pro_invites_email_key" ON "pro_invites" USING btree (lower(
 -- DRE numbers are 8 digits: store them the same way however they were typed ("1364089", "DRE# 01364089").
 update pros set license_number = lpad(regexp_replace(license_number, '\D', '', 'g'), 8, '0')
   where pro_type = 'agent' and license_number ~ '\d' and length(regexp_replace(license_number, '\D', '', 'g')) <= 8;--> statement-breakpoint
--- One working account per license: keep the oldest, suspend the rest with a note in their history.
+-- One working account per real 8 digit license: keep the active one (the oldest if several), suspend the
+-- rest with a note in their history. Text that is not a license number ("N/A") is left alone.
 update pros set status = 'suspended', updated_at = now(),
   status_log = status_log || jsonb_build_array(jsonb_build_object('at', now(), 'from', status, 'to', 'suspended', 'action', 'suspend', 'reason', 'duplicate license', 'admin_user_id', null))
   where id in (
     select id from (
-      select id, row_number() over (partition by license_region, license_number order by created_at, id) as n
-      from pros where pro_type = 'agent' and status <> 'suspended' and license_number is not null
+      select id, row_number() over (partition by license_region, license_number order by (status = 'active') desc, created_at, id) as n
+      from pros where pro_type = 'agent' and status <> 'suspended' and license_number ~ '^[0-9]{8}$'
     ) d where n > 1
   );--> statement-breakpoint
-CREATE UNIQUE INDEX "pros_agent_license_key" ON "pros" USING btree ("license_region","license_number") WHERE "pros"."pro_type" = 'agent' and "pros"."status" <> 'suspended' and "pros"."license_number" is not null;
+CREATE UNIQUE INDEX "pros_agent_license_key" ON "pros" USING btree ("license_region","license_number") WHERE "pros"."pro_type" = 'agent' and "pros"."status" <> 'suspended' and "pros"."license_number" ~ '^[0-9]{8}$';

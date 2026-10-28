@@ -2457,7 +2457,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"pros\".\"pro_type\" = 'agent' and \"pros\".\"status\" <> 'suspended' and \"pros\".\"license_number\" is not null",
+          "where": "\"pros\".\"pro_type\" = 'agent' and \"pros\".\"status\" <> 'suspended' and \"pros\".\"license_number\" ~ '^[0-9]{8}$'",
           "concurrently": false,
           "method": "btree",
           "with": {}
