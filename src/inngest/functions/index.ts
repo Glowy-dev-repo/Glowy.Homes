@@ -3,6 +3,7 @@ import { eventsRetentionFn } from "./events-retention";
 import { hello } from "./hello";
 import { syncIdxLeadsFn } from "./idx-leads";
 import { ingestFeed } from "./ingest-feed";
+import { leadFollowUpFn } from "./lead-follow-up";
 import { proResponseTimesFn, routeLeadFn, sweepLeadsFn } from "./leads";
 import { processMediaFn } from "./process-media";
 import { refreshRegionStatsFn } from "./refresh-region-stats";
@@ -19,6 +20,7 @@ export const functions = [
   nearbySaleFn,
   routeLeadFn,
   sweepLeadsFn,
+  leadFollowUpFn,
   proResponseTimesFn,
   syncIdxLeadsFn,
   instantAlertsFn,
