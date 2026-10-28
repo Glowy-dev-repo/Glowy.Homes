@@ -1,4 +1,5 @@
 import "server-only";
+import { setProStatus } from "@/lib/pros/status";
 import { sqlClient } from "@/db";
 
 const sql = sqlClient;
@@ -135,10 +136,8 @@ export async function decideModeration(itemId: string, decision: "approve" | "re
     returning item_type as "itemType", item_id as "itemId"`;
   if (!item) return null;
   if (item.itemType === "pro") {
-    await sql`
-      update pros set status = ${decision === "approve" ? "active" : "suspended"},
-        license_verified_at = case when ${decision === "approve"} then now() else license_verified_at end, updated_at = now()
-      where id = ${item.itemId}`;
+    // Same path as the admin agent page: status log, email to the agent, public pages refreshed.
+    await setProStatus(sql, item.itemId, decision === "approve" ? "approve" : "reject", { adminUserId: adminId, reason: note });
   } else if (item.itemType === "review") {
     const [r] = await sql<{ proId: string }[]>`
       update pro_reviews set status = ${decision === "approve" ? "approved" : "rejected"} where id = ${item.itemId} returning pro_id as "proId"`;

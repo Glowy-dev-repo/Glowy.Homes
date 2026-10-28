@@ -1,3 +1,5 @@
+import { sqlClient } from "@/db";
+import { notifyNewApplication } from "@/lib/pros/status";
 import { ProSignup } from "@/lib/pros/schema";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
@@ -20,5 +22,6 @@ export async function POST(req: Request) {
       fields: { licenseNumber: ["This DRE license already has a partner account."] },
     });
   }
+  if (result.proStatus === "pending") await notifyNewApplication(sqlClient, result.proId).catch((e) => console.warn(`[pros] application notice failed: ${e}`));
   return ok(result, {}, { status: 201 });
 }

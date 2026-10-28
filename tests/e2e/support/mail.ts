@@ -8,19 +8,22 @@ function mailFile(to: string) {
 
 /**
  * Waits for the app's log transport to record an email to `to` and returns its primary link. With
- * `match`, returns the newest link that matches (the transport keeps recent history per person), so
- * another email to the same address cannot hide the one a test is waiting for.
+ * `match`, only links that match count (the transport keeps recent history per person). With `since`,
+ * only emails sent after that moment count and the earliest one wins, so tests signing in as the same
+ * person at once each take their own link.
  */
-export async function waitForEmailLink(to: string, timeoutMs = 15_000, match?: RegExp): Promise<string> {
+export async function waitForEmailLink(to: string, timeoutMs = 15_000, match?: RegExp, since?: number): Promise<string> {
   const file = mailFile(to);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (existsSync(file)) {
       try {
-        const mail = JSON.parse(readFileSync(file, "utf8")) as { link?: string; history?: { link?: string }[] };
-        const links = [mail.link, ...(mail.history ?? []).map((m) => m.link)].filter((l): l is string => !!l);
-        const link = match ? links.find((l) => match.test(l)) : links[0];
-        if (link) return link;
+        type Sent = { link?: string; sentAt?: string };
+        const mail = JSON.parse(readFileSync(file, "utf8")) as Sent & { history?: Sent[] };
+        const sent = mail.history?.length ? mail.history : [mail];
+        const candidates = sent.filter((m) => m.link && (!match || match.test(m.link)) && (since === undefined || Date.parse(m.sentAt ?? "") >= since));
+        const pick = since === undefined ? candidates[0] : candidates[candidates.length - 1];
+        if (pick?.link) return pick.link;
       } catch {
         // Caught the file mid write; read it again.
       }
@@ -29,6 +32,9 @@ export async function waitForEmailLink(to: string, timeoutMs = 15_000, match?: R
   }
   throw new Error(`No email to ${to}${match ? ` matching ${match}` : ""} within ${timeoutMs}ms. Is EMAIL_TRANSPORT=log set for the app?`);
 }
+
+/** Sign in link for one page: the callback in the link must be `callbackUrl`. */
+export const signInLinkFor = (callbackUrl: string) => new RegExp(`/api/auth/callback/.*callbackUrl=[^&]*${encodeURIComponent(callbackUrl).replace(/[.*()]/g, (c) => `[${c}]`)}(&|$)`);
 
 /** Sign in links only: other emails to the same person (admins get many) never stand in for them. */
 export const SIGN_IN_LINK = /\/api\/auth\/callback\//;

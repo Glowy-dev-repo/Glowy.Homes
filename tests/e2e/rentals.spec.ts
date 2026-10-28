@@ -1,23 +1,13 @@
-import type { Page } from "@playwright/test";
 import sharp from "sharp";
-import { signIn } from "./support/auth";
+import { signIn, signInAs } from "./support/auth";
 import { db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
 
 // docs/05 Phase 5 acceptance criteria 1 to 4, as one landlord and one renter going through the real UI.
 
 async function photo(i: number) {
   const buffer = await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: 40 + i * 50, g: 120, b: 200 - i * 40 } } }).jpeg().toBuffer();
   return { name: `room-${i}.jpg`, mimeType: "image/jpeg", buffer };
-}
-
-async function signInAs(page: Page, email: string, callbackUrl: string) {
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink(email, 15_000, SIGN_IN_LINK));
 }
 
 /** A Los Angeles condo with no owner and nothing listed, so the landlord can list it. */

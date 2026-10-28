@@ -1,6 +1,6 @@
 import { COVERED_ZIP, db } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
+import { signInAs } from "./support/auth";
 
 // The live default: every lead waits for Glowy Homes, which chooses the agent. The gate's server runs
 // automatic assignment for the routing suites, so this lead starts in the state routing leaves a lead in
@@ -20,11 +20,7 @@ test("a lead waiting for Glowy Homes shows the suggested agent and admin assigns
     values ('tour', 'Assign Test', ${`assign-${Date.now()}@example.com`}, ${home.listingId}, ${home.propertyId}, '{}'::jsonb, 'new', ${db().json([entry])})
     returning id`;
 
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent(`/admin/leads?lead=${lead.id}`)}`);
-  await page.getByLabel("Email").fill("admin@example.com");
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink("admin@example.com", 15_000, SIGN_IN_LINK));
+  await signInAs(page, "admin@example.com", `/admin/leads?lead=${lead.id}`);
 
   const row = page.locator(`[data-lead-id="${lead.id}"]`).first();
   await expect(row).toContainText("waiting for an agent");

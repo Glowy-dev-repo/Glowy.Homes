@@ -30,7 +30,7 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
     const file = devMailFile(email.to);
     const previous = await readFile(file, "utf8").then((t) => JSON.parse(t) as { history?: unknown[] } & Record<string, unknown>).catch(() => null);
     const sent = { ...email, sentAt: new Date().toISOString() };
-    const history = previous ? [sent, (({ history: _h, ...rest }) => rest)(previous), ...(previous.history ?? [])].slice(0, 20) : [sent];
+    const history = [sent, ...(previous?.history ?? (previous ? [previous] : []))].slice(0, 20);
     await writeFile(file, JSON.stringify({ ...sent, history }, null, 2));
     // Links (sign in links included) only reach the console outside production.
     const showLink = email.link && process.env.NODE_ENV !== "production";

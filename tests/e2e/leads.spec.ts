@@ -2,7 +2,7 @@ import { uniqueLicense } from "./support/agents";
 import { signIn, signInAs } from "./support/auth";
 import { COVERED_ZIP, db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { uniqueEmail, waitForEmailLink } from "./support/mail";
+import { uniqueEmail } from "./support/mail";
 
 // Lead routing needs the Inngest dev server; the phase gate starts it next to the test build.
 

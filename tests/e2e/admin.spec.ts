@@ -1,14 +1,10 @@
 import { db } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
+import { signInAs } from "./support/auth";
 
 test("admin sees every agent, ZIP code coverage and can filter all leads by ZIP code", async ({ page, isMobile }) => {
   test.skip(isMobile, "admin desktop flow");
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent("/admin/agents")}`);
-  await page.getByLabel("Email").fill("admin@example.com");
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink("admin@example.com", 15_000, SIGN_IN_LINK));
+  await signInAs(page, "admin@example.com", "/admin/agents");
 
   // Agents: the list, then a status filter carried in the URL.
   await expect(page.getByRole("heading", { name: "Partner agents" })).toBeVisible();

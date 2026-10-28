@@ -30,8 +30,9 @@ export async function removeListings(listingIds: string[]): Promise<void> {
   });
 }
 
-/** Homes whose ZIP code has at least one partner agent, so a lead on them can be assigned. */
-export const COVERED_ZIP = "exists (select 1 from pro_zip_codes z where z.zip = left(p.postal_code, 5))";
+/** Homes whose ZIP code has at least one active partner agent taking leads, so a lead on them can be assigned. */
+export const COVERED_ZIP =
+  "exists (select 1 from pro_zip_codes z join pros pz on pz.id = z.pro_id where z.zip = left(p.postal_code, 5) and pz.status = 'active' and pz.pro_type = 'agent' and pz.is_accepting_leads)";
 
 // Seller opt outs (hidden listing or withheld address) are left out so pages show the full address.
 // Never a listing a feed test ingested (SimplyRETS): it must not become every other test's sample.

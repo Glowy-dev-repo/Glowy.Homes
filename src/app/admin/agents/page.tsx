@@ -23,7 +23,7 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams: 
       <div>
         <h1 className="text-h1">Partner agents</h1>
         <p className="mt-1 text-small text-neutral-600">
-          Every agent, their ZIP codes and how many leads they received. New sign ups are approved in Moderation.
+          Every agent, their ZIP codes and how many leads they received. Open an agent to check their license, approve, suspend or reactivate them.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export default async function AdminAgentsPage({ searchParams }: { searchParams: 
               {rows.map((a) => (
                 <tr key={a.id} className="border-b border-neutral-100 align-top" data-testid="admin-agent">
                   <td className="py-3 pr-3">
-                    <Link href={`/agent/${a.slug}`} className="font-medium text-accent underline-offset-2 hover:underline">{a.displayName}</Link>
+                    <Link href={`/admin/agents/${a.id}`} className="font-medium text-accent underline-offset-2 hover:underline">{a.displayName}</Link>
                     <p className="text-small text-neutral-600">{a.email}</p>
                     {a.brokerageName && <p className="text-small text-neutral-600">{a.brokerageName}</p>}
                   </td>

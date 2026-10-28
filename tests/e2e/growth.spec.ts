@@ -1,18 +1,10 @@
 import { createHmac } from "node:crypto";
-import type { Page } from "@playwright/test";
 import { db, sampleListingPath } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { uniqueEmail, SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
+import { signInAs } from "./support/auth";
+import { uniqueEmail, waitForEmailLink } from "./support/mail";
 
 // docs/05 Phase 6: natural language search, shared lists, alert unsubscribe, analytics, summaries.
-
-async function signInAs(page: Page, email: string, callbackUrl: string) {
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink(email, 15_000, SIGN_IN_LINK));
-}
 
 test.describe("natural language search", () => {
   test("text becomes removable chips, then a search", async ({ page }) => {

@@ -2,7 +2,7 @@ import type { IdxClient } from "../../src/lib/idx/client";
 import { syncIdxLeads } from "../../src/lib/idx/sync-leads";
 import { db } from "./support/db";
 import { expect, test } from "./support/fixtures";
-import { SIGN_IN_LINK, waitForEmailLink } from "./support/mail";
+import { signInAs } from "./support/auth";
 
 // Lead routing needs the Inngest dev server; the phase gate starts it next to the test build.
 const INNGEST_URL = process.env.INNGEST_BASE_URL ?? "http://localhost:8288";
@@ -59,11 +59,7 @@ test("a lead from the IDX Broker search reaches the partner agent for its ZIP co
   expect(assigned!.covers).toBe(true);
 
   // The gate runs automatic assignment, so the lead already has its agent.
-  await page.goto(`/signin?callbackUrl=${encodeURIComponent(`/admin/leads?lead=${created[0]}`)}`);
-  await page.getByLabel("Email").fill("admin@example.com");
-  await page.getByRole("button", { name: "Email me a sign in link" }).click();
-  await expect(page).toHaveURL(/check-email/);
-  await page.goto(await waitForEmailLink("admin@example.com", 15_000, SIGN_IN_LINK));
+  await signInAs(page, "admin@example.com", `/admin/leads?lead=${created[0]}`);
   const row = page.locator(`[data-lead-id="${created[0]}"]`).first();
   await expect(row).toContainText("Idx Buyer");
   await expect(row).toContainText(`ZIP ${cover.zip}`);
