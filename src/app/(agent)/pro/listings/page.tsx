@@ -17,7 +17,7 @@ export default async function ProListingsPage() {
     where pr.user_id = ${session!.user.id}
     order by (l.status = 'active') desc, l.list_date desc limit 60`;
   return (
-    <div className="container-page py-10">
+    <div>
       <h1 className="mb-6 text-h1">Your listings</h1>
       {listings.length ? (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

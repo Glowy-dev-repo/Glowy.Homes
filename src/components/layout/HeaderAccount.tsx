@@ -33,7 +33,7 @@ export function HeaderAccount() {
       )}
       {isPro ? (
         <Button asChild>
-          <Link href="/pro/leads">My leads</Link>
+          <Link href="/pro/dashboard">Agent workspace</Link>
         </Button>
       ) : (
         <>
