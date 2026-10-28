@@ -6,6 +6,9 @@ describe("accessFor", () => {
     expect(accessFor("/", null)).toBe("allow");
     expect(accessFor("/search", null)).toBe("allow");
     expect(accessFor("/pro", null)).toBe("allow");
+    // Applicants read the partner agreement before they have an account.
+    expect(accessFor("/pro/agreement", null)).toBe("allow");
+    expect(accessFor("/pro/agreement", ["consumer"])).toBe("allow");
     expect(accessFor("/accounting", null)).toBe("allow");
   });
 

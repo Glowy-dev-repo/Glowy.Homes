@@ -236,3 +236,25 @@ test.describe("closing a lead", () => {
     await db()`delete from leads where id = ${lead.id}`;
   });
 });
+
+test.describe("public agent pages", () => {
+  test("the agent page explains the real flow and links the agreement, which anyone can read", async ({ page }) => {
+    await page.goto("/pro");
+    const steps = page.getByTestId("pro-steps");
+    for (const s of ["Apply", "License check", "Leads assigned by our team"]) await expect(steps).toContainText(s);
+    await page.getByRole("link", { name: "Read the partner agreement" }).click();
+    await expect(page).toHaveURL(/\/pro\/agreement$/);
+    await expect(page.getByTestId("agreement-draft")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Partner agent agreement");
+  });
+
+  test("an agent's public profile shows their DRE number and RealEstateAgent structured data", async ({ page }) => {
+    const [agent] = await db()<{ slug: string; license: string }[]>`
+      select slug, license_number as license from pros where pro_type = 'agent' and status = 'active' and license_number is not null order by created_at limit 1`;
+    await page.goto(`/agent/${agent.slug}`);
+    await expect(page.getByTestId("agent-dre")).toContainText(`DRE #${agent.license}`);
+    const ld = page.locator('script[type="application/ld+json"]');
+    await expect(ld).toHaveCount(1);
+    expect(JSON.parse((await ld.textContent()) ?? "{}")["@type"]).toBe("RealEstateAgent");
+  });
+});

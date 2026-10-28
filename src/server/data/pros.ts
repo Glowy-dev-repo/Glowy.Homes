@@ -103,6 +103,8 @@ export type ProPublic = {
   rating: number | null;
   reviewCount: number;
   licenseVerified: boolean;
+  /** California DRE license number, shown on the public profile as state rules require. */
+  licenseNumber: string | null;
   /** ZIP codes the agent serves, with the city each belongs to. */
   zips: { zip: string; cityName: string | null; citySlug: string | null }[];
 };
@@ -119,6 +121,7 @@ export async function proBySlug(slug: string): Promise<ProPublic | null> {
     select p.id, p.slug, p.pro_type as "proType", p.display_name as "displayName", p.brokerage_name as "brokerageName",
       p.phone, p.bio, p.photo_url as "photoUrl", p.languages, p.years_experience as "yearsExperience",
       p.rating::float8 as rating, p.review_count as "reviewCount", p.license_verified_at is not null as "licenseVerified",
+      p.license_number as "licenseNumber",
       coalesce((select json_agg(json_build_object('zip', z.zip, 'cityName', zc."cityName", 'citySlug', zc."citySlug") order by zc."cityName", z.zip)
         from pro_zip_codes z left join (${sql.unsafe(ZIP_CITY)}) zc on zc.zip = z.zip
         where z.pro_id = p.id), '[]'::json) as zips

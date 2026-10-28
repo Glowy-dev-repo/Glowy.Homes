@@ -7,6 +7,9 @@ type Rule = { match: (path: string) => boolean; roles: readonly Role[] | "any" }
 const under = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}/`);
 
 // /pro itself is the public pro landing page (docs/01 route map); everything below it is the pro workspace.
+// The partner agreement is public too: applicants read it before they have an account.
+const PUBLIC = [under("/pro/agreement")];
+
 const RULES: Rule[] = [
   { match: under("/admin"), roles: ["admin"] },
   // Any signed in user can apply to become a pro.
@@ -18,6 +21,7 @@ const RULES: Rule[] = [
 
 /** Decides whether a request to `path` may proceed. Edge safe: no database access. */
 export function accessFor(path: string, roles: readonly Role[] | null): Access {
+  if (PUBLIC.some((m) => m(path))) return "allow";
   const rule = RULES.find((r) => r.match(path));
   if (!rule) return "allow";
   if (!roles) return "signin";

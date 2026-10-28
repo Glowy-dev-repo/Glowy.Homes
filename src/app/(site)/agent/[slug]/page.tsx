@@ -8,6 +8,8 @@ import { LeadDialog } from "@/components/lead/LeadDialog";
 import { ListingCard } from "@/components/listing/ListingCard";
 import { sqlClient } from "@/db";
 import { formatDate } from "@/lib/format";
+import { jsonLdHtml } from "@/lib/json-ld";
+import { agentJsonLd } from "@/lib/seo/agent-jsonld";
 import { coverJoin, summaryColumns } from "@/lib/search/postgres";
 import type { ListingSummary } from "@/types/search";
 import { approvedReviews, proBySlug } from "@/server/data/pros";
@@ -49,8 +51,10 @@ export default async function AgentProfilePage({ params }: Props) {
   ]);
   const role = "Real estate agent";
 
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? `https://${brand.domain}`}/agent/${pro.slug}`;
   return (
     <div className="container-page py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(agentJsonLd(pro, url)) }} />
       <div className="flex flex-wrap items-start gap-6">
         <AgentAvatar name={pro.displayName} photoKey={pro.photoUrl} size={96} priority />
         <div className="min-w-0 flex-1">
@@ -58,6 +62,7 @@ export default async function AgentProfilePage({ params }: Props) {
           <p className="text-body text-neutral-700">
             {role}
             {pro.brokerageName ? `, ${pro.brokerageName}` : ""}
+            {pro.licenseNumber ? <span data-testid="agent-dre">{` · DRE #${pro.licenseNumber}`}</span> : null}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-3 text-small text-neutral-700">
             {pro.rating ? (
@@ -83,6 +88,7 @@ export default async function AgentProfilePage({ params }: Props) {
           proId={pro.id}
           triggerClassName="inline-flex min-h-12 items-center rounded-md bg-accent px-5 font-semibold text-white hover:bg-accent-hover"
           trigger={`Contact ${pro.displayName.split(" ")[0]}`}
+          recipientNote={`Your message goes to the ${brand.name} team, who will connect you with ${pro.displayName.split(" ")[0]} or another partner agent who serves this area.`}
         />
       </div>
 
