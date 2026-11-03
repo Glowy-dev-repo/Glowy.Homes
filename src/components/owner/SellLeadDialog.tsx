@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CONSENT_TEXT } from "@/lib/leads/schema";
+import { brand } from "@/config/brand";
 
 /** "Thinking of selling?" (docs/01 V7): creates a sell lead routed to agents who cover the area. */
 export function SellLeadDialog({
@@ -89,7 +90,7 @@ export function SellLeadDialog({
             <div className="mt-5" role="status">
               <p className="flex items-center gap-2 text-body text-neutral-900">
                 <CheckCircle2 className="size-5 text-success" aria-hidden />
-                Thanks. We will match you with an agent shortly.
+                Thanks. Your request went to the {brand.name} team, and we typically match you with a local agent within a few hours.
               </p>
               <Dialog.Close asChild>
                 <Button className="mt-5">Done</Button>

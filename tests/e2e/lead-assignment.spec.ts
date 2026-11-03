@@ -10,7 +10,7 @@ test("a lead waiting for Glowy Homes shows the suggested agent and admin assigns
   const [home] = await db()<{ listingId: string; propertyId: string; proId: string }[]>`
     select l.id as "listingId", l.property_id as "propertyId",
       (select z.pro_id from pro_zip_codes z join pros pr on pr.id = z.pro_id
-        where z.zip = left(p.postal_code, 5) and pr.status = 'active' and pr.pro_type = 'agent' order by pr.id limit 1) as "proId"
+        where z.zip = left(p.postal_code, 5) and pr.status = 'active' and pr.pro_type = 'agent' and pr.is_accepting_leads order by pr.id limit 1) as "proId"
     from listings l join properties p on p.id = l.property_id
     where l.source = 'synthetic' and l.listing_type = 'sale' and l.status = 'active' and l.owner_user_id is null and ${db().unsafe(COVERED_ZIP)}
     order by l.id limit 1`;
@@ -37,4 +37,23 @@ test("a lead waiting for Glowy Homes shows the suggested agent and admin assigns
   // It now shows its agent.
   await page.goto(`/admin/leads?lead=${lead.id}`);
   await expect(page.locator(`[data-lead-id="${lead.id}"]`).first()).toContainText("with ");
+});
+
+test("admin closes a spam lead and it leaves the waiting queue", async ({ page, isMobile }) => {
+  test.skip(isMobile, "admin desktop flow");
+  const [lead] = await db()<{ id: string }[]>`
+    insert into leads (lead_type, consumer_name, consumer_email, payload, status)
+    values ('contact', 'Spam Bot', ${`spam-${Date.now()}@example.com`}, '{"zip":"93021"}'::jsonb, 'new')
+    returning id`;
+  await signInAs(page, "admin@example.com", `/admin/leads?lead=${lead.id}`);
+  const row = page.locator(`[data-lead-id="${lead.id}"]`).first();
+  await row.getByTestId("close-spam").click();
+  await expect(row.getByTestId("close-spam")).toHaveText("Yes, close as spam");
+  await row.getByTestId("close-spam").click();
+
+  const closed = async () => (await db()<{ status: string; last: { action: string } }[]>`select status, routing_log -> -1 as last from leads where id = ${lead.id}`)[0];
+  await expect.poll(async () => (await closed()).status, { timeout: 20_000 }).toBe("lost");
+  expect((await closed()).last.action).toBe("admin_closed_spam");
+  const [{ waiting }] = await db()<{ waiting: boolean }[]>`select ${lead.id}::uuid in (select id from leads where assigned_pro_id is null and status in ('new', 'unassigned')) as waiting`;
+  expect(waiting).toBe(false);
 });

@@ -22,12 +22,14 @@ const SVG_HEADERS = {
 
 async function syntheticRow(sourceListingId: string, sourceUrl: string) {
   const [row] = await sqlClient<{ address: string; caption: string | null; propertyType: string }[]>`
-    select concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address, m.caption, l.property_type as "propertyType"
+    select case when l.address_display then concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) else p.city end as address,
+      m.caption, l.property_type as "propertyType"
     from listings l
     join properties p on p.id = l.property_id
     -- Only photos that exist: an unknown photo number must not make the server draw a new image.
     join listing_media m on m.listing_id = l.id and m.source_url = ${sourceUrl}
     where l.source = 'synthetic' and l.source_listing_id = ${sourceListingId}
+      and l.status not in ('draft', 'in_review', 'rejected') and l.internet_display
     limit 1`;
   return row ?? null;
 }

@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { estimateCommute, type CommuteEstimate } from "@/lib/commute";
 import type { Suggestion } from "@/lib/search/autocomplete";
+import { formatDistance } from "@/lib/format";
 
 /** Commute time input (docs/01 LDP section 11): pick a destination, see a travel time range. */
 export function CommuteEstimator({ from }: { from: [number, number] }) {
@@ -59,7 +60,7 @@ export function CommuteEstimator({ from }: { from: [number, number] }) {
       {chosen && (
         <div className="mt-3 rounded-md bg-neutral-50 p-3 text-body" aria-live="polite" data-testid="commute-estimate">
           <p>
-            To {chosen.label}: about {chosen.estimate.distanceKm} km in a straight line.
+            To {chosen.label}: about {formatDistance(chosen.estimate.distanceKm * 1000)} in a straight line.
           </p>
           <p className="tabular">
             By car: {chosen.estimate.car[0]} to {chosen.estimate.car[1]} min. By transit: {chosen.estimate.transit[0]} to {chosen.estimate.transit[1]} min.

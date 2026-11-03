@@ -64,6 +64,10 @@ export function EstimateCard({
               {formatPrice(estimate.rent.low, { listingType: "rent" })} to {formatPrice(estimate.rent.high, { listingType: "rent" })}
             </dd>
           </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-neutral-600">Rent confidence</dt>
+            <dd className="text-right capitalize text-neutral-900" data-testid="rent-confidence">{estimate.rent.confidence}</dd>
+          </div>
         </dl>
       )}
 

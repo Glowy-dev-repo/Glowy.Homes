@@ -30,7 +30,7 @@ test.describe("listing detail page", () => {
     await expect(page.getByTestId("estimate-disclaimer")).toContainText("not an appraisal");
     // MLS display rules: "Listed by" near the facts, who a request reaches, and the disclaimer.
     await expect(page.getByTestId("listed-by")).toContainText(/^Listed by .+ of .+/);
-    await expect(page.getByTestId("cta-note")).toContainText("not to the listing agent");
+    await expect(page.getByTestId("cta-note")).toContainText("does not go to the listing agent");
     await expect(page.getByTestId("mls-disclaimer")).toBeVisible();
     // Rule 12.16.17: a way to report wrong information, addressed to the brokerage or support.
     await expect(page.getByTestId("report-incorrect").getByRole("link", { name: "Report incorrect information" })).toHaveAttribute("href", /^mailto:/);

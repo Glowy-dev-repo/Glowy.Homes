@@ -1,4 +1,5 @@
 import "server-only";
+import { esc } from "@/lib/email/templates/layout";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -99,7 +100,7 @@ export async function startClaim(userId: string, email: string, propertyId: stri
     to: email,
     subject: "Your home verification code",
     text: `Your verification code for ${street}, ${p.address.city} is ${code}. It expires in ${CODE_TTL_DAYS} days.`,
-    html: `<p>Your verification code for ${street}, ${p.address.city} is <strong>${code}</strong>.</p><p>It expires in ${CODE_TTL_DAYS} days.</p>`,
+    html: `<p>Your verification code for ${esc(street)}, ${esc(p.address.city)} is <strong>${code}</strong>.</p><p>It expires in ${CODE_TTL_DAYS} days.</p>`,
     link: code,
   });
   return { status: "verification_required" as const };

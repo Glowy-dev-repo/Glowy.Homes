@@ -85,6 +85,7 @@
   },
   "overrides": {
     "postcss": "^8.5.28",
+    "systeminformation": "^5.33.19",
     "inngest": {
       "zod": "$zod"
     }

@@ -26,8 +26,12 @@ services:
         fromDatabase:
           name: glowy-homes-db
           property: connectionString
-      # The live domain. Sign in links always use the address the visitor came in on.
+      # The live domain.
       - key: NEXT_PUBLIC_APP_URL
+        value: https://glowyhomes.com
+      # Sign in links are built from this, never from the request's Host or X-Forwarded-Host header, so a
+      # forged header cannot make a magic link point at another site.
+      - key: AUTH_URL
         value: https://glowyhomes.com
       - key: AUTH_SECRET
         generateValue: true

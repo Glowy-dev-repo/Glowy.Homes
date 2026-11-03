@@ -122,7 +122,7 @@ test.describe("owner loop", () => {
     await dialog.getByLabel("Name").fill("Pat Owner");
     await dialog.getByRole("checkbox").check();
     await dialog.getByRole("button", { name: "Contact an agent" }).click();
-    await expect(dialog.getByRole("status")).toContainText("match you with an agent");
+    await expect(dialog.getByRole("status")).toContainText("Glowy Homes team");
     const [lead] = await db()`select lead_type, payload from leads where consumer_email = ${email} order by created_at desc limit 1`;
     expect(lead.lead_type).toBe("sell");
     expect(lead.payload.consent.version).toBeTruthy();

@@ -52,7 +52,6 @@ export type RouteInput = {
   listingAgentId?: string | null;
   /** The listing's own owner (a landlord posting a rental): rental inquiries go to them directly. */
   listingOwnerProId?: string | null;
-  routeToListingAgent: boolean;
   /** Agents who already had this lead (reassignment). */
   exclude: string[];
   candidates: Candidate[];
@@ -84,26 +83,24 @@ export function rankCandidates(cs: Candidate[]): Candidate[] {
   );
 }
 
+/** Lead types a landlord or owner answers about their own listing. */
+export const OWNER_LEAD_TYPES: LeadType[] = ["tour", "contact", "rental_inquiry", "rental_application"];
+
 export function decideRoute(input: RouteInput): RouteDecision {
   const exclude = new Set(input.exclude);
   const byId = new Map(input.candidates.map((c) => [c.proId, c]));
 
-  // Rentals posted by their landlord on Glowy Homes: inquiries go to the landlord.
-  const ownerTypes: LeadType[] = ["tour", "contact", "rental_inquiry", "rental_application"];
-  if (ownerTypes.includes(input.leadType) && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
+  // Homes posted by their landlord or owner on Glowy Homes: questions about them go to that owner.
+  if (OWNER_LEAD_TYPES.includes(input.leadType) && input.listingOwnerProId && !exclude.has(input.listingOwnerProId)) {
     return { assign: input.listingOwnerProId, reason: "listing owner", considered: [input.listingOwnerProId] };
   }
 
-  if (input.requestedProId && !exclude.has(input.requestedProId)) {
-    const c = byId.get(input.requestedProId);
-    if (c && c.status === "active" && c.isAccepting && c.assignedToday < c.capPerDay) {
-      return { assign: c.proId, reason: "requested by the consumer", considered: [c.proId] };
-    }
-  }
+  // A lead never goes to the home's listing agent, whatever else applies.
+  if (input.listingAgentId) exclude.add(input.listingAgentId);
 
-  if (input.routeToListingAgent && input.listingAgentId) {
-    const c = byId.get(input.listingAgentId);
-    if (c && eligible(c, exclude)) return { assign: c.proId, reason: "listing agent", considered: [c.proId] };
+  if (input.requestedProId) {
+    const c = byId.get(input.requestedProId);
+    if (c && eligible(c, exclude)) return { assign: c.proId, reason: "requested by the consumer", considered: [c.proId] };
   }
 
   if (!input.zip) return { assign: null, reason: "the lead has no ZIP code to match", considered: [] };

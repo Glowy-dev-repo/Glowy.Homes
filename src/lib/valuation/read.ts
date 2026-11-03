@@ -28,6 +28,16 @@ type Row = {
 const LAZY_TTL_DAYS = 30;
 
 /**
+ * True when the home is listed now and the seller asked for no automated value on it (listings.hide_estimate,
+ * set by admin from the MLS opt out). The estimate then stays off every public page and the API.
+ */
+export async function estimateHidden(propertyId: string): Promise<boolean> {
+  const [row] = await sqlClient<{ hidden: boolean }[]>`
+    select exists (select 1 from listings where property_id = ${propertyId} and hide_estimate and status in ('active', 'pending')) as hidden`;
+  return row?.hidden ?? false;
+}
+
+/**
  * docs/03 section 3.3: homes outside the nightly scope are valued lazily on first view, then
  * cached for 30 days. Returns the estimate after computing one if it was missing or stale.
  */

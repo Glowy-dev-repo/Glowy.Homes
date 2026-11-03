@@ -106,7 +106,7 @@ export const listings = pgTable(
     sourceListingId: text("source_listing_id"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
     price: integer("price").notNull(),
-    priceCurrency: text("price_currency").notNull().default("CAD"),
+    priceCurrency: text("price_currency").notNull().default("USD"),
     originalPrice: integer("original_price"),
     soldPrice: integer("sold_price"),
     listDate: date("list_date").notNull(),
@@ -135,6 +135,11 @@ export const listings = pgTable(
     addressDisplay: boolean("address_display").notNull().default(true),
     hideEstimate: boolean("hide_estimate").notNull().default(false),
     ownerUserId: uuid("owner_user_id").references(() => users.id),
+    /**
+     * Owner listings: the home facts the poster entered. They reach the property record (and the poster becomes
+     * its owner of record) only when an admin approves the listing, never on submission.
+     */
+    submittedFacts: jsonb("submitted_facts").$type<{ propertyType: string; beds: number | null; baths: number | null; sqft: number | null; yearBuilt: number | null }>(),
     isFeatured: boolean("is_featured").notNull().default(false),
     featuredUntil: timestamp("featured_until", { withTimezone: true }),
     viewCount: integer("view_count").notNull().default(0),
@@ -148,6 +153,11 @@ export const listings = pgTable(
     sqft: integer("sqft"),
     cityRegionId: uuid("city_region_id"),
     neighborhoodRegionId: uuid("neighborhood_region_id"),
+    /**
+     * When the listing first became visible to the public. Feed listings are visible on insert; owner
+     * listings only once approved. Saved search alerts select new homes by this, not by created_at.
+     */
+    publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

@@ -91,6 +91,13 @@ describe("LDP helpers", () => {
     expect(ld.about.numberOfBedrooms).toBe(4);
   });
 
+  it("leaves out the street and map point when the seller withheld the address", () => {
+    const ld = listingJsonLd({ ...listing, addressDisplay: false }, "https://glowyhomes.com", []);
+    expect(ld.about.address).not.toHaveProperty("streetAddress");
+    expect(ld.about).not.toHaveProperty("geo");
+    expect(ld.about.address.addressLocality).toBe(listing.address.city);
+  });
+
   it("writes a meta description without dashes", () => {
     const d = metaDescription(listing);
     expect(d).toMatch(/^4 bed, 3 bath, 2,150 sq ft, detached for sale at \$1,249,000 in Pasadena\./);

@@ -1,8 +1,8 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "@/lib/env";
 import { r2, r2Configured } from "./r2";
 
@@ -50,4 +50,15 @@ export async function putVariant(baseKey: string, width: number, body: Buffer): 
   const localKey = `local/${baseKey}`;
   await writeLocal(localKey, width, body);
   return localKey;
+}
+
+/** Deletes the stored variants of a key written by putVariant (a replaced or removed photo). */
+export async function deleteVariants(key: string, widths: readonly number[]): Promise<void> {
+  if (!SAFE_KEY.test(key) || key.includes("..")) throw new Error("Invalid media key");
+  if (key.startsWith("local/")) {
+    await rm(resolve(MEDIA_DIR, key), { recursive: true, force: true });
+    return;
+  }
+  if (!r2Configured()) return;
+  await r2().send(new DeleteObjectsCommand({ Bucket: env().R2_BUCKET, Delete: { Objects: widths.map((w) => ({ Key: `${key}/${w}.webp` })), Quiet: true } }));
 }

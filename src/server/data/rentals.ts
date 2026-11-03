@@ -33,13 +33,18 @@ export async function submitApplication(userId: string, applicationId: string, l
   const [app] = await sql<{ id: string; profile: RentalApplicationProfile }[]>`
     select id, profile from rental_applications where id = ${applicationId} and applicant_user_id = ${userId}`;
   if (!app) return { status: "not_found" };
-  const [listing] = await sql<{ id: string; type: string; status: string; owner: string | null }[]>`
-    select id, listing_type as type, status, owner_user_id as owner from listings where id = ${listingId}`;
+  const [listing] = await sql<{ id: string; type: string; status: string; owner: string | null; source: string }[]>`
+    select id, listing_type as type, status, owner_user_id as owner, source from listings where id = ${listingId}`;
   if (!listing) return { status: "not_found" };
-  if (listing.type !== "rent" || listing.status !== "active") return { status: "not_rental" };
+  // Applications go only to rentals posted here by their landlord; MLS rentals are handled by their listing office.
+  if (listing.type !== "rent" || listing.status !== "active" || listing.source !== "landlord" || !listing.owner) return { status: "not_rental" };
   if (listing.owner === userId) return { status: "own_listing" };
-  const [dupe] = await sql`select id from rental_application_submissions where application_id = ${app.id} and listing_id = ${listingId}`;
-  if (dupe) return { status: "already" };
+  // The row is claimed first, so a double click or two tabs send one application and create one lead.
+  const [sub] = await sql<{ id: string }[]>`
+    insert into rental_application_submissions (application_id, listing_id, status, profile_snapshot)
+    values (${app.id}, ${listingId}, 'submitted', ${sql.json(app.profile as never)})
+    on conflict do nothing returning id`;
+  if (!sub) return { status: "already" };
 
   const lead = await createLead(
     {
@@ -52,10 +57,11 @@ export async function submitApplication(userId: string, applicationId: string, l
       consent: true,
     },
     userId,
-  );
-  const [sub] = await sql<{ id: string }[]>`
-    insert into rental_application_submissions (application_id, listing_id, lead_id, status)
-    values (${app.id}, ${listingId}, ${lead.id}, 'submitted') returning id`;
+  ).catch(async (e: unknown) => {
+    await sql`delete from rental_application_submissions where id = ${sub.id}`;
+    throw e;
+  });
+  await sql`update rental_application_submissions set lead_id = ${lead.id} where id = ${sub.id}`;
   return { status: "submitted", submissionId: sub.id };
 }
 
@@ -70,16 +76,19 @@ export async function mySubmissions(userId: string) {
     order by s.created_at desc`;
 }
 
-/** Applications to the landlord's own listings, with the applicant's profile. */
+/** A suspended landlord or owner loses access to applications and inquiries, like a suspended agent. */
+const activeOwner = (userId: string) => sql`exists (select 1 from pros where user_id = ${userId} and status = 'active')`;
+
+/** Applications to the landlord's own listings, with the applicant's profile as it was when they applied. */
 export async function landlordSubmissions(userId: string) {
   return sql<{ id: string; status: string; createdAt: string; listingId: string; address: string; profile: RentalApplicationProfile; landlordNotes: string | null }[]>`
     select s.id, s.status, s.created_at::text as "createdAt", l.id as "listingId",
       concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address,
-      a.profile, s.landlord_notes as "landlordNotes"
+      coalesce(s.profile_snapshot, a.profile) as profile, s.landlord_notes as "landlordNotes"
     from rental_application_submissions s
     join rental_applications a on a.id = s.application_id
     join listings l on l.id = s.listing_id join properties p on p.id = l.property_id
-    where l.owner_user_id = ${userId}
+    where l.owner_user_id = ${userId} and ${activeOwner(userId)}
     order by s.created_at desc`;
 }
 
@@ -89,7 +98,7 @@ export async function updateSubmission(userId: string, submissionId: string, pat
       status = coalesce(${patch.status ?? null}, s.status),
       landlord_notes = coalesce(${patch.landlordNotes ?? null}, s.landlord_notes)
     from listings l
-    where s.id = ${submissionId} and l.id = s.listing_id and l.owner_user_id = ${userId}
+    where s.id = ${submissionId} and l.id = s.listing_id and l.owner_user_id = ${userId} and ${activeOwner(userId)}
     returning s.id, s.lead_id`;
   if (!rows.length) return false;
   // Any landlord action counts as a first response on the matching lead.
@@ -106,6 +115,6 @@ export async function landlordInquiries(userId: string) {
     from leads ld
     join listings l on l.id = ld.listing_id join properties p on p.id = l.property_id
     join pros pr on pr.id = ld.assigned_pro_id
-    where l.owner_user_id = ${userId} and pr.user_id = ${userId}
+    where l.owner_user_id = ${userId} and pr.user_id = ${userId} and pr.status = 'active'
     order by ld.created_at desc limit 100`;
 }

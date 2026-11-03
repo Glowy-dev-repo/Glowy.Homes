@@ -18,7 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = z.object({ proId: z.string().uuid() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
   const done = await adminReassign(sqlClient, id, parsed.data.proId, who.userId);
-  if (!done) return fail(404, { code: "not_found", message: "Lead or active pro not found." });
+  if (done === "unchanged") return ok({ reassigned: false });
+  if (done === "not_found") {
+    return fail(404, { code: "not_found", message: "Choose an active partner agent who is accepting leads and is not the listing agent. Closed and lost leads cannot be reassigned." });
+  }
   // Reminder to the agent, then a note to admins, if nobody replies (inngest lead-follow-up).
   await Promise.race([
     inngest.send({ name: "lead/assigned", data: { leadId: id, proId: parsed.data.proId } }),

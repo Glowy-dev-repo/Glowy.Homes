@@ -22,7 +22,7 @@ export type SetProStatusResult =
  */
 export async function setProStatus(sql: Sql, proId: string, action: ProStatusAction, opts: { adminUserId: string | null; reason: string | null }): Promise<SetProStatusResult> {
   const [pro] = await sql<{ status: ProStatus; name: string; slug: string; email: string }[]>`
-    select p.status, p.display_name as name, p.slug, u.email from pros p join users u on u.id = p.user_id where p.id = ${proId}`;
+    select p.status, p.display_name as name, p.slug, u.email from pros p join users u on u.id = p.user_id where p.id = ${proId} and p.pro_type = 'agent'`;
   if (!pro) return { ok: false, code: "not_found" };
   const next = nextProStatus(pro.status, action);
   if (!next) return { ok: false, code: "bad_transition" };
@@ -32,7 +32,10 @@ export async function setProStatus(sql: Sql, proId: string, action: ProStatusAct
   try {
     updated = await sql<{ id: string }[]>`
       update pros set status = ${next},
-        license_verified_at = case when ${action} = 'approve' then now() else license_verified_at end,
+        -- Approving, or reactivating someone whose license was never checked (a rejected applicant), is the admin's
+        -- license check: the admin detail page links the DRE lookup next to these buttons.
+        license_verified_at = case when ${action} = 'approve' then now()
+          when ${action} = 'reactivate' then coalesce(license_verified_at, now()) else license_verified_at end,
         status_log = status_log || ${sql.json([entry] as never)}, updated_at = now()
       where id = ${proId} and status = ${pro.status}
       returning id`;

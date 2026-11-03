@@ -1,6 +1,6 @@
 import { sqlClient } from "@/db";
-import { putVariant } from "@/lib/media/storage";
-import { encodeProPhoto, MAX_PHOTO_BYTES, PHOTO_TYPES, PhotoError } from "@/lib/pros/photo";
+import { deleteVariants, putVariant } from "@/lib/media/storage";
+import { encodeProPhoto, MAX_PHOTO_BYTES, PHOTO_TYPES, PhotoError, PRO_PHOTO_WIDTHS } from "@/lib/pros/photo";
 import { revalidateSitePage } from "@/lib/revalidate";
 import { fail, ok } from "@/server/api/respond";
 import { requirePro } from "@/server/api/pro";
@@ -8,6 +8,12 @@ import { rateLimitWrite } from "@/server/api/rate-limit";
 
 const WRONG_TYPE = "Choose a JPG, PNG or WebP photo.";
 const TOO_LARGE = "Photos can be up to 5 MB.";
+
+/** The agent's previous photo is removed from storage once the new value is saved. Only their own folder. */
+async function dropOldPhoto(proId: string, oldKey: string | null) {
+  if (!oldKey || !(oldKey.startsWith(`pros/${proId}/`) || oldKey.startsWith(`local/pros/${proId}/`))) return;
+  await deleteVariants(oldKey, PRO_PHOTO_WIDTHS).catch((e) => console.warn(`[photo] could not delete ${oldKey}: ${e}`));
+}
 
 function refreshProfiles() {
   revalidateSitePage("/agent/[slug]", "page");
@@ -38,7 +44,9 @@ export async function POST(req: Request) {
   const base = `pros/${who.pro.proId}/${crypto.randomUUID()}`;
   let key = base;
   for (const v of variants) key = await putVariant(base, v.width, v.body);
+  const [old] = await sqlClient<{ key: string | null }[]>`select photo_url as key from pros where id = ${who.pro.proId}`;
   await sqlClient`update pros set photo_url = ${key}, updated_at = now() where id = ${who.pro.proId}`;
+  await dropOldPhoto(who.pro.proId, old?.key ?? null);
   refreshProfiles();
   return ok({ photoUrl: key }, {}, { status: 201 });
 }
@@ -49,7 +57,9 @@ export async function DELETE(req: Request) {
   if (writeLimited) return writeLimited;
   const who = await requirePro({ allowInactive: true });
   if ("response" in who) return who.response;
+  const [old] = await sqlClient<{ key: string | null }[]>`select photo_url as key from pros where id = ${who.pro.proId}`;
   await sqlClient`update pros set photo_url = null, updated_at = now() where id = ${who.pro.proId}`;
+  await dropOldPhoto(who.pro.proId, old?.key ?? null);
   refreshProfiles();
   return ok({ photoUrl: null });
 }

@@ -44,7 +44,7 @@ export default async function HomePage() {
               Find a home, and a local agent who knows your {market.postalLabel}.
             </h1>
             <p className="max-w-xl text-[17px] leading-relaxed text-neutral-700">
-              Search homes for sale and for rent across {brand.market.region}. Ask about any home and your question goes to a {brand.name} partner agent who serves that {market.postalLabel}.
+              Search homes for sale and for rent across {brand.market.region}. Ask about any home and your question goes to the {brand.name} team, who connect you with a partner agent who serves that {market.postalLabel}.
             </p>
             <div className="w-full max-w-2xl">
               <HeroSearch />

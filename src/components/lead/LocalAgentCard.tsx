@@ -18,9 +18,9 @@ export function replyTime(minutes: number | null): string | null {
 }
 
 /**
- * The listing page's contact card: the partner agent a question about this home reaches (the most
- * suitable agent for its ZIP code), with tour and question buttons. Says plainly this is not the listing
- * agent (CSMAR Rule 12.16.22). Without a covering agent, requests still go out and an admin assigns them.
+ * The listing page's contact card: a partner agent who serves the home's ZIP code, with tour and question
+ * buttons. Requests go to the Glowy Homes team, who choose the agent, and never to the listing agent
+ * (CSMAR Rule 12.16.22).
  */
 export function LocalAgentCard({
   agent,
@@ -35,17 +35,15 @@ export function LocalAgentCard({
   address: string;
   questionType: LeadType;
 }) {
-  const first = agent?.displayName.split(" ")[0];
   const where = zip ? `ZIP ${zip}` : "this area";
-  const note = agent
-    ? `Your request goes to ${agent.displayName}, a ${brand.name} partner agent for ${where}, not to the listing agent.`
-    : `Your request goes to a ${brand.name} partner agent who serves ${where}, not to the listing agent.`;
+  // Glowy Homes chooses the agent for every lead, so the card never preselects the agent it shows.
+  const note = `Your request goes to the ${brand.name} team, who connect you with a partner agent who serves ${where}. It does not go to the listing agent.`;
   const reply = agent ? replyTime(agent.responseTimeMinutes) : null;
 
   return (
     <section aria-labelledby="local-agent-heading" className="rounded-lg border border-neutral-200 bg-white p-5 shadow-card" data-testid="local-agent">
       <h2 id="local-agent-heading" className="font-sans text-label uppercase tracking-[0.14em] text-neutral-600">
-        Your local agent for {where}
+        Local partner agents for {where}
       </h2>
       {agent ? (
         <div className="mt-3 flex items-center gap-3">
@@ -78,7 +76,6 @@ export function LocalAgentCard({
         <LeadDialog
           leadType="tour"
           listingId={listingId}
-          proId={agent?.id}
           address={address}
           recipientNote={note}
           triggerClassName="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-4 font-semibold text-white hover:bg-accent-hover"
@@ -92,14 +89,13 @@ export function LocalAgentCard({
         <LeadDialog
           leadType={questionType}
           listingId={listingId}
-          proId={agent?.id}
           address={address}
           recipientNote={note}
           triggerClassName="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5"
           trigger={
             <>
               <MessageSquare className="size-5" aria-hidden />
-              {first ? `Ask ${first} a question` : "Ask a local agent"}
+              Ask a local agent
             </>
           }
         />

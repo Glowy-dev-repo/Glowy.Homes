@@ -39,7 +39,7 @@ export default async function MethodologyPage() {
 
       <h2 className="mt-10 text-h2">1. Finding comparable sales</h2>
       <p className="mt-2 text-body text-neutral-700">
-        We look for sales of the same kind of home (for example, condos for a condo) within 5 km in the last 12 months. If fewer than five are found, we widen the search to 10 km and 18 months. With fewer than three, we do not show a number and say there is not enough data.
+        We look for sales of the same kind of home (for example, condos for a condo) within about 3 miles in the last 12 months. If fewer than five are found, we widen the search to about 6 miles and 18 months. With fewer than three, we do not show a number and say there is not enough data.
       </p>
 
       <h2 className="mt-8 text-h2">2. Adjusting each sale</h2>
@@ -54,7 +54,7 @@ export default async function MethodologyPage() {
 
       <h2 className="mt-8 text-h2">4. Confidence</h2>
       <ul className="mt-2 list-disc space-y-1 pl-6 text-body text-neutral-700">
-        <li><strong>High:</strong> at least eight similar sales within 3 km and a range narrower than 12% of the estimate.</li>
+        <li><strong>High:</strong> at least eight similar sales within about 2 miles and a range narrower than 12% of the estimate.</li>
         <li><strong>Medium:</strong> at least five similar sales and a range narrower than 20%.</li>
         <li><strong>Low:</strong> everything else. In any city where our recent typical error is above 12%, we show Low until it improves.</li>
       </ul>

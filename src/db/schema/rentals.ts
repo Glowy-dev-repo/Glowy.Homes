@@ -29,6 +29,8 @@ export const rentalApplicationSubmissions = pgTable(
       .notNull()
       .default("submitted"),
     landlordNotes: text("landlord_notes"),
+    /** The application as it was when sent, so later edits by the renter do not change what landlords saw. */
+    profileSnapshot: jsonb("profile_snapshot").$type<Record<string, unknown>>(),
     createdAt: createdAt(),
   },
   (t) => [

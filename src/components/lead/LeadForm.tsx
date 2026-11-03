@@ -10,6 +10,7 @@ import { CONSENT_TEXT } from "@/lib/leads/schema";
 import { cn } from "@/lib/utils";
 import { Turnstile } from "./Turnstile";
 import { market } from "@/config/market";
+import { brand } from "@/config/brand";
 
 type Assigned = { name: string; photoUrl: string | null; brokerage: string | null } | null;
 
@@ -21,14 +22,11 @@ const SLOTS = [
 
 const initials = (name: string) => name.split(" ").map((w) => w[0]).slice(0, 2).join("");
 
-function nextDays(n: number): string[] {
-  const out: string[] = [];
-  const d = new Date();
-  for (let i = 1; i <= n; i++) {
-    const x = new Date(d.getTime() + i * 86_400_000);
-    out.push(x.toISOString().slice(0, 10));
-  }
-  return out;
+/** The next n days after today, where the homes are (California), as YYYY-MM-DD. */
+export function nextDays(n: number, now: Date = new Date()): string[] {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: market.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const base = Date.parse(`${today}T12:00:00Z`);
+  return Array.from({ length: n }, (_, i) => new Date(base + (i + 1) * 86_400_000).toISOString().slice(0, 10));
 }
 
 /**
@@ -129,7 +127,7 @@ export function LeadForm({
         {state === "matching" ? (
           <p className="flex items-center gap-2 text-body text-neutral-800">
             <Loader2 className="size-5 animate-spin" aria-hidden />
-            Sent. Finding the right professional for you.
+            Sent to the {brand.name} team.
           </p>
         ) : assigned ? (
           <div className="flex items-center gap-3">
@@ -144,7 +142,7 @@ export function LeadForm({
             <div>
               <p className="flex items-center gap-2 text-h3">
                 <CheckCircle2 className="size-5 text-success" aria-hidden />
-                <span data-testid="assigned-pro">{assigned.name}</span> will be in touch
+                Sent to <span data-testid="assigned-pro">{assigned.name}</span>
               </p>
               <p className="text-small text-neutral-600">{assigned.brokerage ?? "Typically replies within a few hours."}</p>
             </div>
@@ -152,7 +150,7 @@ export function LeadForm({
         ) : (
           <p className="flex items-center gap-2 text-body text-neutral-900">
             <CheckCircle2 className="size-5 text-success" aria-hidden />
-            We&apos;ll match you with an agent shortly.
+            Sent to the {brand.name} team. We typically match you with a local partner agent within a few hours.
           </p>
         )}
         {state === "done" && onDone && (

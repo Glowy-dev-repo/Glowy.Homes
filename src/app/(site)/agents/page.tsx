@@ -103,7 +103,7 @@ export default async function LocalAgentsPage({ searchParams }: Props) {
                   <LeadDialog
                     leadType="contact"
                     proId={a.id}
-                    recipientNote={`This goes to ${a.displayName}, a ${brand.name} partner agent for ZIP ${zip}.`}
+                    recipientNote={`Your message goes to the ${brand.name} team, who will connect you with ${a.displayName.split(" ")[0]} or another partner agent who serves ZIP ${zip}.`}
                     triggerClassName="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent px-4 font-semibold text-accent hover:bg-accent/5"
                     trigger={
                       <>

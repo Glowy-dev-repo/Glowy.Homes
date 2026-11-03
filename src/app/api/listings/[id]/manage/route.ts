@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { brand } from "@/config/brand";
 import { isUuid } from "@/lib/listings/detail";
 import { fail, invalid, ok, unauthorized } from "@/server/api/respond";
 import { currentUserId } from "@/server/api/session";
@@ -23,5 +24,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (r === "not_found") return fail(404, { code: "not_found", message: "Listing not found." });
   if (r === "not_live") return fail(409, { code: "not_live", message: "This listing is not live yet." });
   if (r === "invalid") return fail(400, { code: "invalid_status", message: "That status does not apply to this listing." });
+  if (r === "price_check") {
+    return fail(400, { code: "price_check", message: `That price is far from the estimated value for this home. If it is right, email ${brand.supportEmail} and we will review it.` });
+  }
   return ok({ updated: true });
 }

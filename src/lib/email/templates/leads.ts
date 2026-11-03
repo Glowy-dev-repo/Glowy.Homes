@@ -1,3 +1,4 @@
+import { brand } from "@/config/brand";
 import { nameForEmail } from "../safe-name";
 import { esc, layout } from "./layout";
 
@@ -22,18 +23,18 @@ export function proNewLeadEmail(opts: { appUrl: string; leadId: string; leadType
   const subject = `New ${kind}${opts.address ? ` for ${opts.address}` : ""}`;
   return {
     subject,
-    text: `${subject}\n\n${lines.join("\n")}\n\nReply within 30 minutes to keep this lead. Open your inbox: ${href}`,
-    html: layout(subject, `<p style="font-size:15px;line-height:1.6;color:#3f3f46">${lines.map(esc).join("<br>")}</p><p style="font-size:13px;color:#71717a">Reply within 30 minutes to keep this lead.</p>`, { href, label: "Open lead" }),
+    text: `${subject}\n\n${lines.join("\n")}\n\nReply as soon as you can. If there is no reply, we remind you and may assign the lead to another partner agent. Open your inbox: ${href}`,
+    html: layout(subject, `<p style="font-size:15px;line-height:1.6;color:#3f3f46">${lines.map(esc).join("<br>")}</p><p style="font-size:13px;color:#71717a">Reply as soon as you can. If there is no reply, we remind you and may assign the lead to another partner agent.</p>`, { href, label: "Open lead" }),
     link: href,
   };
 }
 
 export function consumerConfirmationEmail(opts: { appUrl: string; consumerName: string; leadType: string; proName: string | null; brokerage: string | null; address: string | null }) {
   const kind = TYPE_LABEL[opts.leadType] ?? "request";
-  const subject = opts.proName ? `${opts.proName} will be in touch` : `We received your ${kind}`;
+  const subject = opts.proName ? `Your ${kind} was sent to ${opts.proName}` : `We received your ${kind}`;
   const who = opts.proName
     ? `${opts.proName}${opts.brokerage ? ` of ${opts.brokerage}` : ""} received your ${kind}${opts.address ? ` about ${opts.address}` : ""} and will typically reply within a few hours.`
-    : `We received your ${kind}${opts.address ? ` about ${opts.address}` : ""} and are matching you with a local professional.`;
+    : `The ${brand.name} team received your ${kind}${opts.address ? ` about ${opts.address}` : ""} and will connect you with a local partner agent, typically within a few hours.`;
   const href = `${opts.appUrl}/account/inquiries`;
   // Sent to whatever address was typed into the form, so the typed name is cleaned first.
   const name = nameForEmail(opts.consumerName, "there");

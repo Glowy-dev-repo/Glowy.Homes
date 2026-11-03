@@ -34,9 +34,12 @@ function styleFor(): StyleSpecification | string {
   };
 }
 
+const clamp = (n: number, limit: number) => Math.min(limit, Math.max(-limit, n));
+
+/** The visible area, kept inside the world: zoomed far out the map shows copies past 180 degrees. */
 function toBounds(map: MlMap): Bounds {
   const b = map.getBounds();
-  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((n) => Number(n.toFixed(5))) as Bounds;
+  return [clamp(b.getWest(), 180), clamp(b.getSouth(), 90), clamp(b.getEast(), 180), clamp(b.getNorth(), 90)].map((n) => Number(n.toFixed(5))) as Bounds;
 }
 
 export default function MapView({

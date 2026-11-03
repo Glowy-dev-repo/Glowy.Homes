@@ -20,7 +20,7 @@ const pro = (id: string, over: Partial<Candidate> = {}): Candidate => ({
 });
 
 const route = (candidates: Candidate[], over: Partial<RouteInput> = {}) =>
-  decideRoute({ leadType: "tour", zip: "90027", routeToListingAgent: false, exclude: [], candidates, ...over });
+  decideRoute({ leadType: "tour", zip: "90027", exclude: [], candidates, ...over });
 
 describe("routing scenarios", () => {
   const scenarios: [string, Candidate[], Partial<RouteInput>, string | null][] = [
@@ -45,6 +45,11 @@ describe("routing scenarios", () => {
     ["19. an agent the consumer asked for is honoured even outside their ZIP codes", [pro("r", { zipMatch: false }), pro("b")], { requestedProId: "r", leadType: "contact" }, "r"],
     ["20. a requested agent at cap falls back to ZIP routing", [pro("r", { assignedToday: 10 }), pro("b")], { requestedProId: "r", leadType: "contact" }, "b"],
     ["21. only agents take leads, not landlords", [pro("a", { proType: "landlord" })], {}, null],
+    ["22. the listing agent never gets the lead, even covering the ZIP code", [pro("la", { rating: 5 }), pro("b", { rating: 1 })], { listingAgentId: "la" }, "b"],
+    ["23. the listing agent alone means nobody gets it", [pro("la")], { listingAgentId: "la" }, null],
+    ["24. a consumer cannot ask for the listing agent", [pro("la"), pro("b")], { requestedProId: "la", listingAgentId: "la", leadType: "contact" }, "b"],
+    ["25. a requested landlord is not treated as an agent", [pro("ll", { proType: "landlord" }), pro("b")], { requestedProId: "ll", leadType: "contact" }, "b"],
+    ["26. a requested agent who paused leads is not used", [pro("r", { isAccepting: false }), pro("b")], { requestedProId: "r", leadType: "contact" }, "b"],
   ];
 
   for (const [name, candidates, over, expected] of scenarios) {

@@ -10,7 +10,7 @@ import { sqlClient } from "@/db";
 import { formatDate } from "@/lib/format";
 import { jsonLdHtml } from "@/lib/json-ld";
 import { agentJsonLd } from "@/lib/seo/agent-jsonld";
-import { coverJoin, summaryColumns } from "@/lib/search/postgres";
+import { coverJoin, summaryColumns, visibleListing } from "@/lib/search/postgres";
 import type { ListingSummary } from "@/types/search";
 import { approvedReviews, proBySlug } from "@/server/data/pros";
 
@@ -43,10 +43,10 @@ export default async function AgentProfilePage({ params }: Props) {
   const [active, sold, reviews] = await Promise.all([
     sql<ListingSummary[]>`
       select ${summaryColumns(sql)} from listings l join properties p on p.id = l.property_id ${coverJoin(sql)}
-      where l.listing_agent_id = ${pro.id} and l.status = 'active' order by l.list_date desc limit 6`,
+      where l.listing_agent_id = ${pro.id} and l.status = 'active' and ${visibleListing(sql)} order by l.list_date desc limit 6`,
     sql<ListingSummary[]>`
       select ${summaryColumns(sql)} from listings l join properties p on p.id = l.property_id ${coverJoin(sql)}
-      where l.listing_agent_id = ${pro.id} and l.status in ('sold', 'leased') order by l.sold_date desc nulls last limit 6`,
+      where l.listing_agent_id = ${pro.id} and l.status in ('sold', 'leased') and ${visibleListing(sql)} order by l.sold_date desc nulls last limit 6`,
     approvedReviews(pro.id),
   ]);
   const role = "Real estate agent";

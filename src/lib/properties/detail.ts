@@ -1,6 +1,6 @@
 import { sqlClient } from "@/db";
 import { isUuid } from "@/lib/listings/detail";
-import { coverJoin, summaryColumns } from "@/lib/search/postgres";
+import { coverJoin, summaryColumns, visibleListing } from "@/lib/search/postgres";
 import type { ListingSummary } from "@/types/search";
 
 export type OwnerOverrides = { beds?: number; baths?: number; sqft?: number; year_built?: number; condition?: string };
@@ -40,7 +40,7 @@ export async function getPropertyDetail(id: string): Promise<PropertyDetail | nu
       p.city_region_id as "cityId",
       case when c.id is null then null else json_build_object('name', c.name, 'slug', c.slug) end as city,
       case when n.id is null then null else json_build_object('name', n.name, 'slug', n.slug) end as neighborhood,
-      (select l.id from listings l where l.property_id = p.id and l.status in ('active', 'pending') order by l.list_date desc limit 1) as "activeListingId"
+      (select l.id from listings l where l.property_id = p.id and l.status in ('active', 'pending') and l.internet_display and l.address_display order by l.list_date desc limit 1) as "activeListingId"
     from properties p
     left join regions c on c.id = p.city_region_id
     left join regions n on n.id = p.neighborhood_region_id
@@ -66,7 +66,7 @@ export async function nearbyForSale(p: PropertyDetail, limit = 6): Promise<Listi
     select ${summaryColumns(sql)}
     from listings l join properties p on p.id = l.property_id
     ${coverJoin(sql)}
-    where l.listing_type = 'sale' and l.status = 'active' and l.property_id <> ${p.id}
+    where l.listing_type = 'sale' and l.status = 'active' and ${visibleListing(sql)} and l.property_id <> ${p.id}
       and ST_DWithin(l.location, ST_SetSRID(ST_MakePoint(${p.lng}, ${p.lat}), 4326)::geography, 5000)
     order by (l.property_type = ${p.propertyType}) desc, l.location <-> ST_SetSRID(ST_MakePoint(${p.lng}, ${p.lat}), 4326)::geography
     limit ${limit}`;

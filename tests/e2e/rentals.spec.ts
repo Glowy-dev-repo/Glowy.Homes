@@ -23,7 +23,7 @@ async function freeCondo() {
 }
 
 test.describe("rentals and user listings", () => {
-  test("landlord lists, admin approves, renter applies twice with one application, landlord updates status", async ({ page, browser, isMobile }) => {
+  test("landlord lists, admin approves, renter applies with a saved application, landlord updates status", async ({ page, browser, isMobile }) => {
     test.skip(isMobile, "one marketplace flow per run; the wizard itself is covered on mobile below");
     test.setTimeout(240_000);
     const home = await freeCondo();
@@ -110,9 +110,10 @@ test.describe("rentals and user listings", () => {
     const renter = await browser.newPage();
     let renterEmail = "";
     const own = await sampleListingPath(`l.id = '${listing.id}'`);
-    const other = await sampleListingPath("l.listing_type = 'rent' and l.status = 'active' and l.owner_user_id is null");
+    // An MLS rental: its listing office handles applications, so it has no Apply button.
+    const mls = await sampleListingPath("l.listing_type = 'rent' and l.status = 'active' and l.owner_user_id is null");
 
-    await test.step("renter fills one application and sends it to two rentals without retyping", async () => {
+    await test.step("renter fills one application and sends it to the landlord's rental; MLS rentals have no Apply", async () => {
       renterEmail = await signIn(renter, "renter", "/account/application");
       const form = renter.locator("form");
       await form.getByLabel("Full name").fill("Sam Rivera");
@@ -123,21 +124,22 @@ test.describe("rentals and user listings", () => {
       await form.getByRole("button", { name: "Save application" }).click();
       await expect(renter.getByRole("status").filter({ hasText: "Application saved." })).toBeVisible();
 
-      for (const target of [own, other]) {
-        await renter.goto(target.path);
-        if (target === own) await expect(renter.getByTestId("owner-card")).toContainText("Rented directly by the landlord");
-        await renter.getByRole("button", { name: "Apply", exact: true }).click();
-        const dialog = renter.getByRole("dialog");
-        await expect(dialog).toContainText("Send the application for Sam Rivera?");
-        await dialog.getByRole("button", { name: "Send application" }).click();
-        await expect(dialog.getByRole("status")).toContainText("Application sent");
-      }
+      await renter.goto(own.path);
+      await expect(renter.getByTestId("owner-card")).toContainText("Rented directly by the landlord");
+      await renter.getByRole("button", { name: "Apply", exact: true }).click();
+      const dialog = renter.getByRole("dialog");
+      await expect(dialog).toContainText("Send the application for Sam Rivera?");
+      await dialog.getByRole("button", { name: "Send application" }).click();
+      await expect(dialog.getByRole("status")).toContainText("Application sent");
 
       const subs = await db()<{ application_id: string }[]>`
-        select s.application_id from rental_application_submissions s where s.listing_id in (${own.id}, ${other.id})
+        select s.application_id from rental_application_submissions s where s.listing_id = ${own.id}
           and s.application_id in (select a.id from rental_applications a join users u on u.id = a.applicant_user_id where u.email = ${renterEmail})`;
-      expect(subs).toHaveLength(2);
-      expect(subs[0].application_id).toBe(subs[1].application_id);
+      expect(subs).toHaveLength(1);
+
+      await renter.goto(mls.path);
+      await expect(renter.getByTestId("ldp-price")).toBeVisible();
+      await expect(renter.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
     });
 
     await test.step("landlord sees the application, approves it, and the renter sees the new status", async () => {
@@ -151,7 +153,6 @@ test.describe("rentals and user listings", () => {
       await renter.goto("/account/applications");
       const mine = renter.getByTestId("my-submission").filter({ hasText: home.line1 });
       await expect(mine.getByTestId("submission-status")).toHaveText("Approved");
-      await expect(renter.getByTestId("my-submission").filter({ hasNotText: home.line1 }).first().getByTestId("submission-status")).toHaveText("Sent");
     });
     await renter.close();
   });

@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { brand } from "@/config/brand";
 import { LEAD_TYPES } from "@/db/schema/leads";
 
 // Lead form contract (docs/02 POST /api/leads). Consent is required for every lead (CAN-SPAM and TCPA in the US, CASL in Canada), and the
 // consent text version is stored with the lead (docs/06 section 1).
 
-export const CONSENT_TEXT = "You agree to be contacted by a licensed professional about this home.";
-export const CONSENT_TEXT_VERSION = "2026-09-v1";
+export const CONSENT_TEXT = `You agree to be contacted about this home by the ${brand.name} team and a licensed partner agent, or by the landlord or owner who posted it.`;
+export const CONSENT_TEXT_VERSION = "2026-11-v2";
 
 const windowSchema = z.object({
   date: z.string().date(),

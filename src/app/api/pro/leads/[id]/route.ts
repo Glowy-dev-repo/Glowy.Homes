@@ -31,8 +31,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!isUuid(id)) return notFound();
   const parsed = LeadPatch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
-  if (!(await updateLeadByPro(who.pro.proId, id, parsed.data))) return notFound();
+  const updated = await updateLeadByPro(who.pro.proId, id, parsed.data);
+  if (!updated) return notFound();
   if (parsed.data.status) await trackServer("lead_status_change", { leadId: id, status: parsed.data.status }, who.userId);
-  if (parsed.data.status === "closed") await notifyLeadClosed(id).catch((e) => console.warn(`[leads] closing email failed: ${e}`));
+  if (updated.newlyClosed) await notifyLeadClosed(id).catch((e) => console.warn(`[leads] closing email failed: ${e}`));
   return ok({ updated: true });
 }

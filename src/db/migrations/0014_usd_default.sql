@@ -1,0 +1,1 @@
+ALTER TABLE "listings" ALTER COLUMN "price_currency" SET DEFAULT 'USD';

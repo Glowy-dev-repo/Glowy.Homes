@@ -1,4 +1,5 @@
 import { sqlClient } from "@/db";
+import { approxCoords } from "@/lib/search/postgres";
 import type { ListingFeatures, RentalTerms } from "@/db/schema/listings";
 import type { RegionStats } from "@/db/schema/geo";
 
@@ -102,7 +103,7 @@ export async function getListingDetail(id: string): Promise<ListingDetail | null
       json_build_object('line1', case when l.address_display then p.address_line1 else ${ADDRESS_WITHHELD} end,
         'line2', case when l.address_display then p.address_line2 end, 'city', p.city, 'regionCode', p.region_code,
         'postalCode', p.postal_code, 'country', p.country) as address,
-      ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng,
+      ${approxCoords(sqlClient)},
       l.property_type as "propertyType", l.beds::float8 as beds, l.baths::float8 as baths, l.sqft,
       p.lot_sqft as "lotSqft", p.year_built as "yearBuilt", p.stories, p.parking_spaces as "parkingSpaces",
       case when l.source in ('fsbo', 'landlord') then p.facts || coalesce(p.owner_facts_override, '{}'::jsonb) else p.facts end as facts,
@@ -134,6 +135,8 @@ export async function getListingDetail(id: string): Promise<ListingDetail | null
       : Promise.resolve([] as ListingAgent[]),
   ]);
 
-  const { agentId: _agentId, ...rest } = row;
-  return { ...rest, media, priceHistory, agent: agents[0] ?? null };
+  const { agentId: _agentId, contactPrefs, ...rest } = row;
+  // An owner's phone number leaves the server only when they chose to show it (this object is also the API response).
+  const prefs = contactPrefs ? { ...contactPrefs, phone: contactPrefs.showPhone ? (contactPrefs.phone ?? null) : null } : contactPrefs;
+  return { ...rest, contactPrefs: prefs, media, priceHistory, agent: agents[0] ?? null };
 }

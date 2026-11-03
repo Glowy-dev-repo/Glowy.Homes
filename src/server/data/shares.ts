@@ -5,7 +5,7 @@ import { sqlClient } from "@/db";
 import { sendEmail } from "@/lib/email";
 import { createRateLimiter } from "@/server/api/rate-limit";
 import { shareInviteEmail } from "@/lib/email/templates/share";
-import { coverJoin, summaryColumns } from "@/lib/search/postgres";
+import { coverJoin, summaryColumns, visibleListing } from "@/lib/search/postgres";
 import type { ListingSummary } from "@/types/search";
 
 // Shared saved homes list with a cobuyer (docs/05 Phase 6 task 4). The owner invites by email; once
@@ -114,6 +114,7 @@ export async function sharedHomes(userId: string): Promise<SharedHome[]> {
     join listings l on l.id = s.listing_id
     join properties p on p.id = l.property_id
     ${coverJoin(sql)}
+    where ${visibleListing(sql)}
     order by s.saved_at desc
     limit 200`;
 }

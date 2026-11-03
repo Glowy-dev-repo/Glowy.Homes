@@ -41,6 +41,16 @@ export function fromSqft(sqft: number): number {
   return units === "metric" ? Math.round(sqft / SQFT_PER_M2) : sqft;
 }
 
+const METERS_PER_MILE = 1609.344;
+
+/** A distance in the market's units: "0.6 mi" or "250 ft" in the US, "1.0 km" or "250 m" with metric. */
+export function formatDistance(meters: number): string {
+  if (units === "metric") return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(1)} km`;
+  const miles = meters / METERS_PER_MILE;
+  if (miles < 0.1) return `${Math.max(50, Math.round((meters * 3.28084) / 50) * 50)} ft`;
+  return `${miles.toFixed(1)} mi`;
+}
+
 export function formatBeds(beds: number | null | undefined): string | null {
   if (beds === null || beds === undefined) return null;
   return beds === 0 ? "Studio" : `${beds} bd`;
@@ -79,11 +89,15 @@ export function propertyTypeLabel(type: string): string {
   return PROPERTY_TYPE_LABELS[type] ?? type;
 }
 
+/**
+ * A date ("2026-11-03") or a database timestamp ("2026-11-03 05:12:00+00"). A timestamp is shown as the
+ * day it was where the homes are, so a lead sent at 9 pm in California is not dated the next day.
+ */
 export function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(market.locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  const opts = { year: "numeric", month: "short", day: "numeric" } as const;
+  if (iso.length > 10) {
+    const t = Date.parse(iso.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00"));
+    if (Number.isFinite(t)) return new Date(t).toLocaleDateString(market.locale, { ...opts, timeZone: market.timezone });
+  }
+  return new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(market.locale, { ...opts, timeZone: "UTC" });
 }

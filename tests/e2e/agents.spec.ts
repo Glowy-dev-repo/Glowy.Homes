@@ -16,7 +16,8 @@ test.describe("local agents by ZIP code", () => {
     await expect(results.getByTestId("best-match")).toHaveCount(1);
 
     await results.getByTestId("zip-agent").first().getByRole("button", { name: /^Ask .+ a question$/ }).click();
-    await expect(page.getByRole("dialog").getByTestId("lead-recipient")).toContainText(`partner agent for ZIP ${row.zip}`);
+    await expect(page.getByRole("dialog").getByTestId("lead-recipient")).toContainText(`Glowy Homes team, who will connect you with`);
+    await expect(page.getByRole("dialog").getByTestId("lead-recipient")).toContainText(`partner agent who serves ZIP ${row.zip}`);
   });
 
   test("an invalid ZIP code explains what to enter; an uncovered one says so", async ({ page }) => {

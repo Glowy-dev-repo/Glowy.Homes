@@ -77,7 +77,8 @@ export async function activeProsForRegion(leadId: string) {
         left join listings l on l.id = ld.listing_id
         left join properties pp on pp.id = coalesce(ld.property_id, l.property_id)
         where z.pro_id = p.id and z.zip = coalesce(left(pp.postal_code, 5), ld.payload->>'zip')) as covers
-    from pros p where p.status = 'active' and p.pro_type = 'agent'
+    from pros p where p.status = 'active' and p.pro_type = 'agent' and p.is_accepting_leads
+      and p.id is distinct from (select l.listing_agent_id from leads ld join listings l on l.id = ld.listing_id where ld.id = ${leadId})
     order by covers desc, p.display_name limit 200`;
 }
 
@@ -108,7 +109,11 @@ export async function moderationQueue(): Promise<ModerationRow[]> {
       case m.item_type
         when 'pro' then (select 'License ' || coalesce(p.license_number, 'not given') || coalesce(', ' || p.brokerage_name, '') from pros p where p.id = m.item_id)
         when 'review' then (select coalesce(rv.body, '') from pro_reviews rv where rv.id = m.item_id)
-        when 'listing' then (select left(coalesce(l.description, ''), 240) from listings l where l.id = m.item_id)
+        when 'listing' then (select concat_ws('. ',
+            case when l.submitted_facts is not null then 'Approving makes the poster the owner of record with these facts: '
+              || concat_ws(', ', (l.submitted_facts->>'beds') || ' bd', (l.submitted_facts->>'baths') || ' ba', (l.submitted_facts->>'sqft') || ' sq ft') end,
+            nullif(left(coalesce(l.description, ''), 240), ''))
+          from listings l where l.id = m.item_id)
         when 'claim' then (select 'Claimed by ' || coalesce(u.name || ' ', '') || '(' || u.email || '). Check proof of ownership, such as a tax bill or deed, before approving.'
           from property_claims c join users u on u.id = c.user_id where c.id = m.item_id)
       end as detail,

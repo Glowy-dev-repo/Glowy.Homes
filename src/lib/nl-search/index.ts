@@ -31,11 +31,33 @@ export function sanitize(raw: SearchParamsInput): SearchParamsInput {
   return input as SearchParamsInput;
 }
 
-export async function parseNaturalQuery(text: string, ctx: ParseContext): Promise<NlResult> {
-  if (nlProvider() === "anthropic") {
+// Each model call is paid, and the route is public: identical searches reuse the last answer, and past a
+// daily number of calls (per server, NL_DAILY_LLM_CAP, default 2000) the free rule based parser takes over.
+const CACHE_MAX = 500;
+const cache = new Map<string, SearchParamsInput>();
+let budget = { day: "", used: 0 };
+
+/** Takes one model call from today's budget; false once it is spent. */
+export function takeLlmBudget(now: Date = new Date()): boolean {
+  const day = now.toISOString().slice(0, 10);
+  if (budget.day !== day) budget = { day, used: 0 };
+  const cap = Number(process.env.NL_DAILY_LLM_CAP ?? 2000);
+  if (budget.used >= cap) return false;
+  budget.used++;
+  return true;
+}
+
+/** `allowLlm` false (the caller is over their own limit) goes straight to the rules. */
+export async function parseNaturalQuery(text: string, ctx: ParseContext, opts: { allowLlm?: boolean } = {}): Promise<NlResult> {
+  const key = text.trim().toLowerCase().replace(/\s+/g, " ");
+  const hit = cache.get(key);
+  if (hit) return { params: hit, provider: "anthropic" };
+  if (nlProvider() === "anthropic" && opts.allowLlm !== false && takeLlmBudget()) {
     try {
-      const params = await parseQueryAnthropic(text, ctx, process.env.ANTHROPIC_API_KEY!, AbortSignal.timeout(TIMEOUT_MS));
-      return { params: sanitize(params), provider: "anthropic" };
+      const params = sanitize(await parseQueryAnthropic(text, ctx, process.env.ANTHROPIC_API_KEY!, AbortSignal.timeout(TIMEOUT_MS)));
+      if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!);
+      cache.set(key, params);
+      return { params, provider: "anthropic" };
     } catch (e) {
       console.warn("[nl-search] falling back to rules:", e instanceof Error ? e.message : e);
     }

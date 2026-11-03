@@ -20,7 +20,7 @@ import { EstimateCard } from "@/components/valuation/EstimateCard";
 import { brand } from "@/config/brand";
 import { broker } from "@/config/broker";
 import { sqlClient } from "@/db";
-import { formatArea, formatBaths, formatBeds, formatNumber, formatPrice } from "@/lib/format";
+import { formatArea, formatBaths, formatBeds, formatDistance, formatNumber, formatPrice } from "@/lib/format";
 import { jsonLdHtml } from "@/lib/json-ld";
 import { getListingDetail, isOwnerListing, type ListingDetail } from "@/lib/listings/detail";
 import { daysOnMarket, factGroups, fullAddress, keyFacts, listingJsonLd, listingPath, metaDescription, toSummary } from "@/lib/listings/ldp";
@@ -99,9 +99,7 @@ export default async function ListingPage({ params }: Props) {
   const hoodStats = l.neighborhood?.stats ?? {};
   const recipientNote = owner
     ? undefined
-    : localAgent
-      ? `This goes to ${localAgent.displayName}, a ${brand.name} partner agent for ZIP ${zip}, not to the listing agent.`
-      : `This goes to a ${brand.name} partner agent who serves this ZIP code, not to the listing agent.`;
+    : `This goes to the ${brand.name} team, who connect you with a partner agent who serves ${zip ? `ZIP ${zip}` : "this area"}. It does not go to the listing agent.`;
 
   return (
     <div className="pb-24 lg:pb-12">
@@ -168,7 +166,7 @@ export default async function ListingPage({ params }: Props) {
                   }
                 />
               )}
-              {!closed && !sale && (
+              {!closed && !sale && l.source === "landlord" && (
                 <ApplyButton
                   listingId={l.id}
                   className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-neutral-300 px-4 font-semibold text-neutral-900 hover:bg-neutral-50"
@@ -235,7 +233,7 @@ export default async function ListingPage({ params }: Props) {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="py-2">{l.listDate.slice(0, 4)}</td>
+                    <td className="py-2">Most recent</td>
                     <td className="tabular py-2 text-right">{formatPrice(l.taxAnnual)}</td>
                   </tr>
                 </tbody>
@@ -261,7 +259,7 @@ export default async function ListingPage({ params }: Props) {
                   </div>
                 ) : null}
                 <div className="flex justify-between gap-3">
-                  <dt className="text-neutral-600">Homes within 1 km</dt>
+                  <dt className="text-neutral-600">Homes within {formatDistance(1000)}</dt>
                   <dd className="tabular">
                     {formatNumber(density)} ({density > 600 ? "dense, walkable area" : density > 200 ? "moderately dense" : "lower density"})
                   </dd>
@@ -376,7 +374,6 @@ export default async function ListingPage({ params }: Props) {
               leadType={sale ? "contact" : "rental_inquiry"}
               listingId={l.id}
               address={address}
-              proId={localAgent?.id}
               recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md border border-accent px-3 font-semibold text-accent"
               trigger={owner ? "Contact" : "Ask an agent"}
@@ -385,7 +382,6 @@ export default async function ListingPage({ params }: Props) {
               leadType="tour"
               listingId={l.id}
               address={address}
-              proId={localAgent?.id}
               recipientNote={recipientNote}
               triggerClassName="inline-flex min-h-11 items-center rounded-md bg-accent px-3 font-semibold text-white"
               trigger="Request tour"

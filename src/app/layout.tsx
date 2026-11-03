@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   title: { default: `${brand.name}: homes for sale, rentals and home values`, template: `%s | ${brand.name}` },
   description: `Search homes for sale and for rent in ${brand.market.region}, see what any home is worth, and connect with local agents.`,
   applicationName: brand.name,
-  openGraph: { type: "website", siteName: brand.name, locale: "en_CA" },
+  openGraph: { type: "website", siteName: brand.name, locale: market.locale.replace("-", "_") },
   twitter: { card: "summary_large_image" },
 };
 

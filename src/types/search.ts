@@ -24,7 +24,9 @@ export const SearchParams = z.object({
       z.number().check(z.minimum(-90), z.maximum(90)),
     ]),
   ),
-  polygon: opt(z.array(z.tuple([z.number(), z.number()])).check(z.minLength(3), z.maxLength(200))),
+  polygon: opt(
+    z.array(z.tuple([z.number().check(z.minimum(-180), z.maximum(180)), z.number().check(z.minimum(-90), z.maximum(90))])).check(z.minLength(3), z.maxLength(200)),
+  ),
   priceMin: opt(int().check(z.nonnegative())),
   priceMax: opt(int().check(z.positive())),
   bedsMin: opt(z.number().check(z.minimum(0), z.maximum(10))),

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ANON_COOKIE, EventBatch } from "@/lib/analytics/events";
+import { ANON_COOKIE, ClientEventBatch } from "@/lib/analytics/events";
 import { anonId, insertEvents, newAnonId } from "@/lib/analytics/server";
 import { invalid } from "@/server/api/respond";
 import { rateLimit, rateLimitWrite } from "@/server/api/rate-limit";
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (writeLimited) return writeLimited;
   const limited = rateLimit(req);
   if (limited) return limited;
-  const parsed = EventBatch.safeParse(await req.json().catch(() => null));
+  const parsed = ClientEventBatch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error);
   const existing = await anonId();
   const anon = existing ?? newAnonId();

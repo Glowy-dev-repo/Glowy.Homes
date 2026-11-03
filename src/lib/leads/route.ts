@@ -4,14 +4,12 @@ import type { LeadType, RoutingLogEntry } from "@/db/schema/leads";
 import { sendEmail } from "@/lib/email";
 import { adminNewLeadEmail, adminUnassignedEmail, consumerConfirmationEmail, proNewLeadEmail } from "@/lib/email/templates/leads";
 import { leadAssignmentMode } from "./assignment";
-import { decideRoute, scoreLead, type Candidate } from "./routing";
+import { decideRoute, OWNER_LEAD_TYPES, scoreLead, type Candidate } from "./routing";
 import { market } from "@/config/market";
 
 // route_lead database orchestration (docs/03 section 5).
 
 type Sql = postgres.Sql;
-
-export const ROUTE_TO_LISTING_AGENT = process.env.ROUTE_TO_LISTING_AGENT === "true";
 
 type LeadRow = {
   id: string;
@@ -49,7 +47,10 @@ async function loadLead(sql: Sql, leadId: string): Promise<LeadRow | null> {
       case when r.type = 'neighborhood' then r.parent_id else r.id end as "cityId",
       r.name as "regionName",
       l.listing_agent_id as "listingAgentId",
-      (select pr.id from pros pr where pr.user_id = l.owner_user_id and pr.status = 'active') as "listingOwnerProId",
+      -- Only a landlord or owner answering about a home they posted here; an agent who posts a home of their own
+      -- does not get its leads directly, they wait for Glowy Homes like every other lead.
+      (select pr.id from pros pr where pr.user_id = l.owner_user_id and pr.status = 'active' and pr.pro_type in ('landlord', 'owner')
+        and l.source in ('landlord', 'fsbo')) as "listingOwnerProId",
       -- Leads imported from IDX Broker are about MLS homes that are not in our database; the import
       -- stores that home's ZIP code, price and address on the lead instead.
       coalesce(l.price, case when ld.payload->>'price' ~ '^[0-9]{1,9}$' then (ld.payload->>'price')::int end) as "listingPrice",
@@ -122,7 +123,6 @@ async function holdForAdmin(sql: Sql, lead: LeadRow, extra: string[], requestedP
     requestedProId,
     listingAgentId: lead.listingAgentId,
     listingOwnerProId: lead.listingOwnerProId,
-    routeToListingAgent: ROUTE_TO_LISTING_AGENT,
     exclude: [],
     candidates: await loadCandidates(sql, lead, extra),
   });
@@ -171,8 +171,10 @@ export async function routeLead(sql: Sql, leadId: string, mode: "initial" | "ret
   const requestedProId = typeof lead.payload.requested_pro_id === "string" ? lead.payload.requested_pro_id : null;
   const extra = [requestedProId, lead.listingAgentId, lead.listingOwnerProId].filter((x): x is string => !!x);
   // Inquiries on a listing posted on our site by its landlord or owner go to them directly (they answer
-  // about their own home); every other lead waits for Glowy Homes to choose the agent.
-  if (leadAssignmentMode() === "admin" && mode !== "reassign" && !lead.listingOwnerProId) return holdForAdmin(sql, lead, extra, requestedProId);
+  // about their own home); every other lead waits for Glowy Homes to choose the agent, reassignments too.
+  if (leadAssignmentMode() === "admin" && !(lead.listingOwnerProId && OWNER_LEAD_TYPES.includes(lead.leadType))) {
+    return holdForAdmin(sql, lead, extra, requestedProId);
+  }
   const score = mode === "initial" ? await scoreFor(sql, lead) : null;
 
   let exclude = [...previous];
@@ -184,7 +186,6 @@ export async function routeLead(sql: Sql, leadId: string, mode: "initial" | "ret
       requestedProId,
       listingAgentId: lead.listingAgentId,
       listingOwnerProId: lead.listingOwnerProId,
-      routeToListingAgent: ROUTE_TO_LISTING_AGENT,
       exclude,
       candidates,
     });
@@ -238,6 +239,8 @@ export async function checkFirstResponse(sql: Sql, leadId: string, proId: string
   const [lead] = await sql<{ assigned: string | null; responded: boolean; status: string }[]>`
     select assigned_pro_id as assigned, first_response_at is not null as responded, status from leads where id = ${leadId}`;
   if (!lead || lead.assigned !== proId || lead.responded || lead.status !== "new") return { status: "responded" };
+  // With admin assignment the lead-follow-up job reminds the agent and alerts admins instead of moving the lead.
+  if (leadAssignmentMode() === "admin") return { status: "responded" };
   await sql`update pros set response_time_minutes = coalesce(response_time_minutes, 30) + 10 where id = ${proId}`;
   await sql`
     update leads set routing_log = routing_log || ${sql.json([{ at: new Date().toISOString(), action: "no_response", pro_id: proId, reason: "no first response in time" }] as never)}
@@ -245,18 +248,26 @@ export async function checkFirstResponse(sql: Sql, leadId: string, proId: string
   return routeLead(sql, leadId, "reassign");
 }
 
-/** Admin override (docs/01 AD4), recorded in routing_log. */
-export async function adminReassign(sql: Sql, leadId: string, proId: string, adminUserId: string) {
+/**
+ * Admin override (docs/01 AD4), recorded in routing_log. The agent must be an active partner agent who is
+ * accepting leads and is not the home's listing agent; closed and lost leads are left alone. Choosing the
+ * agent who already has the lead changes nothing, so no second follow up starts.
+ */
+export async function adminReassign(sql: Sql, leadId: string, proId: string, adminUserId: string): Promise<"assigned" | "unchanged" | "not_found"> {
+  const [current] = await sql<{ assigned: string | null }[]>`select assigned_pro_id as assigned from leads where id = ${leadId}`;
+  if (current?.assigned === proId) return "unchanged";
   const entry = { at: new Date().toISOString(), action: "admin_reassigned", pro_id: proId, reason: "manual reassignment by admin", admin_user_id: adminUserId };
   const rows = await sql`
     update leads set assigned_pro_id = ${proId}, assigned_at = now(), status = 'new', status_changed_at = now(), first_response_at = null,
       routing_log = routing_log || ${sql.json([entry] as never)}, updated_at = now()
-    where id = ${leadId} and exists (select 1 from pros where id = ${proId} and status = 'active')
+    where id = ${leadId} and status not in ('closed', 'lost')
+      and exists (select 1 from pros where id = ${proId} and status = 'active' and pro_type = 'agent' and is_accepting_leads)
+      and ${proId}::uuid is distinct from (select l.listing_agent_id from listings l where l.id = leads.listing_id)
     returning id`;
-  if (!rows.length) return false;
+  if (!rows.length) return "not_found";
   const lead = await loadLead(sql, leadId);
   if (lead) await notifyAssigned(sql, lead, proId);
-  return true;
+  return "assigned";
 }
 
 async function notifyAssigned(sql: Sql, lead: LeadRow, proId: string) {
@@ -295,4 +306,17 @@ export async function refreshProResponseTimes(sql: Sql) {
       select assigned_pro_id as id, round(percentile_cont(0.5) within group (order by extract(epoch from first_response_at - assigned_at) / 60))::int as median
       from leads where first_response_at is not null and assigned_at >= now() - interval '30 days' group by 1
     ) s where p.id = s.id`;
+}
+
+/**
+ * Admin closes a junk lead (spam, a test, an abusive message): it leaves every queue as lost and nobody is
+ * notified. Recorded in routing_log. Closed or lost leads are left as they are.
+ */
+export async function adminCloseAsSpam(sql: Sql, leadId: string, adminUserId: string): Promise<boolean> {
+  const entry = { at: new Date().toISOString(), action: "admin_closed_spam", reason: "closed as spam by admin", admin_user_id: adminUserId };
+  const rows = await sql`
+    update leads set status = 'lost', status_changed_at = now(), routing_log = routing_log || ${sql.json([entry] as never)}, updated_at = now()
+    where id = ${leadId} and status not in ('closed', 'lost')
+    returning id`;
+  return rows.length > 0;
 }

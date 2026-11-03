@@ -125,7 +125,7 @@ export async function messages(leadId: string, viewerUserId: string): Promise<Me
 export async function leadParticipant(leadId: string, userId: string): Promise<"consumer" | "pro" | null> {
   const [row] = await sql<{ consumer: string | null; proUser: string | null }[]>`
     select ld.consumer_user_id as consumer, pr.user_id as "proUser"
-    from leads ld left join pros pr on pr.id = ld.assigned_pro_id where ld.id = ${leadId}`;
+    from leads ld left join pros pr on pr.id = ld.assigned_pro_id and pr.status = 'active' where ld.id = ${leadId}`;
   if (!row) return null;
   if (row.proUser === userId) return "pro";
   if (row.consumer === userId) return "consumer";
@@ -143,8 +143,13 @@ export async function addMessage(leadId: string, userId: string, role: "consumer
   return m;
 }
 
-export async function updateLeadByPro(proId: string, leadId: string, patch: { status?: LeadStatus; note?: string; closePrice?: number; closeDate?: string }) {
-  if (patch.status && !LEAD_STATUSES.includes(patch.status)) return false;
+/**
+ * The assigned agent changes a lead's status or adds a note. Returns null when the lead is not theirs, else
+ * whether this change closed it (so admins are emailed once, not on every save). Moving a lead out of
+ * closed clears the sale price and date it was closed with.
+ */
+export async function updateLeadByPro(proId: string, leadId: string, patch: { status?: LeadStatus; note?: string; closePrice?: number; closeDate?: string }): Promise<{ newlyClosed: boolean } | null> {
+  if (patch.status && !LEAD_STATUSES.includes(patch.status)) return null;
   const closing = patch.status === "closed" && patch.closePrice !== undefined && patch.closeDate !== undefined;
   const entry = {
     at: new Date().toISOString(),
@@ -154,18 +159,21 @@ export async function updateLeadByPro(proId: string, leadId: string, patch: { st
     pro_id: proId,
     ...(closing ? { close_price: patch.closePrice, close_date: patch.closeDate } : {}),
   };
-  const rows = await sql`
+  const reopening = !!patch.status && patch.status !== "closed";
+  const rows = await sql<{ previous: string; status: string }[]>`
+    with old as (select id, status from leads where id = ${leadId} and assigned_pro_id = ${proId} for update)
     update leads set
-      status = coalesce(${patch.status ?? null}, status),
-      status_changed_at = case when ${patch.status ?? null}::text is not null and ${patch.status ?? null} <> status then now() else status_changed_at end,
+      status = coalesce(${patch.status ?? null}, leads.status),
+      status_changed_at = case when ${patch.status ?? null}::text is not null and ${patch.status ?? null} <> leads.status then now() else status_changed_at end,
       routing_log = routing_log || ${sql.json([entry] as never)},
-      close_price = case when ${closing} then ${patch.closePrice ?? null}::int else close_price end,
-      close_date = case when ${closing} then ${patch.closeDate ?? null}::date else close_date end,
+      close_price = case when ${closing} then ${patch.closePrice ?? null}::int when ${reopening} then null else close_price end,
+      close_date = case when ${closing} then ${patch.closeDate ?? null}::date when ${reopening} then null else close_date end,
       first_response_at = coalesce(first_response_at, now()),
       updated_at = now()
-    where id = ${leadId} and assigned_pro_id = ${proId}
-    returning id`;
-  return rows.length > 0;
+    from old where leads.id = old.id
+    returning old.status as previous, leads.status`;
+  if (!rows.length) return null;
+  return { newlyClosed: rows[0].status === "closed" && rows[0].previous !== "closed" };
 }
 
 /** Consumer view of their own leads with the assigned pro's public details. */
@@ -173,7 +181,7 @@ export async function consumerLeads(userId: string) {
   return sql<{ id: string; leadType: string; status: string; createdAt: string; address: string | null; listingId: string | null; proName: string | null; proSlug: string | null; proPhoto: string | null; brokerage: string | null; proId: string | null; reviewed: boolean }[]>`
     select ld.id, ld.lead_type as "leadType", ld.status, ld.created_at::text as "createdAt",
       concat_ws(', ', concat_ws(' ', p.address_line2, p.address_line1), p.city) as address, ld.listing_id as "listingId",
-      pr.display_name as "proName", pr.slug as "proSlug", pr.photo_url as "proPhoto", pr.brokerage_name as brokerage, pr.id as "proId",
+      pr.display_name as "proName", case when pr.pro_type = 'agent' then pr.slug end as "proSlug", pr.photo_url as "proPhoto", pr.brokerage_name as brokerage, pr.id as "proId",
       exists (select 1 from pro_reviews rv where rv.lead_id = ld.id) as reviewed
     from leads ld
     left join listings l on l.id = ld.listing_id

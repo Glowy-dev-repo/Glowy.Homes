@@ -1,4 +1,4 @@
-import { formatArea, formatDate, formatPrice } from "@/lib/format";
+import { formatArea, formatDate, formatDistance, formatPrice } from "@/lib/format";
 import type { ValuationComp } from "@/types/valuation";
 
 /** docs/01 V4: comparable sales used, with distance, sold date and price. Top five by weight. */
@@ -24,7 +24,7 @@ export function CompsTable({ comps }: { comps: ValuationComp[] }) {
               <td className="py-2 pr-3">{c.address}</td>
               <td className="tabular py-2 pr-3 text-right">{formatPrice(c.soldPrice)}</td>
               <td className="py-2 pr-3 whitespace-nowrap">{formatDate(c.soldAt)}</td>
-              <td className="tabular py-2 pr-3 text-right">{(c.distanceM / 1000).toFixed(1)} km</td>
+              <td className="tabular py-2 pr-3 text-right">{formatDistance(c.distanceM)}</td>
               <td className="py-2 text-neutral-700">
                 {[c.beds !== null ? `${c.beds} bd` : null, c.baths !== null ? `${c.baths} ba` : null, formatArea(c.sqft)].filter(Boolean).join(" · ")}
               </td>

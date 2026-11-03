@@ -19,7 +19,7 @@ export const leadFollowUpFn = inngest.createFunction(
     const { leadId, proId } = z.object({ leadId: z.string().uuid(), proId: z.string().uuid() }).parse(event.data);
     await step.sleep("first-window", responseWindowMs());
     const first = await step.run("remind", () => followUpAssigned(sqlClient, leadId, proId, "remind"));
-    if (first === "responded") return first;
+    if (first !== "reminded") return first;
     await step.sleep("second-window", responseWindowMs());
     return step.run("escalate", () => followUpAssigned(sqlClient, leadId, proId, "escalate"));
   },

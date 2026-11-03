@@ -116,6 +116,10 @@ const ZIP_CITY = `
     from properties pp join regions c on c.id = pp.city_region_id where pp.postal_code ~ '^[0-9]{5}' group by 1, 2, 3
   ) t order by zip, n desc`;
 
+/**
+ * A public agent profile. Only partner agents have one: landlord and owner accounts are never reviewed, so
+ * a public page for them could be used to pose as Glowy Homes, and it would show their phone number.
+ */
 export async function proBySlug(slug: string): Promise<ProPublic | null> {
   const [p] = await sql<ProPublic[]>`
     select p.id, p.slug, p.pro_type as "proType", p.display_name as "displayName", p.brokerage_name as "brokerageName",
@@ -125,7 +129,7 @@ export async function proBySlug(slug: string): Promise<ProPublic | null> {
       coalesce((select json_agg(json_build_object('zip', z.zip, 'cityName', zc."cityName", 'citySlug', zc."citySlug") order by zc."cityName", z.zip)
         from pro_zip_codes z left join (${sql.unsafe(ZIP_CITY)}) zc on zc.zip = z.zip
         where z.pro_id = p.id), '[]'::json) as zips
-    from pros p where p.slug = ${slug} and p.status = 'active'`;
+    from pros p where p.slug = ${slug} and p.status = 'active' and p.pro_type = 'agent'`;
   return p ?? null;
 }
 

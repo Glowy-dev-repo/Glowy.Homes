@@ -35,9 +35,12 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
   const listingIds: Suggestion[] = /^gh\d{2,}/i.test(query)
     ? (
         await sqlClient<{ id: string; sid: string; line1: string; line2: string | null; city: string }[]>`
-          select l.id, l.source_listing_id as sid, p.address_line1 as line1, p.address_line2 as line2, p.city
+          select l.id, l.source_listing_id as sid,
+            case when l.address_display then p.address_line1 else 'Address not disclosed' end as line1,
+            case when l.address_display then p.address_line2 end as line2, p.city
           from listings l join properties p on p.id = l.property_id
           where upper(l.source_listing_id) like ${`${query.toUpperCase()}%`}
+            and l.status not in ('draft', 'in_review', 'rejected') and l.internet_display
           order by l.source_listing_id limit 3`
       ).map((r) => ({
         group: "listings",
@@ -52,7 +55,8 @@ export async function autocomplete(q: string, type: "sale" | "rent" = "sale"): P
         await sqlClient<{ property_id: string; listing_id: string | null; line1: string; line2: string | null; city: string; lng: number; lat: number }[]>`
           select p.id as property_id, p.address_line1 as line1, p.address_line2 as line2, p.city,
             ST_X(p.location::geometry) as lng, ST_Y(p.location::geometry) as lat,
-            (select l.id from listings l where l.property_id = p.id order by (l.status = 'active') desc, l.list_date desc limit 1) as listing_id
+            (select l.id from listings l where l.property_id = p.id
+              and l.status not in ('draft', 'in_review', 'rejected') and l.internet_display and l.address_display order by (l.status = 'active') desc, l.list_date desc limit 1) as listing_id
           from properties p
           where p.address_normalized like ${`${normalizeStreet(query)}%`}
           order by p.address_normalized limit ${MAX - places.length - listingIds.length}`

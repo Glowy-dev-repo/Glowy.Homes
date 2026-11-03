@@ -14,7 +14,8 @@ import { sqlClient } from "@/db";
 import { formatArea, formatDate, formatPrice, propertyTypeLabel } from "@/lib/format";
 import { effectiveFacts, getPropertyDetail, nearbyForSale } from "@/lib/properties/detail";
 import { addressSlug } from "@/lib/slug";
-import { getOrComputeEstimate } from "@/lib/valuation/read";
+import { estimateHidden, getOrComputeEstimate } from "@/lib/valuation/read";
+import type { PropertyEstimate } from "@/types/valuation";
 
 // Property value page (docs/04): cached and refreshed hourly, and revalidated when an owner edits facts.
 export const revalidate = 3600;
@@ -44,8 +45,9 @@ export default async function PropertyValuePage({ params }: Props) {
   const canonical = addressSlug(p.address.line1, p.address.line2, p.address.city);
   if (slug !== canonical) permanentRedirect(`/home-value/${p.id}/${canonical}`);
 
-  const [estimate, nearby] = await Promise.all([getOrComputeEstimate(p.id), nearbyForSale(p)]);
-  const compIds = estimate.comps.slice(0, 5).map((c) => c.propertyId);
+  const hidden = await estimateHidden(p.id);
+  const [estimate, nearby] = await Promise.all([hidden ? null : getOrComputeEstimate(p.id), nearbyForSale(p)]);
+  const compIds = estimate ? estimate.comps.slice(0, 5).map((c) => c.propertyId) : [];
   const compPoints = compIds.length
     ? await sqlClient<{ id: string; lat: number; lng: number }[]>`
         select id, ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng from properties where id = any(${compIds}::uuid[])`
@@ -79,29 +81,11 @@ export default async function PropertyValuePage({ params }: Props) {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-10">
-          <EstimateCard estimate={estimate} methodologyHref="/methodology" agentOpinionHref="#sell" size="large" />
-          <Track name="estimate_view" props={{ propertyId: id, confidence: estimate.value?.confidence ?? "insufficient" }} />
-
-          <section aria-labelledby="history-heading">
-            <h2 id="history-heading" className="mb-3 text-h2">Value history</h2>
-            {estimate.value ? <ValueHistoryChart points={estimate.history} /> : <p className="text-body text-neutral-600">No estimate history yet.</p>}
-          </section>
-
-          <section aria-labelledby="comps-heading">
-            <h2 id="comps-heading" className="mb-3 text-h2">Comparable sales used</h2>
-            <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
-              <CompsTable comps={estimate.comps} />
-              {compPoints.length > 0 && (
-                <CompsMap
-                  subject={{ lat: p.lat, lng: p.lng }}
-                  comps={compIds.map((cid, i) => ({ ...compPoints.find((c) => c.id === cid)!, label: String(i + 1) })).filter((c) => c.lat !== undefined)}
-                />
-              )}
-            </div>
-            <p className="mt-3 text-small text-neutral-600">
-              Sale prices are adjusted for size, bedrooms, bathrooms, age and market changes since each sale. <Link href="/methodology" className="text-accent hover:underline">How estimates work</Link>
+          {estimate ? <EstimateSections estimate={estimate} propertyId={id} subject={{ lat: p.lat, lng: p.lng }} compIds={compIds} compPoints={compPoints} /> : (
+            <p className="rounded-lg border border-neutral-200 bg-white p-5 text-body text-neutral-700" data-testid="estimate-hidden">
+              The seller asked us not to show an estimated value for this home while it is listed.
             </p>
-          </section>
+          )}
 
           <section aria-labelledby="facts-heading">
             <h2 id="facts-heading" className="mb-3 text-h2">Home facts</h2>
@@ -148,5 +132,42 @@ export default async function PropertyValuePage({ params }: Props) {
         </section>
       )}
     </div>
+  );
+}
+
+/** Estimate, value history and the comparable sales behind it; left out entirely when the seller hid the estimate. */
+function EstimateSections({ estimate, propertyId, subject, compIds, compPoints }: {
+  estimate: PropertyEstimate;
+  propertyId: string;
+  subject: { lat: number; lng: number };
+  compIds: string[];
+  compPoints: { id: string; lat: number; lng: number }[];
+}) {
+  return (
+    <>
+      <EstimateCard estimate={estimate} methodologyHref="/methodology" agentOpinionHref="#sell" size="large" />
+      <Track name="estimate_view" props={{ propertyId, confidence: estimate.value?.confidence ?? "insufficient" }} />
+
+      <section aria-labelledby="history-heading">
+        <h2 id="history-heading" className="mb-3 text-h2">Value history</h2>
+        {estimate.value ? <ValueHistoryChart points={estimate.history} /> : <p className="text-body text-neutral-600">No estimate history yet.</p>}
+      </section>
+
+      <section aria-labelledby="comps-heading">
+        <h2 id="comps-heading" className="mb-3 text-h2">Comparable sales used</h2>
+        <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
+          <CompsTable comps={estimate.comps} />
+          {compPoints.length > 0 && (
+            <CompsMap
+              subject={subject}
+              comps={compIds.map((cid, i) => ({ ...compPoints.find((c) => c.id === cid)!, label: String(i + 1) })).filter((c) => c.lat !== undefined)}
+            />
+          )}
+        </div>
+        <p className="mt-3 text-small text-neutral-600">
+          Sale prices are adjusted for size, bedrooms, bathrooms, age and market changes since each sale. <Link href="/methodology" className="text-accent hover:underline">How estimates work</Link>
+        </p>
+      </section>
+    </>
   );
 }

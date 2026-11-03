@@ -31,7 +31,11 @@ export function ApplyButton({ listingId, className }: { listingId: string; class
   const send = async () => {
     setState("sending");
     setError(null);
-    const res = await fetch(`/api/rentals/applications/${app!.id}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId }) });
+    const res = await fetch(`/api/rentals/applications/${app!.id}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId }) }).catch(() => null);
+    if (!res) {
+      setError("We could not reach the server. Check your connection and try again.");
+      return setState("idle");
+    }
     if (res.ok) return setState("sent");
     const b = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
     setError(b?.error?.message ?? "We could not send your application.");

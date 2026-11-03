@@ -26,7 +26,7 @@ function fakeSql(lead: Record<string, unknown> | null) {
 
 const assigned = (over: Record<string, unknown> = {}) => ({
   assigned: "pro-1", responded: false, status: "new", leadType: "tour", address: "12 Main St, Moorpark",
-  assignedAt: new Date(Date.now() - 60 * 60_000).toISOString(), agentName: "Dana Reyes", agentEmail: "dana@example.com", ...over,
+  assignedAt: new Date(Date.now() - 60 * 60_000).toISOString(), agentName: "Dana Reyes", agentEmail: "dana@example.com", agentActive: true, ...over,
 });
 
 describe("follow up on a lead admin assigned", () => {
@@ -57,5 +57,12 @@ describe("follow up on a lead admin assigned", () => {
     expect(writes).toHaveLength(1);
     expect(writes[0]).toContain('"action":"no_response"');
     expect(writes[0]).not.toContain("assigned_pro_id");
+  });
+
+  it("does not remind an agent suspended since the assignment; admins hear at once", async () => {
+    const { sql, writes } = fakeSql(assigned({ agentActive: false }));
+    expect(await followUpAssigned(sql, "lead-1", "pro-1", "remind")).toBe("escalated");
+    expect(sent.map((m) => m.to)).toEqual(["admin@example.com", "konner@example.com"]);
+    expect(writes[0]).toContain("agent no longer active");
   });
 });

@@ -1,6 +1,6 @@
 import "server-only";
 import { sqlClient } from "@/db";
-import { coverJoin, summaryColumns } from "@/lib/search/postgres";
+import { coverJoin, summaryColumns, visibleListing } from "@/lib/search/postgres";
 import type { SearchParams, ListingSummary } from "@/types/search";
 
 // Saved homes, saved searches and recently viewed. Every function takes the owner's user id
@@ -20,7 +20,7 @@ export async function savedHomes(userId: string): Promise<(ListingSummary & { sa
     join listings l on l.id = sh.listing_id
     join properties p on p.id = l.property_id
     ${coverJoin(sql)}
-    where sh.user_id = ${userId}
+    where sh.user_id = ${userId} and ${visibleListing(sql)}
     order by sh.created_at desc`;
 }
 
@@ -29,7 +29,7 @@ export async function saveHome(userId: string, listingId: string): Promise<boole
   return sql.begin(async (tx) => {
     const inserted = await tx`
       insert into saved_homes (user_id, listing_id)
-      select ${userId}, id from listings where id = ${listingId}
+      select ${userId}, l.id from listings l where l.id = ${listingId} and ${visibleListing(tx)}
       on conflict do nothing
       returning listing_id`;
     if (inserted.length) await tx`update listings set save_count = save_count + 1 where id = ${listingId}`;
@@ -105,7 +105,7 @@ export async function recordRecentlyViewed(userId: string, items: { listingId: s
     `insert into recently_viewed (user_id, listing_id, viewed_at)
      select $1::uuid, x.listing_id, x.viewed_at
      from jsonb_to_recordset($2::jsonb) as x(listing_id uuid, viewed_at timestamptz)
-     join listings l on l.id = x.listing_id
+     join listings l on l.id = x.listing_id and l.status not in ('draft', 'in_review', 'rejected') and l.internet_display
      on conflict (user_id, listing_id) do update set viewed_at = greatest(recently_viewed.viewed_at, excluded.viewed_at)`,
     [userId, sql.json(items.map((i) => ({ listing_id: i.listingId, viewed_at: i.viewedAt })))],
   );
@@ -118,7 +118,7 @@ export async function recentlyViewed(userId: string, limit = 12): Promise<(Listi
     join listings l on l.id = rv.listing_id
     join properties p on p.id = l.property_id
     ${coverJoin(sql)}
-    where rv.user_id = ${userId}
+    where rv.user_id = ${userId} and ${visibleListing(sql)}
     order by rv.viewed_at desc
     limit ${limit}`;
 }

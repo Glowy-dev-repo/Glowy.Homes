@@ -15,7 +15,7 @@ import { findCity, findNeighborhood, marketBbox } from "./regions";
 // Postgres search strategy (docs/02 section 6). PostGIS for bounds and polygons, full text on
 // listings.search_vector, grid clusters when a search matches more than 200 listings.
 
-type Sql = postgres.Sql;
+type Sql = postgres.Sql | postgres.TransactionSql;
 type Fragment = postgres.PendingQuery<postgres.Row[]>;
 
 /**
@@ -109,6 +109,24 @@ function orderBy(sql: Sql, sort: SearchParams["sort"]): Fragment {
   }
 }
 
+/**
+ * A listing anyone may see: published (not a draft, under review or rejected) and not withheld from the
+ * internet by the seller (MLS internet_display). Every list of homes shown to visitors filters on this.
+ */
+export function visibleListing(sql: Sql): Fragment {
+  return sql`l.status not in ('draft', 'in_review', 'rejected') and l.internet_display`;
+}
+
+/**
+ * Latitude and longitude for a listing. When the seller withheld the address (MLS address_display), only a
+ * point rounded to about 1 km leaves the database, so the home cannot be found from the map or the API.
+ */
+export function approxCoords(sql: Sql): Fragment {
+  return sql`
+    case when l.address_display then ST_Y(l.location::geometry) else round(ST_Y(l.location::geometry)::numeric, 2)::float8 end as lat,
+    case when l.address_display then ST_X(l.location::geometry) else round(ST_X(l.location::geometry)::numeric, 2)::float8 end as lng`;
+}
+
 /** Shared card columns: search results, similar homes, saved homes and browse pages all use them. */
 export function summaryColumns(sql: Sql): Fragment {
   return sql`
@@ -118,7 +136,7 @@ export function summaryColumns(sql: Sql): Fragment {
     l.brokerage_name as "brokerageName", l.list_agent_name as "listAgentName",
     case when l.address_display then p.address_line1 else 'Address not disclosed' end as "addressLine1",
     case when l.address_display then p.address_line2 end as "addressLine2",
-    p.city, ST_Y(l.location::geometry) as lat, ST_X(l.location::geometry) as lng,
+    p.city, ${approxCoords(sql)},
     m.storage_key as "coverKey", m.blur_data_url as "coverBlur"`;
 }
 
@@ -133,7 +151,8 @@ export function coverJoin(sql: Sql): Fragment {
 
 /**
  * Listings matching a saved search that first appeared in (since, until]: the saved search alert
- * query (docs/03 section 6). New means newly created in our database, so a listing is sent once.
+ * query (docs/03 section 6). New means first published (an owner listing when it was approved), so a
+ * listing is sent once.
  */
 export async function newListingMatches(
   p: SearchParams,
@@ -144,7 +163,7 @@ export async function newListingMatches(
 ): Promise<{ items: ListingSummary[]; total: number }> {
   const clause = await whereClause(sql, p);
   if (!clause) return { items: [], total: 0 };
-  const where = sql`${clause.where} and l.created_at > ${since} and l.created_at <= ${until}`;
+  const where = sql`${clause.where} and l.published_at > ${since} and l.published_at <= ${until}`;
   const [items, [{ total }]] = await Promise.all([
     sql<ListingSummary[]>`
       select ${summaryColumns(sql)}
@@ -152,7 +171,7 @@ export async function newListingMatches(
       join properties p on p.id = l.property_id
       ${coverJoin(sql)}
       where ${where}
-      order by l.created_at desc, l.id
+      order by l.published_at desc, l.id
       limit ${limit}`,
     sql<{ total: number }[]>`select count(*)::int as total from listings l where ${where}`,
   ]);
@@ -188,8 +207,8 @@ export async function searchListings(p: SearchParams, sql: Sql = sqlClient): Pro
       select count(*)::int as count, avg(y)::float8 as lat, avg(x)::float8 as lng, min(price)::int as "minPrice",
         json_build_array(min(x), min(y), max(x), max(y)) as bounds
       from (
-        select l.price, ST_X(l.location::geometry) as x, ST_Y(l.location::geometry) as y
-        from listings l where ${where}
+        select l.price, c.lng as x, c.lat as y
+        from listings l cross join lateral (select ${approxCoords(sql)}) c where ${where}
       ) t
       group by floor(x / ${cell}), floor(y / ${cell})`;
   } else {

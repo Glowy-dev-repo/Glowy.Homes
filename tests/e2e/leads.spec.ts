@@ -32,11 +32,11 @@ test.describe("lead routing", () => {
     test.setTimeout(150_000);
     const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
-    // The card names the partner agent for this ZIP code; the tour request goes to them.
-    const shown = (await page.getByTestId("local-agent-name").textContent())?.trim();
+    // The card shows a partner agent for this ZIP code, but the request goes to the Glowy Homes team,
+    // who choose the agent: nothing on the card preselects one.
     await page.getByTestId("local-agent").getByRole("button", { name: "Request a tour" }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByTestId("lead-recipient")).toContainText(/partner agent for ZIP \d{5}, not to the listing agent/);
+    await expect(dialog.getByTestId("lead-recipient")).toContainText(/Glowy Homes team, who connect you with a partner agent who serves ZIP \d{5}\. It does not go to the listing agent\./);
     const email = uniqueEmail("tour");
     await dialog.getByLabel("Name").fill("Taylor Buyer");
     await dialog.getByLabel("Email").fill(email);
@@ -55,10 +55,8 @@ test.describe("lead routing", () => {
       select exists (select 1 from pro_zip_codes z join leads ld on ld.id = ${lead.id} join listings l on l.id = ld.listing_id
         join properties p on p.id = l.property_id where z.pro_id = ${lead.pro} and z.zip = left(p.postal_code, 5)) as ok`;
     expect(covers.ok).toBe(true);
-    const [assigned] = await db()`select display_name from pros where id = ${lead.pro}`;
-    expect(assigned.display_name).toBe(shown);
-    const [consent] = await db()`select payload->'consent'->>'version' as v, payload->'tour'->>'mode' as mode from leads where id = ${lead.id}`;
-    expect(consent).toMatchObject({ mode: "video" });
+    const [consent] = await db()`select payload->'consent'->>'version' as v, payload->'tour'->>'mode' as mode, payload ? 'requested_pro_id' as preselected from leads where id = ${lead.id}`;
+    expect(consent).toMatchObject({ mode: "video", preselected: false });
     expect(consent.v).toBeTruthy();
 
     // The assigned agent sees it as New, with the consumer's contact details.
@@ -140,7 +138,6 @@ test.describe("lead routing", () => {
       order by l.list_date desc limit 1`;
     const { path } = await sampleListingPath(`l.id = '${home.id}'`);
     await page.goto(path);
-    const shown = (await page.getByTestId("local-agent-name").textContent())?.trim();
     await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
     const dialog = page.getByRole("dialog");
     const email = uniqueEmail("zipmatch");
@@ -155,8 +152,6 @@ test.describe("lead routing", () => {
         pr.pro_type as type
       from pros pr where pr.id = ${lead.pro}`;
     expect(pro).toMatchObject({ zip: true, fits: true, type: "agent" });
-    // The agent on the listing's card is the one the question reached.
-    expect((await db()`select display_name from pros where id = ${lead.pro}`)[0].display_name).toBe(shown);
   });
 });
 
@@ -210,7 +205,7 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
 test.describe("admin and pros", () => {
   test("admin reassigns a lead and routing_log records it", async ({ page, isMobile }) => {
     test.skip(isMobile, "admin desktop flow");
-    const [lead] = await db()`select id, assigned_pro_id as pro from leads where assigned_pro_id is not null order by created_at desc limit 1`;
+    const [lead] = await db()`select id, assigned_pro_id as pro from leads where assigned_pro_id is not null and status not in ('closed', 'lost') order by created_at desc limit 1`;
     test.skip(!lead, "needs at least one assigned lead");
     await signInAs(page, "admin@example.com", `/admin/leads?lead=${lead.id}`);
     const row = page.locator(`[data-lead-id="${lead.id}"]`).first();

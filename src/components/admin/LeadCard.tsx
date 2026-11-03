@@ -1,5 +1,6 @@
 import { BadgeDollarSign, Clock, Home, Mail, MessageSquare, Phone } from "lucide-react";
 import { ReassignForm } from "@/components/admin/ReassignForm";
+import { SpamButton } from "@/components/admin/SpamButton";
 import { formatDate, formatPrice } from "@/lib/format";
 import type { AdminLeadCard } from "@/server/data/admin-dashboard";
 
@@ -78,7 +79,10 @@ export function LeadCard({ lead, pros }: { lead: AdminLeadCard; pros: { id: stri
             )}
           </p>
         )}
-        <ReassignForm leadId={lead.id} pros={pros} suggestedId={lead.suggestedProId} assigned={!!lead.proName} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ReassignForm leadId={lead.id} pros={pros} suggestedId={lead.suggestedProId} assigned={!!lead.proName} />
+          <SpamButton leadId={lead.id} />
+        </div>
       </div>
     </li>
   );
