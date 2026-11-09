@@ -235,9 +235,9 @@ export function normalizeSimplyRets(p: SimplyRetsProperty): NormalizedListing {
   return NormalizedListingSchema.parse(record);
 }
 
-/** Origins photos may come from (Content-Security-Policy img-src): the feed's CDN. */
+/** Origins photos may come from (Content-Security-Policy img-src): the feed's CDN (SimplyRETS or Spark). */
 export function feedPhotoOrigins(): string[] {
-  return (process.env.FEED_PHOTO_ORIGINS ?? "https://d2bd5h5te3s67r.cloudfront.net")
+  return (process.env.FEED_PHOTO_ORIGINS ?? "https://d2bd5h5te3s67r.cloudfront.net,https://cdn.photos.sparkplatform.com,https://cdn.resize.sparkplatform.com")
     .split(",")
     .map((s) => s.trim())
     .filter((s) => /^https:\/\/[a-z0-9.-]+$/i.test(s));

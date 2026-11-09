@@ -1,9 +1,10 @@
 import type { InlineMedia } from "../ingest";
 import type { FeedSource, ListingFeedAdapter } from "../types";
 import { simplyRetsAdapter } from "./simplyrets";
+import { sparkAdapter } from "./spark";
 import { syntheticAdapter } from "./synthetic";
 
-const SOURCES: FeedSource[] = ["synthetic", "reso", "crea_ddf", "csv", "simplyrets"];
+const SOURCES: FeedSource[] = ["synthetic", "reso", "crea_ddf", "csv", "simplyrets", "spark"];
 
 export function configuredFeedSource(): FeedSource {
   const value = process.env.LISTING_FEED ?? "synthetic";
@@ -24,6 +25,16 @@ export function getAdapter(source: FeedSource = configuredFeedSource()): Listing
       const secret = process.env.SIMPLYRETS_API_SECRET?.trim();
       if (!key || !secret) throw new Error("SimplyRETS adapter requires SIMPLYRETS_API_KEY and SIMPLYRETS_API_SECRET from the SimplyRETS account.");
       return simplyRetsAdapter({ key, secret });
+    }
+    case "spark": {
+      const token = process.env.SPARK_ACCESS_TOKEN?.trim();
+      if (!token) throw new Error("Spark adapter requires SPARK_ACCESS_TOKEN from the Spark Datamart feed approved by the MLS.");
+      const pageSize = Number(process.env.SPARK_PAGE_SIZE);
+      return sparkAdapter({
+        token,
+        baseUrl: process.env.SPARK_API_BASE?.trim() || undefined,
+        maxPageSize: Number.isFinite(pageSize) && pageSize > 0 ? pageSize : undefined,
+      });
     }
     case "reso":
       throw new Error("RESO adapter requires RESO_BASE_URL and RESO_ACCESS_TOKEN from a licensed MLS agreement.");

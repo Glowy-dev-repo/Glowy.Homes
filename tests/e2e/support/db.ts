@@ -35,12 +35,12 @@ export const COVERED_ZIP =
   "exists (select 1 from pro_zip_codes z join pros pz on pz.id = z.pro_id where z.zip = left(p.postal_code, 5) and pz.status = 'active' and pz.pro_type = 'agent' and pz.is_accepting_leads)";
 
 // Seller opt outs (hidden listing or withheld address) are left out so pages show the full address.
-// Never a listing a feed test ingested (SimplyRETS): it must not become every other test's sample.
+// Never a listing a feed test ingested (SimplyRETS, Spark): it must not become every other test's sample.
 export async function sampleListingPath(where = "l.listing_type = 'sale' and l.status = 'active'"): Promise<{ id: string; path: string; price: number }> {
   const [row] = await db().unsafe<{ id: string; line1: string; line2: string | null; city: string; price: number }[]>(
     `select l.id, p.address_line1 as line1, p.address_line2 as line2, p.city, l.price
      from listings l join properties p on p.id = l.property_id
-     where (${where}) and l.source <> 'simplyrets' and l.internet_display and l.address_display
+     where (${where}) and l.source not in ('simplyrets', 'spark') and l.internet_display and l.address_display
      order by l.list_date desc, l.id limit 1`,
   );
   const slug = [row.line1, row.line2, row.city].filter(Boolean).join(" ").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

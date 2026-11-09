@@ -11,7 +11,7 @@ import { setupChecklist } from "@/server/data/admin-dashboard";
 export const metadata: Metadata = { title: "Admin settings", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const SOURCE: Record<string, string> = { synthetic: "Demo listings", simplyrets: "MLS (SimplyRETS)", reso: "MLS", crea_ddf: "MLS", csv: "File import" };
+const SOURCE: Record<string, string> = { synthetic: "Demo listings", simplyrets: "MLS (SimplyRETS)", spark: "MLS (Spark)", reso: "MLS", crea_ddf: "MLS", csv: "File import" };
 const STATUS: Record<string, string> = { success: "Worked", partial: "Worked, some errors", failed: "Failed", running: "Running" };
 
 export default async function AdminSystemPage() {

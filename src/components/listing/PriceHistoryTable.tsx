@@ -21,6 +21,7 @@ const SOURCE_LABELS: Record<string, string> = {
   reso: "MLS",
   crea_ddf: "MLS",
   simplyrets: "MLS",
+  spark: "MLS",
   csv: "Brokerage import",
   fsbo: "Owner",
   landlord: "Landlord",

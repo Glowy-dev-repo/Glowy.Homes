@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { revalidateSitePage } from "@/lib/revalidate";
 import { sqlClient } from "@/db";
+import { feedGeocoder } from "@/lib/geocode";
 import { configuredFeedSource, getAdapter } from "@/lib/ingestion/adapters";
 import { runIngest } from "@/lib/ingestion/ingest";
 import { inngest } from "../client";
@@ -24,7 +25,7 @@ export const ingestFeed = inngest.createFunction(
     if (scheduled && (source === "synthetic" || source === "csv")) return { skipped: `scheduled runs are off for ${source}` };
 
     const result = await step.run("ingest", async () => {
-      const r = await runIngest(sqlClient, getAdapter(source));
+      const r = await runIngest(sqlClient, getAdapter(source), { geocode: feedGeocoder(sqlClient) });
       return r;
     });
 

@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
 const mediaOrigin = new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "https://media.glowyhomes.com").origin;
-// Listing photos served straight from the MLS feed's CDN (SimplyRETS), matching the ingest adapter.
-const feedPhotoOrigins = (process.env.FEED_PHOTO_ORIGINS ?? "https://d2bd5h5te3s67r.cloudfront.net")
+// Listing photos served straight from the MLS feed's CDN (SimplyRETS or Spark), matching the ingest adapter.
+const feedPhotoOrigins = (process.env.FEED_PHOTO_ORIGINS ?? "https://d2bd5h5te3s67r.cloudfront.net,https://cdn.photos.sparkplatform.com,https://cdn.resize.sparkplatform.com")
   .split(",")
   .map((s) => s.trim())
   .filter((s) => /^https:\/\/[a-z0-9.-]+$/i.test(s))

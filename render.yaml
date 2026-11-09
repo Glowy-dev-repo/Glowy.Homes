@@ -92,6 +92,13 @@ services:
         sync: false
       - key: SIMPLYRETS_API_SECRET
         sync: false
+      # Spark MLS feed (CSMAR Consultant IDX feed): set LISTING_FEED to spark once CSMAR approves the Datamart request.
+      - key: SPARK_ACCESS_TOKEN
+        sync: false
+      - key: SPARK_API_BASE
+        sync: false
+      - key: SPARK_PAGE_SIZE
+        sync: false
       - key: FEED_PHOTO_ORIGINS
         sync: false
       # IDX Broker API key (Home, Access Control): imports leads from the IDX search every 10 minutes.

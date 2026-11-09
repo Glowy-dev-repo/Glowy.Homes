@@ -124,3 +124,13 @@ export function configuredGeocoder(sql: postgres.Sql): Geocoder {
   if (key && !key.includes("replace")) return mapTilerGeocoder(key);
   return localStreetGeocoder(sql);
 }
+
+/** For feed listings that arrive without coordinates (docs/03 step b): places them from their address. */
+export function feedGeocoder(sql: postgres.Sql, geocoder: Geocoder = configuredGeocoder(sql)) {
+  return async (a: { line1: string; city: string; postalCode: string }): Promise<{ lat: number; lng: number } | null> => {
+    const parsed = parseAddress(`${a.line1}, ${a.city} ${a.postalCode}`);
+    if (!parsed) return null;
+    const r = await geocoder.geocode(parsed).catch(() => null);
+    return r ? { lat: r.lat, lng: r.lng } : null;
+  };
+}

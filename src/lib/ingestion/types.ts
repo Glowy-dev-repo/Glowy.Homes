@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PROPERTY_TYPES } from "@/db/schema/listings";
 
-export type FeedSource = "synthetic" | "reso" | "crea_ddf" | "csv" | "simplyrets";
+export type FeedSource = "synthetic" | "reso" | "crea_ddf" | "csv" | "simplyrets" | "spark";
 
 /** A record exactly as a feed returns it. Each adapter knows its own shape. */
 export type RawListing = Record<string, unknown>;
