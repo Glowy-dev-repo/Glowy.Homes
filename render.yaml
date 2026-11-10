@@ -84,6 +84,11 @@ services:
         sync: false
       - key: BROKER_EMAIL
         sync: false
+      # Optional: overrides the MLS subscriber in src/config/broker.ts (Patrick LaPointe), shown with the brokerage (CSMAR Rule 12.16.14).
+      - key: SUBSCRIBER_NAME
+        sync: false
+      - key: SUBSCRIBER_DRE_LICENSE
+        sync: false
       # Private preview password; delete it to open the site to the public.
       - key: PREVIEW_PASSWORD
         sync: false

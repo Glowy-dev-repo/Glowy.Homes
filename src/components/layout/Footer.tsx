@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { brand } from "@/config/brand";
-import { broker, brokerConfigured } from "@/config/broker";
+import { broker, brokerConfigured, subscriberLine } from "@/config/broker";
 import { footerNav } from "@/config/nav";
 import { Logo } from "./Logo";
 
@@ -63,6 +63,7 @@ export function Footer() {
           <p data-testid="broker-identity">
             <strong className="font-medium text-white">{brand.name} is brokered by {broker.brokerageName}</strong>, a {brand.market.region} licensed real estate broker, DRE #{broker.dreLicense}.
             {broker.brokerName ? ` Broker of record: ${broker.brokerName}.` : ""}
+            {subscriberLine ? ` Agent: ${subscriberLine}, ${broker.brokerageName}.` : ""}
             {broker.phone ? ` ${broker.phone}.` : ""}
             {broker.email ? ` ${broker.email}.` : ""}
           </p>

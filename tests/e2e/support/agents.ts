@@ -6,7 +6,7 @@ export const uniqueLicense = () => String(Math.floor(Math.random() * 1e8)).padSt
 
 /** Fills the partner agent wizard at /pro/join (the page must be open) and submits it. */
 export async function fillAgentWizard(page: Page, opts: { name: string; license: string; city?: string; agree?: boolean }): Promise<void> {
-  const city = opts.city ?? "Sacramento";
+  const city = opts.city ?? "Moorpark";
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Name clients will see").fill(opts.name);
   await page.getByLabel("California DRE license number").fill(opts.license);

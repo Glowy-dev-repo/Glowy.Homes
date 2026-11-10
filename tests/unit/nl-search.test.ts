@@ -15,30 +15,30 @@ describe("natural language search, rules provider (docs/05 Phase 6 criterion 2)"
   }
 
   it("does not read bedroom counts or areas as prices", () => {
-    const p = parseQueryRules("at least 3 beds over 1500 sq ft in Los Angeles", ctx);
+    const p = parseQueryRules("at least 3 beds over 1500 sq ft in Thousand Oaks", ctx);
     expect(p.priceMin).toBeUndefined();
-    expect(p).toMatchObject({ bedsMin: 3, sqftMin: 1500, city: "los-angeles" });
+    expect(p).toMatchObject({ bedsMin: 3, sqftMin: 1500, city: "thousand-oaks" });
   });
 
   it("understands metric areas and neighborhoods", () => {
-    const p = parseQueryRules("condo over 90 m2 in Liberty Village", { ...ctx, neighborhoods: [{ name: "Liberty Village", slug: "liberty-village", citySlug: "los-angeles" }] });
-    expect(p).toMatchObject({ sqftMin: 969, city: "los-angeles", neighborhood: "liberty-village", propertyTypes: ["condo"] });
+    const p = parseQueryRules("condo over 90 m2 in Liberty Village", { ...ctx, neighborhoods: [{ name: "Liberty Village", slug: "liberty-village", citySlug: "thousand-oaks" }] });
+    expect(p).toMatchObject({ sqftMin: 969, city: "thousand-oaks", neighborhood: "liberty-village", propertyTypes: ["condo"] });
   });
 
   it("ignores rental only amenities for homes for sale", () => {
-    expect(parseQueryRules("furnished house in San Jose", ctx).furnished).toBeUndefined();
+    expect(parseQueryRules("furnished house in Newbury Park", ctx).furnished).toBeUndefined();
   });
 
   it("sanitize drops fields the schema rejects", () => {
-    expect(sanitize({ bedsMin: 99, city: "los-angeles", page: 3 } as never)).toEqual({ city: "los-angeles" });
+    expect(sanitize({ bedsMin: 99, city: "thousand-oaks", page: 3 } as never)).toEqual({ city: "thousand-oaks" });
   });
 });
 
 describe("parsed filter chips", () => {
   it("describes and removes filters", () => {
-    const params = { type: "rent" as const, city: "los-angeles", priceMax: 2500, bedsMin: 2, pets: true };
+    const params = { type: "rent" as const, city: "thousand-oaks", priceMax: 2500, bedsMin: 2, pets: true };
     const chips = describeParams(params);
-    expect(chips.map((c) => c.label)).toEqual(["For rent", "Los Angeles", "Under $2,500/mo", "2+ beds", "Pets allowed"]);
-    expect(removeChip(params, chips.find((c) => c.id === "price")!)).toEqual({ type: "rent", city: "los-angeles", bedsMin: 2, pets: true });
+    expect(chips.map((c) => c.label)).toEqual(["For rent", "Thousand Oaks", "Under $2,500/mo", "2+ beds", "Pets allowed"]);
+    expect(removeChip(params, chips.find((c) => c.id === "price")!)).toEqual({ type: "rent", city: "thousand-oaks", bedsMin: 2, pets: true });
   });
 });

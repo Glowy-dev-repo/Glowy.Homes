@@ -8,7 +8,7 @@ Prepared for the Conejo Simi Moorpark Association of REALTORS® MLS staff, to ac
 
 | Rule | Requirement | Where it is on the site |
 |---|---|---|
-| 12.16.3 Control | The display is under the broker's actual and apparent control | A bar at the top of every page names the brokerage: "Glowy Homes is brokered by [Brokerage], a California licensed real estate broker, DRE #[number]". The same identity appears in the footer. |
+| 12.16.3 Control | The display is under the broker's actual and apparent control | A bar at the top of every page names the brokerage: "Glowy Homes is brokered by [Brokerage], a California licensed real estate broker, DRE #[number] · Agent: Patrick LaPointe, DRE #02440112". The same identity appears in the footer. |
 | 12.16.4 Display content | No confidential fields; MLS data is not modified | Only public listing fields are shown. Agent only remarks, showing instructions and lockbox information are never displayed. |
 | 12.16.5 Listing attribution | "Listed by" agent and firm, listing office phone or email, co listing agent and firm, near the bed and bath count | On every listing page, directly under the bed and bath count: "Listed by [agent] of [firm]" with the office phone. Repeated in full, with co listing details, in the "Listing information" section. Search result cards name the listing firm and link to the full listing. |
 | 12.16.6 Augmentations | Added information clearly separated and its source identified | The value estimate is labeled "Glowy Homes value range" with "This is an estimate, not an appraisal". Neighborhood statistics are labeled as Glowy Homes data. |
@@ -17,7 +17,7 @@ Prepared for the Conejo Simi Moorpark Association of REALTORS® MLS staff, to ac
 | 12.16.9 Security | Reasonable efforts to prevent scraping | Request rate limits on search and listing pages; listing data is not offered for download. |
 | 12.16.11 Restricted display | Listings or addresses withheld at the seller's direction are not shown | Listings marked to withhold from the internet are excluded from every page. Withheld addresses show as "Address not disclosed" and are left off the map. |
 | 12.16.13 Selective display | Exclusions only by objective criteria | Any area or property type limits are set by objective criteria only. |
-| 12.16.14 Website identification | Brokerage name in a readily visible font and color | The brokerage bar at the top of every page, in the same text size as the page body. |
+| 12.16.14 Website identification | Brokerage name, and the subscriber's name, in a readily visible font and color | The brokerage bar at the top of every page, in the same text size as the page body, names Keller Williams World Class and the subscriber, Patrick LaPointe (DRE #02440112), whose CSMAR membership the feed is licensed to. The footer repeats both. |
 | 12.16.15 Automated value estimates | Disabled for a listing at the seller's request | An admin setting hides the estimate for any listing when the listing broker reports the seller's request. The page then states the estimate is hidden at the seller's request. |
 | 12.16.16 Search result limit | No more than 500 listings per search | Search returns at most 500 results (12 pages of 40). |
 | 12.16.17 Corrections | A way to receive comments about the accuracy of added information | Every listing page has a "Report incorrect information" link to the brokerage email. |

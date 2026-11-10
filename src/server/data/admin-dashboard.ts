@@ -1,6 +1,6 @@
 import "server-only";
 import { sqlClient } from "@/db";
-import { brokerConfigured } from "@/config/broker";
+import { brokerConfigured, subscriberConfigured } from "@/config/broker";
 import { leadAssignmentMode } from "@/lib/leads/assignment";
 import { previewPassword } from "@/lib/preview";
 
@@ -119,6 +119,7 @@ export function setupChecklist(): SetupItem[] {
   return [
     { label: "Real MLS listings", done: feed !== "synthetic", detail: feed === "synthetic" ? "Showing demo listings until the MLS feed is approved and connected." : `Connected (${feed}).` },
     { label: "Brokerage shown on every page", done: brokerConfigured, detail: brokerConfigured ? "Keller Williams World Class details are set." : "Set the broker details so the MLS required brokerage bar shows." },
+    { label: "MLS subscriber shown with the brokerage", done: subscriberConfigured, detail: subscriberConfigured ? "The agent the MLS feed is licensed to is named on every page." : "Set SUBSCRIBER_NAME and SUBSCRIBER_DRE_LICENSE: the MLS requires the agent the feed is licensed to on the site." },
     { label: "Emails can be sent", done: has("RESEND_API_KEY"), detail: has("RESEND_API_KEY") ? "Sign in links, lead and alert emails are on." : "Add RESEND_API_KEY so sign in links and lead emails go out." },
     { label: "Background jobs", done: has("INNGEST_SIGNING_KEY") || process.env.NODE_ENV !== "production", detail: "Lead routing, admin emails, listing updates and alerts run as background jobs (Inngest)." },
     { label: "Spam protection on forms", done: has("TURNSTILE_SECRET_KEY"), detail: has("TURNSTILE_SECRET_KEY") ? "Cloudflare Turnstile is on." : "Add the Turnstile keys before the site goes public." },

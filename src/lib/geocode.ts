@@ -16,7 +16,7 @@ const REGION_WORDS = /\b(ON|Ontario|Canada|CA|California|USA|United States)\b\.?
 const UNIT = /(?:\b(?:unit|apt|apartment|suite|ste)\b\.?\s*|#\s*)([A-Za-z0-9]+)\b/i;
 
 /**
- * "Unit 1204, 88 Harbor St, San Francisco, CA 94110" or "Unit 1204, 88 Harbor St, Toronto, ON M5V 1A1"
+ * "Unit 1204, 88 Harbor St, Thousand Oaks, CA 91360" or "Unit 1204, 88 Harbor St, Toronto, ON M5V 1A1"
  * -> { number: 88, street: "Harbor St", unit: "1204", city, postal }
  */
 export function parseAddress(input: string): ParsedAddress | null {
@@ -40,7 +40,7 @@ export function parseAddress(input: string): ParsedAddress | null {
   const m = parts[streetPartIndex].match(/^(\d+)\s+(.+)$/)!;
   let street = m[2].trim();
   let city = parts.slice(streetPartIndex + 1).find((p) => /[A-Za-z]/.test(p)) ?? null;
-  // "88 Harbor St San Francisco" without commas: split off a known city name at the end first.
+  // "88 Harbor St Thousand Oaks" without commas: split off a known city name at the end first.
   if (!city) {
     const known = brand.market.cities.find((c) => street.toLowerCase().endsWith(` ${c.name.toLowerCase()}`));
     if (known) {

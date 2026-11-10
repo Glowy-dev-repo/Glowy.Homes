@@ -12,7 +12,8 @@ type Broker = typeof brokerConfig;
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-export function idxWrapperHtml(opts: { appUrl: string; idxUrl: string; broker: Broker }): string {
+/** `subscriber` is the MLS subscriber line ("Name, DRE #number") when the feed is licensed to an agent. */
+export function idxWrapperHtml(opts: { appUrl: string; idxUrl: string; broker: Broker; subscriber?: string | null }): string {
   const app = opts.appUrl.replace(/\/+$/, "");
   const idx = opts.idxUrl.replace(/\/+$/, "");
   const b = opts.broker;
@@ -24,13 +25,14 @@ export function idxWrapperHtml(opts: { appUrl: string; idxUrl: string; broker: B
   ];
   const links = nav.map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a>`).join("");
   const phone = b.phone ? ` · <a href="tel:${esc(b.phone.replace(/[^\d+]/g, ""))}">${esc(b.phone)}</a>` : "";
+  const agent = opts.subscriber ? esc(opts.subscriber) : null;
   const brokerBar =
     b.brokerageName && b.dreLicense
-      ? `<div class="gh-broker">${esc(brand.name)} is brokered by <strong>${esc(b.brokerageName)}</strong>, a ${esc(brand.market.region)} licensed real estate broker, DRE #${esc(b.dreLicense)}${phone}</div>`
+      ? `<div class="gh-broker">${esc(brand.name)} is brokered by <strong>${esc(b.brokerageName)}</strong>, a ${esc(brand.market.region)} licensed real estate broker, DRE #${esc(b.dreLicense)}${agent ? ` · Agent: ${agent}` : ""}${phone}</div>`
       : "";
   const brokerLine =
     b.brokerageName && b.dreLicense
-      ? `<p><strong>${esc(brand.name)} is brokered by ${esc(b.brokerageName)}</strong>, a ${esc(brand.market.region)} licensed real estate broker, DRE #${esc(b.dreLicense)}.${b.brokerName ? ` Broker of record: ${esc(b.brokerName)}.` : ""}${b.phone ? ` ${esc(b.phone)}.` : ""}${b.email ? ` ${esc(b.email)}.` : ""}</p>`
+      ? `<p><strong>${esc(brand.name)} is brokered by ${esc(b.brokerageName)}</strong>, a ${esc(brand.market.region)} licensed real estate broker, DRE #${esc(b.dreLicense)}.${b.brokerName ? ` Broker of record: ${esc(b.brokerName)}.` : ""}${agent ? ` Agent: ${agent}, ${esc(b.brokerageName)}.` : ""}${b.phone ? ` ${esc(b.phone)}.` : ""}${b.email ? ` ${esc(b.email)}.` : ""}</p>`
       : "";
 
   return `<!DOCTYPE html>

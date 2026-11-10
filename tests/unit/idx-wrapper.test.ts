@@ -25,6 +25,13 @@ describe("IDX Broker wrapper", () => {
     expect(html).toContain('href="tel:8057777777"');
   });
 
+  it("names the MLS subscriber with the brokerage when the feed is licensed to an agent (CSMAR Rule 12.16.14)", () => {
+    expect(html).not.toContain("Agent:");
+    const withAgent = idxWrapperHtml({ appUrl: "https://glowyhomes.com", idxUrl: "https://glowyhomes.idxbroker.com", broker, subscriber: "Pat <Lee>, DRE #01234567" });
+    expect(withAgent).toContain("DRE #01523573 · Agent: Pat &lt;Lee&gt;, DRE #01234567");
+    expect(withAgent).toContain("Agent: Pat &lt;Lee&gt;, DRE #01234567, Keller Williams World Class.");
+  });
+
   it("uses absolute links and images only, since IDX Broker serves it from its own domain", () => {
     const urls = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map((m) => m[1]);
     expect(urls.length).toBeGreaterThan(5);

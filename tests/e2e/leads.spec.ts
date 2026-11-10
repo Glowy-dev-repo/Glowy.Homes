@@ -30,7 +30,7 @@ test.describe("lead routing", () => {
   test("a tour request is assigned within 60 seconds and shows in the agent inbox as New", async ({ page, browser, isMobile }) => {
     test.skip(isMobile, "one routing flow per run");
     test.setTimeout(150_000);
-    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'los-angeles' and type = 'city') and ${COVERED_ZIP}`);
+    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'thousand-oaks' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
     // The card shows a partner agent for this ZIP code, but the request goes to the Glowy Homes team,
     // who choose the agent: nothing on the card preselects one.
@@ -78,7 +78,7 @@ test.describe("lead routing", () => {
     test.setTimeout(180_000);
     const [listing] = await db()`
       select l.id from listings l where l.status = 'active' and l.listing_type = 'sale'
-        and l.city_region_id = (select id from regions where slug = 'san-jose' and type = 'city') order by l.list_date desc limit 1`;
+        and l.city_region_id = (select id from regions where slug = 'newbury-park' and type = 'city') order by l.list_date desc limit 1`;
     const email = uniqueEmail("reassign");
     const res = await request.post("/api/leads", {
       data: { leadType: "contact", listingId: listing.id, name: "Riley Quiet", email, consent: true, message: "Is it available?" },
@@ -98,7 +98,7 @@ test.describe("lead routing", () => {
     test.skip(isMobile, "authorization is viewport independent");
     test.setTimeout(120_000);
     const email = await signIn(page, "inquirer", "/");
-    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-diego' and type = 'city') and ${COVERED_ZIP}`);
+    const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'simi-valley' and type = 'city') and ${COVERED_ZIP}`);
     await page.goto(path);
     await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
     const dialog = page.getByRole("dialog");
@@ -159,7 +159,7 @@ test("a client reviews a pro after a closed inquiry and it appears once approved
   test.skip(isMobile, "multi party desktop flow");
   test.setTimeout(150_000);
   const email = await signIn(page, "reviewer", "/");
-  const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'san-francisco' and type = 'city') and ${COVERED_ZIP}`);
+  const { path } = await sampleListingPath(`l.listing_type = 'sale' and l.status = 'active' and l.city_region_id = (select id from regions where slug = 'westlake-village' and type = 'city') and ${COVERED_ZIP}`);
   await page.goto(path);
   await page.getByTestId("local-agent").getByRole("button", { name: /^Ask / }).click();
   const dialog = page.getByRole("dialog");
@@ -247,13 +247,13 @@ test.describe("admin and pros", () => {
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByText("Choose at least one ZIP code you serve.")).toBeVisible();
-    await page.getByTestId("zip-picker").getByText("Sacramento", { exact: true }).click();
-    await page.getByLabel("All ZIP codes in Sacramento").check();
+    await page.getByTestId("zip-picker").getByText("Moorpark", { exact: true }).click();
+    await page.getByLabel("All ZIP codes in Moorpark").check();
     await page.getByLabel("Lowest home price ($)").fill("300000");
     await page.getByLabel("Highest home price ($)").fill("900000");
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
-    await expect(page.locator("dd").filter({ hasText: "95811" })).toBeVisible();
+    await expect(page.locator("dd").filter({ hasText: "93021" })).toBeVisible();
     await page.getByRole("button", { name: "Create my profile" }).click();
     await expect(page.getByText("Please accept the partner agreement.")).toBeVisible();
     await page.getByLabel(/I have read and accept the partner agreement/).check();
@@ -273,12 +273,12 @@ test.describe("admin and pros", () => {
     expect(pro).toMatchObject({ status: "active", verified: true });
     const [prefs] = await db()`select price_min, price_max, (select count(*)::int from pro_zip_codes z join pros p2 on p2.id = z.pro_id where p2.slug = ${pro.slug}) as zips from pros where slug = ${pro.slug}`;
     expect(prefs).toMatchObject({ price_min: 300000, price_max: 900000 });
-    expect(prefs.zips).toBeGreaterThan(5);
+    expect(prefs.zips).toBe(1); // Moorpark is one ZIP code
     await page.goto(`/agent/${pro.slug}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(agentName);
     await expect(page.getByText("License verified")).toBeVisible();
-    await expect(page.getByTestId("agent-zips")).toContainText("95811");
-    await page.goto("/agents/sacramento");
+    await expect(page.getByTestId("agent-zips")).toContainText("93021");
+    await page.goto("/agents/moorpark");
     await expect(page.getByTestId("agent-list")).toContainText(agentName);
   });
 });

@@ -101,12 +101,12 @@ describe("market index", () => {
 
 describe("address parsing", () => {
   it("parses common formats", () => {
-    expect(parseAddress("12 Maple Ave, Los Angeles")).toMatchObject({ number: 12, street: "Maple Ave", unit: null, city: "Los Angeles" });
+    expect(parseAddress("12 Maple Ave, Thousand Oaks")).toMatchObject({ number: 12, street: "Maple Ave", unit: null, city: "Thousand Oaks" });
     expect(parseAddress("Unit 1204, 88 Harbour St, Toronto, ON M5V 1A1")).toMatchObject({ number: 88, street: "Harbour St", unit: "1204", city: "Toronto", postal: "M5V 1A1" });
-    expect(parseAddress("Unit 1204, 88 Harbor St, San Francisco, CA 94110")).toMatchObject({ number: 88, street: "Harbor St", unit: "1204", city: "San Francisco", postal: "94110" });
-    expect(parseAddress("12345 Ventura Blvd San Diego")).toMatchObject({ number: 12345, street: "Ventura Blvd", city: "San Diego", postal: null });
-    expect(parseAddress("500 Oak St, Sacramento, California 95814-1234")).toMatchObject({ number: 500, street: "Oak St", city: "Sacramento", postal: "95814-1234" });
-    expect(parseAddress("88 Harbor St #1204 Los Angeles")).toMatchObject({ number: 88, unit: "1204", city: "Los Angeles" });
+    expect(parseAddress("Unit 1204, 88 Harbor St, Westlake Village, CA 91360")).toMatchObject({ number: 88, street: "Harbor St", unit: "1204", city: "Westlake Village", postal: "91360" });
+    expect(parseAddress("12345 Ventura Blvd Simi Valley")).toMatchObject({ number: 12345, street: "Ventura Blvd", city: "Simi Valley", postal: null });
+    expect(parseAddress("500 Oak St, Moorpark, California 93021-1234")).toMatchObject({ number: 500, street: "Oak St", city: "Moorpark", postal: "93021-1234" });
+    expect(parseAddress("88 Harbor St #1204 Thousand Oaks")).toMatchObject({ number: 88, unit: "1204", city: "Thousand Oaks" });
     expect(parseAddress("Maple Ave")).toBeNull();
   });
 });

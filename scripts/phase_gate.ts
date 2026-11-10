@@ -299,7 +299,7 @@ async function nlSearch() {
 
 /** Phase 6 criterion 3 (CLAUDE.md section 9 item 10): search page mobile performance at least 85. */
 async function searchLighthouse(ctx: Ctx) {
-  const url = `${ctx.baseUrl}/search?city=los-angeles`;
+  const url = `${ctx.baseUrl}/search?city=thousand-oaks`;
   await fetch(url);
   const { runLighthouseMedian } = await import("./lib/lighthouse");
   const { scores, failing, all } = await runLighthouseMedian(url, ["performance", "accessibility"]);

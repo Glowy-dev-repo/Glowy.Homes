@@ -40,11 +40,11 @@ describe("formatting", () => {
 
 describe("browse copy", () => {
   it("writes stats sentences without dashes", () => {
-    const text = browseSummary("Los Angeles", "sale", { listing_count: 7806, median_price: 1348000, median_dom: 17 });
+    const text = browseSummary("Thousand Oaks", "sale", { listing_count: 7806, median_price: 1348000, median_dom: 17 });
     expect(text).toBe(
-      "There are 7,806 homes for sale in Los Angeles. The median list price is $1,348,000. Homes here have typically been listed for 17 days.",
+      "There are 7,806 homes for sale in Thousand Oaks. The median list price is $1,348,000. Homes here have typically been listed for 17 days.",
     );
-    for (const s of [text, browseSummary("San Jose", "rent", {}), ...quickLinks("Los Angeles", "sale").map((q) => q.label)]) {
+    for (const s of [text, browseSummary("Newbury Park", "rent", {}), ...quickLinks("Thousand Oaks", "sale").map((q) => q.label)]) {
       expect(s).not.toMatch(/[–—]| - /);
     }
   });

@@ -3,7 +3,7 @@ import { acceptableSummary, templateSummary, type SummaryFacts } from "@/lib/reg
 
 const facts: SummaryFacts = {
   name: "Lake Commons",
-  cityName: "Los Angeles",
+  cityName: "Thousand Oaks",
   saleCount: 436,
   rentCount: 255,
   medianPrice: 1_252_500,
@@ -17,7 +17,7 @@ const facts: SummaryFacts = {
 describe("neighborhood summaries (docs/05 Phase 6 task 3)", () => {
   it("states the market from the facts, with the city comparison", () => {
     const s = templateSummary(facts);
-    expect(s).toContain("The median asking price in Lake Commons is $1,252,500, about 18% above the Los Angeles median.");
+    expect(s).toContain("The median asking price in Lake Commons is $1,252,500, about 18% above the Thousand Oaks median.");
     expect(s).toContain("condos (62%) and townhouses (21%)");
     expect(s).toContain("built around 1998");
     expect(s).toContain("436 homes for sale and 255 rentals");

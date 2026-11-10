@@ -109,13 +109,13 @@ describe("LDP helpers", () => {
 describe("saved search schemas", () => {
   it("validates create and update payloads", () => {
     expect(CreateSavedSearch.safeParse({ name: "", filters: {} }).success).toBe(false);
-    expect(CreateSavedSearch.parse({ name: "Homes", filters: { city: "los-angeles" } }).alertFrequency).toBe("daily");
+    expect(CreateSavedSearch.parse({ name: "Homes", filters: { city: "thousand-oaks" } }).alertFrequency).toBe("daily");
     expect(UpdateSavedSearch.safeParse({}).success).toBe(false);
     expect(UpdateSavedSearch.safeParse({ alertFrequency: "weekly" }).success).toBe(true);
   });
 
   it("describes filters in plain words", () => {
-    const text = describeFilters(SearchParams.parse({ city: "los-angeles", priceMax: 900000, bedsMin: 3, propertyTypes: ["condo"] }));
-    expect(text).toBe("For sale, Los Angeles, up to $900K, 3+ beds, Condo");
+    const text = describeFilters(SearchParams.parse({ city: "thousand-oaks", priceMax: 900000, bedsMin: 3, propertyTypes: ["condo"] }));
+    expect(text).toBe("For sale, Thousand Oaks, up to $900K, 3+ beds, Condo");
   });
 });

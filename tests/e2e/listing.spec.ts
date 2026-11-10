@@ -81,11 +81,11 @@ test.describe("saving", () => {
   });
 
   test("saved search round trip: save, reload, edit frequency, delete", async ({ page }) => {
-    const email = await signIn(page, "saved-search", "/search?city=sacramento&bedsMin=3");
-    await expect(page).toHaveURL(/\/search\?city=sacramento&bedsMin=3/);
+    const email = await signIn(page, "saved-search", "/search?city=moorpark&bedsMin=3");
+    await expect(page).toHaveURL(/\/search\?city=moorpark&bedsMin=3/);
     await page.getByRole("button", { name: "Save search" }).first().click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Name").fill("Sacramento 3 beds");
+    await dialog.getByLabel("Name").fill("Moorpark 3 beds");
     await dialog.getByLabel("Email alerts").selectOption("daily");
     await dialog.getByRole("button", { name: "Save search" }).click();
     await expect(dialog.getByRole("status")).toContainText("Saved");
@@ -94,19 +94,19 @@ test.describe("saving", () => {
     await expect.poll(async () => (await rows()).length).toBe(1);
     const [row] = await rows();
     expect(row.alert_frequency).toBe("daily");
-    expect(row.filters).toMatchObject({ city: "sacramento", bedsMin: 3 });
+    expect(row.filters).toMatchObject({ city: "moorpark", bedsMin: 3 });
 
     await page.goto("/account/searches");
     await page.reload();
     const item = page.getByTestId("saved-search");
-    await expect(item).toContainText("Sacramento 3 beds");
+    await expect(item).toContainText("Moorpark 3 beds");
     await item.getByLabel(/Email alerts for/).selectOption("weekly");
     await expect(page.getByRole("status")).toContainText("updated");
     await expect.poll(async () => (await rows())[0]?.alert_frequency).toBe("weekly");
     await page.reload();
     await expect(page.getByTestId("saved-search").getByLabel(/Email alerts for/)).toHaveValue("weekly");
 
-    await page.getByRole("button", { name: "Delete Sacramento 3 beds" }).click();
+    await page.getByRole("button", { name: "Delete Moorpark 3 beds" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
     await expect(page.getByRole("heading", { name: "No saved searches yet" })).toBeVisible();
     await expect.poll(async () => (await rows()).length).toBe(0);
@@ -116,7 +116,7 @@ test.describe("saving", () => {
 test("key pages never scroll sideways on a phone", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile layout check");
   const { path } = await sampleListingPath();
-  for (const url of ["/", "/search?city=los-angeles", "/homes/los-angeles", path, "/signin"]) {
+  for (const url of ["/", "/search?city=thousand-oaks", "/homes/thousand-oaks", path, "/signin"]) {
     await page.goto(url);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, `${url} overflows by ${overflow}px`).toBeLessThanOrEqual(0);

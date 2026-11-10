@@ -41,7 +41,7 @@ describe("private preview", () => {
   });
 
   it("only returns to paths on this site", () => {
-    expect(safeNext("/search?city=los-angeles")).toBe("/search?city=los-angeles");
+    expect(safeNext("/search?city=thousand-oaks")).toBe("/search?city=thousand-oaks");
     expect(safeNext("https://evil.example")).toBe("/");
     expect(safeNext("//evil.example")).toBe("/");
     expect(safeNext("/\\evil.example")).toBe("/");

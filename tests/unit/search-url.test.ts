@@ -8,7 +8,7 @@ describe("search URL codec", () => {
       type: "rent",
       status: ["active", "pending"],
       q: "maple",
-      city: "los-angeles",
+      city: "thousand-oaks",
       neighborhood: "cedar-park",
       bounds: [-79.5, 43.6, -79.3, 43.7],
       polygon: [[-79.5, 43.6], [-79.4, 43.7], [-79.3, 43.6]],
@@ -36,12 +36,12 @@ describe("search URL codec", () => {
 
   it("omits defaults so equal searches give equal URLs", () => {
     expect(toQueryString({})).toBe("");
-    expect(toQueryString({ type: "sale", status: ["active"], sort: "newest", page: 1, city: "los-angeles" })).toBe("city=los-angeles");
+    expect(toQueryString({ type: "sale", status: ["active"], sort: "newest", page: 1, city: "thousand-oaks" })).toBe("city=thousand-oaks");
   });
 
   it("lenient parse drops only the invalid fields", () => {
-    const p = parseSearchParams(new URLSearchParams("city=los-angeles&bedsMin=99&propertyTypes=castle&priceMax=500000"));
-    expect(p.city).toBe("los-angeles");
+    const p = parseSearchParams(new URLSearchParams("city=thousand-oaks&bedsMin=99&propertyTypes=castle&priceMax=500000"));
+    expect(p.city).toBe("thousand-oaks");
     expect(p.priceMax).toBe(500000);
     expect(p.bedsMin).toBeUndefined();
     expect(p.propertyTypes).toBeUndefined();
@@ -54,7 +54,7 @@ describe("search URL codec", () => {
   });
 
   it("counts active filters for the mobile badge", () => {
-    expect(activeFilterCount(SearchParams.parse({ city: "los-angeles", sort: "price_asc" }))).toBe(0);
+    expect(activeFilterCount(SearchParams.parse({ city: "thousand-oaks", sort: "price_asc" }))).toBe(0);
     expect(activeFilterCount(SearchParams.parse({ priceMax: 1, bedsMin: 2, propertyTypes: ["condo"], status: ["sold"] }))).toBe(4);
   });
 });

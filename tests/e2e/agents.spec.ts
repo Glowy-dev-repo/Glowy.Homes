@@ -25,6 +25,6 @@ test.describe("local agents by ZIP code", () => {
     await expect(page.locator("#zip-error")).toHaveText("Enter a 5 digit ZIP code.");
     await page.goto("/agents?zip=00001");
     await expect(page.getByRole("heading", { name: "No partner agent covers ZIP 00001 yet" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Los Angeles" }).first()).toHaveAttribute("href", "/agents/los-angeles");
+    await expect(page.getByRole("link", { name: "Thousand Oaks" }).first()).toHaveAttribute("href", "/agents/thousand-oaks");
   });
 });

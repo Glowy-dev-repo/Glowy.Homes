@@ -1,5 +1,5 @@
 import { brand } from "@/config/brand";
-import { broker } from "@/config/broker";
+import { broker, subscriberLine } from "@/config/broker";
 import { idxWrapperHtml } from "@/lib/idx/wrapper";
 
 // IDX Broker fetches this page and wraps its hosted listing pages in it (Design, Website, Wrappers,
@@ -11,6 +11,7 @@ export function GET() {
     appUrl: process.env.NEXT_PUBLIC_APP_URL ?? `https://${brand.domain}`,
     idxUrl: process.env.IDX_BASE_URL?.trim() || "https://glowyhomes.idxbroker.com",
     broker,
+    subscriber: subscriberLine,
   });
   return new Response(html, {
     headers: {

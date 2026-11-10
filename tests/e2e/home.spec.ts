@@ -24,14 +24,14 @@ test.describe("home page shell", () => {
 
     const footer = page.getByRole("contentinfo");
     await expect(footer).toContainText("fair housing");
-    await expect(footer.getByRole("link", { name: "Los Angeles" })).toHaveAttribute("href", "/homes/los-angeles");
+    await expect(footer.getByRole("link", { name: "Thousand Oaks" })).toHaveAttribute("href", "/homes/thousand-oaks");
   });
 
   test("hero search goes to homes, and the links go to rentals and home worth", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("combobox").fill("Los Angeles");
+    await page.getByRole("combobox").fill("Thousand Oaks");
     await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect(page).toHaveURL(/\/search\?type=sale&q=Los(\+|%20)Angeles/);
+    await expect(page).toHaveURL(/\/search\?type=sale&q=Thousand(\+|%20)Oaks/);
 
     await page.goto("/");
     await expect(page.getByRole("main").getByRole("link", { name: "Search rentals" })).toHaveAttribute("href", "/search?type=rent");

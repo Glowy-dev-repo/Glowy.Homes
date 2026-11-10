@@ -13,7 +13,7 @@ const base: NormalizedListing = {
   originalPrice: 950000,
   listDate: "2026-08-01",
   statusDate: "2026-09-01",
-  address: { line1: "12 Maple Ave", city: "Los Angeles", regionCode: "ON", postalCode: "M5V 1A1", country: "CA" },
+  address: { line1: "12 Maple Ave", city: "Thousand Oaks", regionCode: "ON", postalCode: "M5V 1A1", country: "CA" },
   location: { lat: 43.6, lng: -79.4 },
   propertyType: "detached",
   facts: {},

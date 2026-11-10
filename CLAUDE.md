@@ -22,7 +22,7 @@ domain: "glowyhomes.com"            # production domain
 tagline: "Find your place."
 primary_market_country: "US"        # CA or US
 primary_market_region: "California" # province or state to seed first
-primary_market_cities: ["Los Angeles", "San Diego", "San Jose", "San Francisco", "Sacramento"]
+primary_market_cities: ["Thousand Oaks", "Simi Valley", "Newbury Park", "Moorpark", "Westlake Village"]
 currency: "USD"
 units: "imperial"                   # metric or imperial
 listing_feed: "synthetic"           # synthetic | reso_web_api | crea_ddf | csv

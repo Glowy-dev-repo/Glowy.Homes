@@ -9,7 +9,7 @@ export const brand = {
   market: {
     country: "US",
     region: "California",
-    cities: [{"name":"Los Angeles","slug":"los-angeles"},{"name":"San Diego","slug":"san-diego"},{"name":"San Jose","slug":"san-jose"},{"name":"San Francisco","slug":"san-francisco"},{"name":"Sacramento","slug":"sacramento"}],
+    cities: [{"name":"Thousand Oaks","slug":"thousand-oaks"},{"name":"Simi Valley","slug":"simi-valley"},{"name":"Newbury Park","slug":"newbury-park"},{"name":"Moorpark","slug":"moorpark"},{"name":"Westlake Village","slug":"westlake-village"}],
   },
   currency: "USD",
   units: "imperial",

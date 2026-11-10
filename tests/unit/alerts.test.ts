@@ -3,8 +3,8 @@ import { unsubscribeToken, verifyUnsubscribeToken } from "@/lib/alerts/token";
 import { alertPeriodKey, alertSubject, isoWeek } from "@/lib/alerts/window";
 
 describe("alert windows (docs/03 section 6)", () => {
-  it("daily windows follow the Los Angeles calendar day, not UTC", () => {
-    // 03:30 UTC on Sept 27 is still Sept 26 in Los Angeles.
+  it("daily windows follow the Thousand Oaks calendar day, not UTC", () => {
+    // 03:30 UTC on Sept 27 is still Sept 26 in Thousand Oaks.
     expect(alertPeriodKey("daily", new Date("2026-09-27T03:30:00Z"))).toBe("daily:2026-09-26");
     expect(alertPeriodKey("daily", new Date("2026-09-27T12:00:00Z"))).toBe("daily:2026-09-27");
   });
@@ -30,8 +30,8 @@ describe("alert windows (docs/03 section 6)", () => {
   });
 
   it("subjects use the count and the search name", () => {
-    expect(alertSubject(1, "Condos in Los Angeles")).toBe("1 new home in Condos in Los Angeles");
-    expect(alertSubject(7, "Condos in Los Angeles")).toBe("7 new homes in Condos in Los Angeles");
+    expect(alertSubject(1, "Condos in Thousand Oaks")).toBe("1 new home in Condos in Thousand Oaks");
+    expect(alertSubject(7, "Condos in Thousand Oaks")).toBe("7 new homes in Condos in Thousand Oaks");
   });
 
   it("unsubscribe tokens are bound to one saved search", () => {
